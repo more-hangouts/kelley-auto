@@ -1,0 +1,48 @@
+{% extends "pdf/_base.html" %}
+{% block title %}Invoice {{ inv.invoice_number or inv.id }} · {{ business.legal_name }}{% endblock %}
+{% block doc_kind %}Invoice{% endblock %}
+{% block doc_number %}{{ inv.invoice_number or 'Draft' }}{% endblock %}
+{% block doc_meta %}
+  <div><span class="meta-label">Issued</span>{{ inv.issue_date | fdate }}</div>
+  {% if inv.due_date %}<div><span class="meta-label">Due</span>{{ inv.due_date | fdate }}</div>{% endif %}
+  <div><span class="meta-label">Status</span>{{ inv.status | capitalize }}</div>
+  <div><span class="meta-label">Revision</span>r{{ inv.revision }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="bill-to">
+  <div class="bill-to-label">Bill to</div>
+  <div class="bill-to-name">{{ contact.display_name }}</div>
+  {% if contact.email %}<div class="muted">{{ contact.email }}</div>{% endif %}
+  {% if contact.phone %}<div class="muted">{{ contact.phone | phone }}</div>{% endif %}
+  {% if event %}<div class="muted">Event: {{ event.event_name }}{% if event.event_date %} · {{ event.event_date | fdate }}{% endif %}</div>{% endif %}
+</div>
+
+{% if inv.public_notes %}
+<div class="notes-block">{{ inv.public_notes }}</div>
+{% endif %}
+
+{% include "pdf/_lineitems.html" %}
+{% include "pdf/_totals.html" %}
+
+{% include "pdf/_schedule.html" %}
+
+<div class="totals-wrap" style="margin-top:14pt;">
+  <div class="totals-spacer"></div>
+  <div class="totals">
+    <div class="totals-row"><span class="label">Paid to date</span><span class="value">{{ inv.paid_to_date_cents | money }}</span></div>
+    <div class="totals-row grand"><span class="label">Balance due</span><span class="value">{{ inv.balance_cents | money }}</span></div>
+  </div>
+</div>
+
+{% if inv.terms %}
+<div class="terms">
+  <h2>Terms</h2>
+  <pre>{{ inv.terms }}</pre>
+</div>
+{% endif %}
+
+{% if inv.footer %}
+<div class="doc-footer">{{ inv.footer }}</div>
+{% endif %}
+{% endblock %}

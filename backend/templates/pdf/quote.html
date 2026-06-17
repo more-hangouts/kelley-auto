@@ -1,0 +1,56 @@
+{% extends "pdf/_base.html" %}
+{% block title %}Quote {{ q.quote_number or q.id }} · {{ business.legal_name }}{% endblock %}
+{% block doc_kind %}Quote{% endblock %}
+{% block doc_number %}{{ q.quote_number or 'Draft' }}{% endblock %}
+{% block doc_meta %}
+  <div><span class="meta-label">Issued</span>{{ q.issue_date | fdate }}</div>
+  {% if q.expires_at %}<div><span class="meta-label">Expires</span>{{ q.expires_at | fdate }}</div>{% endif %}
+  <div><span class="meta-label">Status</span>{{ q.status | capitalize }}</div>
+  <div><span class="meta-label">Revision</span>r{{ q.revision }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="bill-to">
+  <div class="bill-to-label">Prepared for</div>
+  <div class="bill-to-name">{{ contact.display_name }}</div>
+  {% if contact.email %}<div class="muted">{{ contact.email }}</div>{% endif %}
+  {% if contact.phone %}<div class="muted">{{ contact.phone | phone }}</div>{% endif %}
+  {% if event %}<div class="muted">Event: {{ event.event_name }}{% if event.event_date %} · {{ event.event_date | fdate }}{% endif %}</div>{% endif %}
+</div>
+
+{% if q.public_notes %}
+<div class="notes-block">{{ q.public_notes }}</div>
+{% endif %}
+
+{% include "pdf/_lineitems.html" %}
+{% include "pdf/_totals.html" %}
+
+{% include "pdf/_schedule.html" %}
+
+{% if q.terms %}
+<div class="terms">
+  <h2>Terms</h2>
+  <pre>{{ q.terms }}</pre>
+</div>
+{% endif %}
+
+{% if q.signature_signed_at %}
+<div class="signature-block">
+  <div class="signature-label">Signed &amp; accepted</div>
+  <div class="signature">
+    {% if q.signature_base64 %}
+    <img class="signature-image" src="data:image/png;base64,{{ q.signature_base64 }}" alt="Customer signature">
+    {% endif %}
+    <span class="signature-meta">
+      <strong>{{ q.signature_name }}</strong>
+      · {{ q.signature_signed_at.strftime('%B %-d, %Y') }}
+      {% if q.signature_ip %}· {{ q.signature_ip }}{% endif %}
+    </span>
+  </div>
+</div>
+{% endif %}
+
+{% if q.footer %}
+<div class="doc-footer">{{ q.footer }}</div>
+{% endif %}
+{% endblock %}

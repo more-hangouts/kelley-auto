@@ -1,0 +1,118 @@
+name: Smoke tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Backend smokes + frontend build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bellas_xv_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bellas_xv_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bellas_xv_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      APP_TIMEZONE: America/Chicago
+      APP_ENV: test
+      SECRET_KEY: ci-secret-key-not-for-production
+      RESCHEDULE_TOKEN_SECRET: ci-reschedule-secret
+      ENRICHMENT_TOKEN_SECRET: ci-enrichment-secret
+      PUBLIC_SITE_URL: http://localhost:5173
+      WIDGET_PUBLIC_BASE_URL: http://localhost:8000
+      CORS_ORIGINS: http://localhost:5173
+      BOOKING_WIDGET_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8000
+      SMTP_HOST: ""
+      SMTP_FROM_EMAIL: ""
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        run: python -m database.migrations.runner
+
+      - name: Run backend handoff smoke suite
+        # Full suite defined in docs/SMOKE_TEST_AUDIT.md and scripts/smoke_handoff.sh.
+        # Runs serially per the singleton-numbering-state rule in tests/__init__.py.
+        run: PYTHON=$(which python) scripts/smoke_handoff.sh
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Final smoke residue sweep
+        if: always()
+        run: |
+          set +e
+          sweep_out=$(psql "$DATABASE_URL" -v apply=true -f scripts/cleanup_admin_smoke_pollution.sql 2>&1)
+          sweep_status=$?
+          printf '%s\n' "$sweep_out"
+
+          if [[ $sweep_status -ne 0 ]]; then
+            printf 'final smoke residue sweep failed\n'
+            exit "$sweep_status"
+          fi
+
+          residue=$(printf '%s\n' "$sweep_out" | grep -oE 'POST_RUN_RESIDUE_TOTAL=[0-9]+' | tail -1 | cut -d= -f2)
+          if [[ -z "$residue" ]]; then
+            printf 'POST_RUN_RESIDUE_TOTAL missing from cleanup output\n'
+            exit 1
+          fi
+          if [[ "$residue" -gt 0 ]]; then
+            printf 'Final smoke residue sweep found and cleaned %d leaked top-level rows\n' "$residue"
+            exit 1
+          fi

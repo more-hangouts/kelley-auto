@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+.env.production
+public/media/
+*.pem
+ecosystem.config.js
+.DS_Store
+._*

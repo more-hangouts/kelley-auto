@@ -1,0 +1,39 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets & runtime
+.env
+.env.production
+logs/
+SECURITY_AUDIT.md
+*.zip
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+.claude/
+*.swp
+
+# Stock images / scratch assets dropped at repo root. Real marketing imagery
+# belongs under marketing/ or frontend/src/assets/.
+/*.webp
+/*.png
+
+# Local archive of pre-watermarked / pre-hero marketing source files. Keep
+# on disk for reference; not for version control.
+marketing/assets/previous-watermarked-*/
+marketing/assets/previous-hero-*/
+
+# Per-run catalog import summary (regenerated every import; not source data)
+data/reports/catalog_import_summary.json

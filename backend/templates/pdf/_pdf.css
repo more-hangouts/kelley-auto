@@ -1,0 +1,272 @@
+/* Shared CSS for invoice / quote / receipt PDFs.
+   WeasyPrint-friendly: explicit print page rules, no JS, no flexbox
+   gymnastics that have known WeasyPrint quirks. */
+
+@page {
+  size: Letter;
+  margin: 0.75in 0.6in 0.6in 0.6in;
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    color: #7A6A6F;
+    font-size: 9pt;
+    font-family: "Helvetica", "Arial", sans-serif;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Helvetica", "Arial", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #2A1B1F;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 600; }
+h1 { font-size: 22pt; color: #A7616F; }
+h2 { font-size: 13pt; margin-top: 16pt; }
+p { margin: 4pt 0; }
+
+.muted { color: #7A6A6F; }
+.right { text-align: right; }
+.bold { font-weight: 600; }
+
+/* Header: business identity + doc identity */
+.pdf-header {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14pt;
+  border-bottom: 1pt solid #E8D8DD;
+  padding-bottom: 12pt;
+}
+.pdf-header-cell {
+  display: table-cell;
+  vertical-align: top;
+}
+.pdf-header-business { width: 60%; }
+.pdf-header-doc { width: 40%; text-align: right; }
+
+.business-logo {
+  max-height: 50pt;
+  max-width: 180pt;
+  margin-bottom: 6pt;
+}
+.business-name {
+  font-size: 14pt;
+  font-weight: 600;
+  color: #A7616F;
+  letter-spacing: 0.02em;
+}
+.business-meta {
+  font-size: 9pt;
+  color: #7A6A6F;
+  margin-top: 4pt;
+}
+
+.doc-kind {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 9pt;
+  color: #7A6A6F;
+}
+.doc-number {
+  font-size: 18pt;
+  color: #2A1B1F;
+  font-weight: 600;
+  margin-top: 2pt;
+}
+.doc-meta {
+  margin-top: 8pt;
+  font-size: 9pt;
+  color: #2A1B1F;
+}
+.doc-meta .meta-label { color: #7A6A6F; margin-right: 4pt; }
+.doc-meta div { padding: 1pt 0; }
+
+/* Bill-to block */
+.bill-to {
+  background: #FBF0F3;
+  border: 1pt solid #F1E1E5;
+  border-radius: 6pt;
+  padding: 8pt 10pt;
+  margin-bottom: 12pt;
+  font-size: 10pt;
+}
+.bill-to-label {
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7A6A6F;
+  margin-bottom: 2pt;
+}
+.bill-to-name { font-weight: 600; font-size: 11pt; }
+
+/* Notes block (public_notes) */
+.notes-block {
+  background: #FFF8FA;
+  border: 1pt solid #F1E1E5;
+  border-radius: 6pt;
+  padding: 8pt 10pt;
+  margin-bottom: 12pt;
+  white-space: pre-wrap;
+}
+
+/* Lines table */
+table.lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+}
+table.lines thead th {
+  text-align: left;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #7A6A6F;
+  padding: 6pt 6pt;
+  border-bottom: 1pt solid #E8D8DD;
+}
+table.lines tbody td {
+  padding: 6pt 6pt;
+  border-bottom: 1pt solid #F1E7EA;
+  vertical-align: top;
+}
+table.lines .col-qty,
+table.lines .col-unit,
+table.lines .col-total {
+  text-align: right;
+  white-space: nowrap;
+}
+table.lines .col-code {
+  width: 80pt;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 9pt;
+  color: #7A6A6F;
+  white-space: nowrap;
+}
+table.lines .col-qty { width: 50pt; }
+table.lines .col-unit { width: 80pt; }
+table.lines .col-total { width: 90pt; }
+.line-desc { font-weight: 500; }
+
+/* Totals */
+.totals-wrap {
+  margin-top: 10pt;
+  display: table;
+  width: 100%;
+}
+.totals-spacer { display: table-cell; width: 60%; }
+.totals {
+  display: table-cell;
+  width: 40%;
+  background: #FFF8FA;
+  border: 1pt solid #F1E1E5;
+  border-radius: 6pt;
+  padding: 6pt 10pt;
+}
+.totals-row {
+  display: table;
+  width: 100%;
+  font-size: 10pt;
+  padding: 2pt 0;
+}
+.totals-row .label { display: table-cell; }
+.totals-row .value { display: table-cell; text-align: right; }
+.totals-row.grand {
+  font-weight: 700;
+  font-size: 12pt;
+  border-top: 1pt solid #E8D8DD;
+  padding-top: 6pt;
+  margin-top: 4pt;
+  color: #A7616F;
+}
+/* "You save: $X" closer line on the customer-facing PDFs. Sits below
+   the grand total in a softer green so it reads as a callout rather
+   than another money column. */
+.totals-row.save {
+  font-weight: 600;
+  color: #2F7D43;
+  padding-top: 4pt;
+}
+
+/* Schedule */
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10pt;
+  font-size: 10pt;
+}
+.schedule-table th, .schedule-table td {
+  text-align: left;
+  padding: 4pt 6pt;
+  border-bottom: 1pt solid #F1E7EA;
+}
+.schedule-table th {
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #7A6A6F;
+  border-bottom: 1pt solid #E8D8DD;
+}
+.paid { color: #2F7D43; font-weight: 600; }
+.due { color: #B07700; font-weight: 600; }
+
+/* Terms / footer */
+.terms, .doc-footer {
+  margin-top: 14pt;
+  font-size: 9pt;
+  color: #2A1B1F;
+}
+.terms pre {
+  margin: 0;
+  font-family: "Helvetica", "Arial", sans-serif;
+  white-space: pre-wrap;
+}
+.doc-footer { color: #7A6A6F; }
+
+/* Signature block (quote) — compact, full-width row so terms still fit. */
+.signature-block { margin-top: 12pt; }
+.signature-label {
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: #A7616F;
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+  margin-bottom: 4pt;
+}
+.signature {
+  padding: 6pt 10pt;
+  border: 1pt dashed #A7616F;
+  border-radius: 4pt;
+  background: #FFF8FA;
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+.signature-image {
+  max-height: 32pt;
+  max-width: 180pt;
+  flex: 0 0 auto;
+  display: block;
+}
+.signature-meta {
+  font-size: 9pt;
+  color: #7A6A6F;
+  flex: 1;
+}
+
+/* Receipt-specific stamp */
+.receipt-stamp {
+  display: inline-block;
+  border: 2pt solid #2F7D43;
+  color: #2F7D43;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 6pt 14pt;
+  border-radius: 6pt;
+  text-transform: uppercase;
+  font-size: 11pt;
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bellas XV fit prep tool — dev test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { background: #2A1B1F; margin: 0; padding: 32px 16px; font-family: Inter, sans-serif; }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 { color: #FBF5EF; font-family: 'Playfair Display', serif; font-weight: 500; }
+    p.note { color: #C9B7B7; font-size: 14px; }
+    .section { margin-bottom: 48px; }
+    .section h2 { color: #FBF5EF; font-family: 'Playfair Display', serif; font-weight: 500; font-size: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Fit prep tool — local test harness</h1>
+    <p class="note">
+      Served by <code>uvicorn api.server:app</code>. Talks to the same origin
+      for <code>/api/booking/theme</code>. Below it, the booking widget is
+      mounted to verify the end-of-flow "book your appointment" handoff.
+    </p>
+
+    <div class="section">
+      <h2>Sizing calculator</h2>
+      <div id="bellas-fit-prep-tool"></div>
+    </div>
+
+    <div class="section" id="book">
+      <h2>Booking widget (anchor target)</h2>
+      <div id="bellas-booking-widget"></div>
+    </div>
+  </div>
+
+  <script src="/widgets/bellas-fit-prep-tool.js"></script>
+  <script src="/widgets/bellas-booking-widget.js"></script>
+  <script>
+    BellasFitPrepTool.init({
+      containerId: 'bellas-fit-prep-tool',
+      apiBaseUrl: window.location.origin,
+      bookingAnchorId: 'book',
+    });
+    BellasBookingWidget.init({
+      containerId: 'bellas-booking-widget',
+      apiBaseUrl: window.location.origin,
+    });
+  </script>
+</body>
+</html>

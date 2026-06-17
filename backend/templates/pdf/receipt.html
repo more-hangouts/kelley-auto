@@ -1,0 +1,70 @@
+{% extends "pdf/_base.html" %}
+{% block title %}Receipt {{ p.payment_number or p.id }} · {{ business.legal_name }}{% endblock %}
+{% block doc_kind %}Receipt{% endblock %}
+{% block doc_number %}{{ p.payment_number or ('Payment #' ~ p.id) }}{% endblock %}
+{% block doc_meta %}
+  <div><span class="meta-label">Date</span>{{ p.payment_date | fdate }}</div>
+  <div><span class="meta-label">Method</span>{{ p.method | capitalize }}</div>
+  <div><span class="meta-label">Status</span>{{ p.status | replace('_', ' ') | capitalize }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="bill-to">
+  <div class="bill-to-label">Received from</div>
+  <div class="bill-to-name">{{ contact.display_name }}</div>
+  {% if contact.email %}<div class="muted">{{ contact.email }}</div>{% endif %}
+  {% if contact.phone %}<div class="muted">{{ contact.phone | phone }}</div>{% endif %}
+</div>
+
+<div style="margin: 12pt 0;">
+  {% if p.status == 'completed' %}
+    <span class="receipt-stamp">Paid</span>
+  {% elif p.status == 'partially_refunded' %}
+    <span class="receipt-stamp" style="color:#B07700; border-color:#B07700;">Partially refunded</span>
+  {% elif p.status == 'refunded' %}
+    <span class="receipt-stamp" style="color:#7A6A6F; border-color:#7A6A6F;">Refunded</span>
+  {% endif %}
+</div>
+
+<div class="totals-wrap">
+  <div class="totals-spacer"></div>
+  <div class="totals">
+    <div class="totals-row grand"><span class="label">Amount received</span><span class="value">{{ p.amount_cents | money }}</span></div>
+    <div class="totals-row"><span class="label">Applied to invoices</span><span class="value">{{ p.applied_cents | money }}</span></div>
+    {% if p.unapplied_cents %}
+    <div class="totals-row"><span class="label">Unapplied (credit on file)</span><span class="value">{{ p.unapplied_cents | money }}</span></div>
+    {% endif %}
+    {% if p.refunded_cents %}
+    <div class="totals-row"><span class="label">Refunded</span><span class="value">{{ p.refunded_cents | money }}</span></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if allocations %}
+<h2>Applied to</h2>
+<table class="schedule-table">
+  <thead>
+    <tr>
+      <th>Invoice</th>
+      <th class="right">Applied</th>
+      <th class="right">Refunded</th>
+      <th class="right">Invoice balance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in allocations %}
+    <tr>
+      <td>{{ a.invoice_number }}</td>
+      <td class="right">{{ a.applied_cents | money }}</td>
+      <td class="right">{% if a.refunded_cents %}{{ a.refunded_cents | money }}{% else %}<span class="muted">none</span>{% endif %}</td>
+      <td class="right">{{ a.invoice_balance_cents | money }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="doc-footer" style="margin-top:18pt;">
+  Thank you for your payment. This receipt was generated on {{ rendered_at.strftime('%B %-d, %Y') }}.
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{# Shared line-item table fragment used by invoice + quote PDFs.
+
+   Phase 4 contract: every entry in `line_items` is a
+   `services.catalog_service.CustomerLineView` projection. The partial
+   reads only `public_code`, `display_text`, `quantity`,
+   `unit_price_cents`, and `line_total_cents`. It never references
+   `description`, `notes`, `product_key`, `internal_sku`, `designer`,
+   `style_number`, `internal_notes`, or any other staff-only field;
+   Phase 7's lint asserts that.
+
+   Phase 3 of the discount refactor extracted the totals block into
+   `pdf/_totals.html`. Callers include both partials in sequence so the
+   line table and the totals breakdown can evolve independently. #}
+<table class="lines">
+  <thead>
+    <tr>
+      <th class="col-code">Code</th>
+      <th>Item</th>
+      <th class="col-qty">Qty</th>
+      <th class="col-unit">Unit</th>
+      <th class="col-total">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for li in line_items %}
+    <tr>
+      <td class="col-code">{{ li.public_code or "" }}</td>
+      <td>
+        <div class="line-desc">{{ li.display_text }}</div>
+      </td>
+      <td class="col-qty">{{ li.quantity | qty }}</td>
+      <td class="col-unit">{{ li.unit_price_cents | money }}</td>
+      <td class="col-total">{{ li.line_total_cents | money }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,164 @@
+{% extends "portal/base.html" %}
+{% block title %}Quote {{ q.quote_number or '' }} · {{ business.legal_name }}{% endblock %}
+
+{% block main %}
+<section class="portal-doc-head">
+  <div class="doc-title">
+    <div class="doc-kind">Quote</div>
+    <div class="doc-number">{{ q.quote_number or 'Draft' }}</div>
+  </div>
+  <div class="doc-meta">
+    <div><span class="meta-label">Issued</span> {{ q.issue_date }}</div>
+    {% if q.expires_at %}<div><span class="meta-label">Expires</span> {{ q.expires_at }}</div>{% endif %}
+    <div><span class="meta-label">For</span> {{ q.contact.display_name }}</div>
+  </div>
+</section>
+
+{% if q.public_notes %}
+<section class="portal-public-notes">{{ q.public_notes }}</section>
+{% endif %}
+
+{% with line_items=q.line_items, subtotal_cents=q.subtotal_cents, discount_cents=q.discount_cents, tax_cents=q.tax_cents, total_cents=q.total_cents %}
+{% include "portal/_lineitems.html" %}
+{% endwith %}
+
+{% if q.terms %}
+<section class="portal-terms">
+  <h2>Terms</h2>
+  <pre>{{ q.terms }}</pre>
+</section>
+{% endif %}
+
+{% if q.is_signable %}
+<section class="portal-sign">
+  <h2>Read and sign</h2>
+  <p>Type your full legal name and sign below to accept this quote. Once you sign, this quote becomes your contract with {{ business.legal_name }}.</p>
+
+  <form id="sign-form" novalidate>
+    <label class="sign-label">
+      Full legal name
+      <input type="text" name="signature_name" id="signature_name" maxlength="120" required autocomplete="name">
+    </label>
+
+    <div class="sign-pad-wrap">
+      <canvas id="sign-pad" width="600" height="200"></canvas>
+      <div class="sign-pad-actions">
+        <button type="button" id="sign-clear" class="btn btn-secondary">Clear</button>
+      </div>
+    </div>
+
+    <button type="submit" id="sign-submit" class="btn btn-primary">Sign and accept</button>
+    <div id="sign-error" class="sign-error" hidden></div>
+  </form>
+</section>
+
+<script>
+(function () {
+  var canvas = document.getElementById('sign-pad');
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  var dirty = false;
+
+  function resizeCanvas() {
+    var rect = canvas.getBoundingClientRect();
+    var ratio = window.devicePixelRatio || 1;
+    canvas.width = rect.width * ratio;
+    canvas.height = 200 * ratio;
+    canvas.style.height = '200px';
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2A1B1F';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function pos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+  function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+  function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); dirty = true; e.preventDefault(); }
+  function end() { drawing = false; }
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start);
+  canvas.addEventListener('touchmove', move);
+  canvas.addEventListener('touchend', end);
+
+  document.getElementById('sign-clear').addEventListener('click', function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    dirty = false;
+  });
+
+  document.getElementById('sign-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = document.getElementById('sign-error');
+    err.hidden = true;
+    var name = document.getElementById('signature_name').value.trim();
+    if (!name) { err.textContent = 'Please type your full name.'; err.hidden = false; return; }
+    if (!dirty) { err.textContent = 'Please draw your signature.'; err.hidden = false; return; }
+    var btn = document.getElementById('sign-submit');
+    btn.disabled = true;
+
+    var dataUrl = canvas.toDataURL('image/png');
+    var base64 = dataUrl.indexOf(',') >= 0 ? dataUrl.slice(dataUrl.indexOf(',') + 1) : dataUrl;
+
+    fetch({{ accept_url | tojson }}, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signature_name: name, signature_base64: base64 })
+    }).then(function (resp) {
+      if (resp.ok) {
+        window.location.href = {{ accepted_url | tojson }};
+      } else {
+        return resp.json().then(function (data) {
+          err.textContent = (data && data.detail && data.detail.code) ? 'Could not accept: ' + data.detail.code : 'Could not accept the quote. Please try again.';
+          err.hidden = false;
+          btn.disabled = false;
+        }).catch(function () {
+          err.textContent = 'Could not accept the quote. Please try again.';
+          err.hidden = false;
+          btn.disabled = false;
+        });
+      }
+    }).catch(function () {
+      err.textContent = 'Network error. Please try again.';
+      err.hidden = false;
+      btn.disabled = false;
+    });
+  });
+
+  // Best-effort view stamp.
+  try { fetch({{ view_receipt_url | tojson }}, { method: 'POST', credentials: 'omit' }); } catch (_) {}
+})();
+</script>
+{% else %}
+  {% if q.signed_at %}
+  <section class="portal-status portal-status-signed">
+    <h2>Signed</h2>
+    <p>This quote was signed by {{ q.signature_name }} on {{ q.signed_at.strftime('%B %-d, %Y') }}.</p>
+  </section>
+  {% else %}
+  <section class="portal-status">
+    <h2>This quote is no longer active.</h2>
+    <p>Status: {{ q.status }}. Please get in touch with us if you have questions.</p>
+  </section>
+  {% endif %}
+<script>
+try { fetch({{ view_receipt_url | tojson }}, { method: 'POST', credentials: 'omit' }); } catch (_) {}
+</script>
+{% endif %}
+
+{% if q.footer %}
+<section class="portal-footer-text">{{ q.footer }}</section>
+{% endif %}
+
+<section class="portal-cta">
+  <p><a class="btn btn-secondary" href="{{ pdf_url }}">Download PDF</a></p>
+</section>
+{% endblock %}

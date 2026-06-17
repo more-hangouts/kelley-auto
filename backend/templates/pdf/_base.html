@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{{ business.legal_name }}{% endblock %}</title>
+<style>{% include "pdf/_pdf.css" %}</style>
+</head>
+<body>
+
+<div class="pdf-header">
+  <div class="pdf-header-cell pdf-header-business">
+    {% if business.logo_path %}
+      <img class="business-logo" src="file://{{ business.logo_path }}" alt="{{ business.legal_name }}">
+    {% else %}
+      <div class="business-name">{{ business.legal_name }}</div>
+    {% endif %}
+    <div class="business-meta">
+      {% for line in business.address_lines %}
+        <div>{{ line }}</div>
+      {% endfor %}
+      {% if business.phone %}<div>{{ business.phone | phone }}</div>{% endif %}
+      {% if business.email %}<div>{{ business.email }}</div>{% endif %}
+      {% if business.website %}<div>{{ business.website }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="pdf-header-cell pdf-header-doc">
+    <div class="doc-kind">{% block doc_kind %}{% endblock %}</div>
+    <div class="doc-number">{% block doc_number %}{% endblock %}</div>
+    <div class="doc-meta">
+      {% block doc_meta %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+{% block body %}{% endblock %}
+
+</body>
+</html>

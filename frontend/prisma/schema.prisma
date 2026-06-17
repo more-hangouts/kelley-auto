@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Car {
+  id               String       @id @default(cuid())
+  vin              String       @unique
+  make             String
+  model            String
+  year             Int
+  cashPrice        Decimal      @db.Decimal(10, 2)
+  mileage          Int
+  condition        Condition
+  exteriorColor    String
+  interiorColor    String
+  transmission     Transmission
+  fuelType         FuelType
+  description      String?      @db.Text
+  status           CarStatus    @default(AVAILABLE)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  images           CarImage[]
+  inquiries        Inquiry[]
+}
+
+model CarImage {
+  id        String  @id @default(cuid())
+  carId     String
+  imageUrl  String
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+  car       Car     @relation(fields: [carId], references: [id], onDelete: Cascade)
+}
+
+model Inquiry {
+  id            String        @id @default(cuid())
+  carId         String
+  firstName     String
+  lastName      String
+  customerEmail String
+  message       String        @db.Text
+  status        InquiryStatus @default(NEW)
+  createdAt     DateTime      @default(now())
+  car           Car           @relation(fields: [carId], references: [id])
+}
+
+enum Condition {
+  NEW
+  USED
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+}
+
+enum FuelType {
+  GAS
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
+enum CarStatus {
+  AVAILABLE
+  PENDING
+  SOLD
+}
+
+enum InquiryStatus {
+  NEW
+  REVIEWED
+  CONTACTED
+}

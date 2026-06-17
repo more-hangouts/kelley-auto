@@ -1,0 +1,98 @@
+{# Customer-facing totals breakdown.
+
+   Caller passes a `totals` dict produced by
+   `services.invoice_pdf._totals_breakdown`. Two layouts gated on
+   `totals.pct_path`:
+
+   - **Percent path (`pct_path = true`).** The seven-row layout from
+     Phase 3 of the discount refactor:
+
+         Subtotal
+         Line discounts                (only if any line has a discount)
+         Subtotal after line discounts (only if any line has a discount)
+         Order discount: <label>       (only if order discount applies)
+         Taxable subtotal              (only if order discount applies)
+         Tax                           (only if non-zero)
+         Total
+         You save                      (only if total savings > 0)
+
+     The label on the order discount row uses the snapshotted
+     `discount_label`, not a live preset lookup, so a later rename on
+     BusinessProfile cannot rewrite history.
+
+   - **Legacy path (`pct_path = false`).** The four-row layout from
+     before this work renders unchanged so already-sent records do not
+     drift in totals or in copy.
+
+   Customer-copy rules apply: no em dashes anywhere on this page; use
+   forward-slash separators or plain phrasing instead. #}
+<div class="totals-wrap">
+  <div class="totals-spacer"></div>
+  <div class="totals">
+    {% if totals.pct_path %}
+      <div class="totals-row">
+        <span class="label">Subtotal</span>
+        <span class="value">{{ totals.subtotal_pre_discount_cents | money }}</span>
+      </div>
+      {% if totals.line_discount_total_cents %}
+      <div class="totals-row">
+        <span class="label">Line discounts</span>
+        <span class="value">-{{ totals.line_discount_total_cents | money }}</span>
+      </div>
+      <div class="totals-row">
+        <span class="label">Subtotal after line discounts</span>
+        <span class="value">{{ totals.subtotal_after_line_discounts_cents | money }}</span>
+      </div>
+      {% endif %}
+      {% for row in totals.order_discount_rows %}
+      <div class="totals-row">
+        <span class="label">Order discount: {{ row.label }} ({{ row.percent }}%)</span>
+        <span class="value">-{{ row.savings_cents | money }}</span>
+      </div>
+      {% endfor %}
+      {% if totals.order_discount_rows %}
+      <div class="totals-row">
+        <span class="label">Taxable subtotal</span>
+        <span class="value">{{ totals.taxable_subtotal_cents | money }}</span>
+      </div>
+      {% endif %}
+      {% if totals.tax_cents %}
+      <div class="totals-row">
+        <span class="label">Tax</span>
+        <span class="value">{{ totals.tax_cents | money }}</span>
+      </div>
+      {% endif %}
+      <div class="totals-row grand">
+        <span class="label">Total</span>
+        <span class="value">{{ totals.total_cents | money }}</span>
+      </div>
+      {% if totals.you_save_cents %}
+      <div class="totals-row save">
+        <span class="label">You save</span>
+        <span class="value">{{ totals.you_save_cents | money }}</span>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="totals-row">
+        <span class="label">Subtotal</span>
+        <span class="value">{{ totals.subtotal_after_line_discounts_cents | money }}</span>
+      </div>
+      {% if totals.discount_cents %}
+      <div class="totals-row">
+        <span class="label">Discount</span>
+        <span class="value">-{{ totals.discount_cents | money }}</span>
+      </div>
+      {% endif %}
+      {% if totals.tax_cents %}
+      <div class="totals-row">
+        <span class="label">Tax</span>
+        <span class="value">{{ totals.tax_cents | money }}</span>
+      </div>
+      {% endif %}
+      <div class="totals-row grand">
+        <span class="label">Total</span>
+        <span class="value">{{ totals.total_cents | money }}</span>
+      </div>
+    {% endif %}
+  </div>
+</div>

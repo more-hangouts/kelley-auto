@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% block title %}{{ business.legal_name }}{% endblock %}</title>
+<link rel="stylesheet" href="/portal/static/portal.css">
+{% block head_extra %}{% endblock %}
+</head>
+<body>
+<header class="portal-header">
+  <div class="portal-header-inner">
+    {% if business.logo_storage_key %}
+      <img class="portal-logo" alt="{{ business.legal_name }}" src="/api/business-profile/logo">
+    {% else %}
+      <div class="portal-brand">{{ business.legal_name }}</div>
+    {% endif %}
+    <div class="portal-business-meta">
+      {% if business.phone %}<div>{{ business.phone }}</div>{% endif %}
+      {% if business.website %}<div>{{ business.website }}</div>{% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="portal-main">
+{% block main %}{% endblock %}
+</main>
+
+<footer class="portal-footer">
+  <div>{{ business.legal_name }}</div>
+  {% if business.address_line1 %}
+    <div>
+      {{ business.address_line1 }}{% if business.address_line2 %}, {{ business.address_line2 }}{% endif %}
+      {% if business.city %} · {{ business.city }}{% if business.state %}, {{ business.state }}{% endif %}{% endif %}
+      {% if business.postal_code %} {{ business.postal_code }}{% endif %}
+    </div>
+  {% endif %}
+  {% if business.email %}<div>{{ business.email }}</div>{% endif %}
+</footer>
+</body>
+</html>

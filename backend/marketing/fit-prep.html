@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boutique Experience Profile - Bella's XV</title>
+  <meta name="description" content="Tell us your size, style, and budget so your stylist can prepare for your Bella's XV fitting.">
+  <link rel="canonical" href="https://shopbellasxv.com/fit-prep.html">
+
+  <meta property="og:title" content="Boutique Experience Profile - Bella's XV">
+  <meta property="og:description" content="Tell us your size, style, and budget so your stylist can prepare for your fitting.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shopbellasxv.com/fit-prep.html">
+  <meta property="og:image" content="https://shopbellasxv.com/assets/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+
+  <style>
+    .fp-page {
+      background: var(--cream);
+      padding: var(--space-5) 0 var(--space-6);
+    }
+    .fp-page__intro {
+      max-width: 720px;
+      margin: 0 auto var(--space-4);
+      text-align: center;
+    }
+    .fp-page__eyebrow {
+      font-size: 0.8125rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--rose-gold);
+      font-weight: 600;
+      margin-bottom: var(--space-1);
+    }
+    .fp-page__title {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      margin-bottom: var(--space-2);
+    }
+    .fp-page__lede {
+      color: var(--warm-gray);
+      font-size: 1.0625rem;
+      line-height: 1.6;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+    .fp-page__widget { margin-top: var(--space-4); }
+    .fp-page__back {
+      display: inline-block;
+      margin: var(--space-3) 0;
+      color: var(--rose-gold);
+      font-size: 0.95rem;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .fp-page__back:hover { text-decoration: underline; }
+    .fp-booking {
+      background: var(--cream-tint);
+      padding: var(--space-6) 0;
+      border-top: 1px solid var(--warm-divider);
+    }
+    .fp-booking__intro {
+      max-width: 720px;
+      margin: 0 auto var(--space-4);
+      text-align: center;
+    }
+    .fp-booking__title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      margin-bottom: var(--space-1);
+    }
+    .fp-booking__lede {
+      color: var(--warm-gray);
+      font-size: 1rem;
+      max-width: 32rem;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <a href="#tool" class="skip-link">Skip to sizing calculator</a>
+
+  <main>
+    <section class="fp-page" id="top">
+      <div class="container">
+        <a href="index.html" class="fp-page__back">← Back to Bella's XV</a>
+        <div class="fp-page__intro">
+          <p class="fp-page__eyebrow">Optional · Pre-fitting prep</p>
+          <h1 class="fp-page__title">Boutique Experience Profile</h1>
+          <p class="fp-page__lede">
+            Share your size, style, and budget so your stylist can pull
+            dresses for you before you arrive. Everything still gets
+            confirmed in store.
+          </p>
+        </div>
+
+        <div class="fp-page__widget" id="tool">
+          <div id="bellas-fit-prep-tool"></div>
+          <noscript>
+            <p style="text-align:center;color:var(--warm-gray)">
+              JavaScript is required for the sizing calculator. You can still
+              <a href="index.html#book">book your appointment</a> or call us at
+              <a href="tel:+12106705845">(210) 670-5845</a>.
+            </p>
+          </noscript>
+        </div>
+      </div>
+    </section>
+
+    <section class="fp-booking" id="book">
+      <div class="container">
+        <div class="fp-booking__intro">
+          <h2 class="fp-booking__title">Ready to book?</h2>
+          <p class="fp-booking__lede">
+            We'll size you in store and double-check everything against the
+            designer's chart. Pick a time that works for you.
+          </p>
+        </div>
+        <div class="booking__widget">
+          <div id="bellas-booking-widget"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <img src="assets/wordmark-light.svg" alt="Bella's XV" class="footer__wordmark" width="341" height="104">
+        <div class="footer__rating" aria-label="Rated 4.6 stars from 99 Google reviews">
+          <span class="footer__stars" aria-hidden="true">★★★★★</span>
+          <span class="footer__rating-text">4.6 &middot; 99 Google reviews</span>
+        </div>
+      </div>
+
+      <div class="footer__contact">
+        <h2 class="footer__heading">Visit</h2>
+        <p>
+          <a href="https://maps.google.com/?q=7723+Guilbeau+Rd+%23101+San+Antonio+TX+78250" target="_blank" rel="noopener">
+            7723 Guilbeau Rd #101<br>
+            San Antonio, TX 78250
+          </a>
+        </p>
+        <p><a href="tel:+12106705845">(210) 670-5845</a></p>
+      </div>
+
+      <div class="footer__hours">
+        <h2 class="footer__heading">Hours</h2>
+        <dl>
+          <dt>Wed - Thu</dt><dd>12 PM - 7 PM</dd>
+          <dt>Fri</dt><dd>12 PM - 5 PM</dd>
+          <dt>Sat</dt><dd>11 AM - 5 PM</dd>
+          <dt>Sun</dt><dd>12 PM - 5 PM</dd>
+          <dt>Mon - Tue</dt><dd>Closed</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="container footer__bottom">
+      <p>&copy; <span id="year"></span> Bella's XV. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+
+  <script>
+    // Resolve widget asset + API origin: localhost in dev, prod domain otherwise.
+    (function () {
+      var host = window.location.hostname;
+      var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+      var origin = isLocal ? window.location.origin : 'https://api.shopbellasxv.com';
+      window.__bxvWidgetOrigin = origin;
+
+      function loadScript(src, onload) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.defer = true;
+        s.onload = onload;
+        document.head.appendChild(s);
+      }
+
+      loadScript(origin + '/widgets/bellas-fit-prep-tool.js', function () {
+        if (window.BellasFitPrepTool) {
+          window.BellasFitPrepTool.init({
+            containerId: 'bellas-fit-prep-tool',
+            apiBaseUrl: origin,
+            bookingAnchorId: 'book',
+          });
+        }
+      });
+
+      // Booking widget reads the Boutique Experience handoff (note +
+      // profile id) from localStorage on its own, so the page no longer
+      // duplicates that wiring.
+      loadScript(origin + '/widgets/bellas-booking-widget.js', function () {
+        if (window.BellasBookingWidget) {
+          window.BellasBookingWidget.init({
+            containerId: 'bellas-booking-widget',
+            apiBaseUrl: origin,
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

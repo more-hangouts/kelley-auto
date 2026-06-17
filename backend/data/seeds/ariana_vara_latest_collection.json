@@ -1,0 +1,4778 @@
+{
+  "generated_at": "2026-05-06T21:45:28.764386+00:00",
+  "source_url": "https://www.arianavara.com/categories/latest-collection",
+  "scope": "Ariana Vara (Princesa) Syvo storefront, one catalog row per (style, color).",
+  "notes": [
+    "Detail-page scrape; no public JSON API.",
+    "image_urls stores the .2000.webp zoom URL per image. image_meta carries face/crop/sequence/is_default labels lifted from <img> alt text on the previews strip.",
+    "color_hex, size_range, and attributes are captured but not consumed by the current importer; they wait for a future catalog_items schema change.",
+    "Public codes are null because the app mints them on import.",
+    "Pricing and per-size availability are intentionally skipped."
+  ],
+  "product_count": 25,
+  "catalog_item_count": 57,
+  "skipped": [],
+  "items": [
+    {
+      "internal_sku": "ARIA-PR30245-CHAMPAGNE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30245",
+      "color": "Champagne/Gold",
+      "color_hex": "#dfceb4/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Curved Cracked Ice Gown w/ Jeweled Straps",
+      "description_text": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "description_html": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_champagne-gold__42__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_champagne-gold__43__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_champagne-gold__42__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_champagne-gold__43__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Curved"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder-Straps",
+          "Features Pocket",
+          "Necklace"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "446",
+        "color_value_id": "22",
+        "handle": "pr30245",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30245",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Curved Cracked Ice Gown w/ Jeweled Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30245-NAVY-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30245",
+      "color": "Navy Blue/Silver",
+      "color_hex": "#2F3C71/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Curved Cracked Ice Gown w/ Jeweled Straps",
+      "description_text": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "description_html": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_navyblue-silver__44__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_navyblue-silver__45__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_navyblue-silver__44__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_navyblue-silver__45__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Curved"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder-Straps",
+          "Features Pocket",
+          "Necklace"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "446",
+        "color_value_id": "51",
+        "handle": "pr30245",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30245",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Curved Cracked Ice Gown w/ Jeweled Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30245-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30245",
+      "color": "Rose Gold",
+      "color_hex": "#ddc3b4",
+      "category": "quince_gown",
+      "product_title": "Curved Cracked Ice Gown w/ Jeweled Straps",
+      "description_text": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "description_html": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_rosegold__46__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_rosegold__48__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_rosegold__46__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_rosegold__48__.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Curved"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder-Straps",
+          "Features Pocket",
+          "Necklace"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "446",
+        "color_value_id": "15",
+        "handle": "pr30245",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30245",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Curved Cracked Ice Gown w/ Jeweled Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30245-ROYAL-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30245",
+      "color": "Royal Blue/Silver",
+      "color_hex": "#0047ee/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Curved Cracked Ice Gown w/ Jeweled Straps",
+      "description_text": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "description_html": "Radiant and youthful, this curved quinceañera gown sparkles with cracked ice, intricate beading, and stone accents. It features a pocket, detachable off-the-shoulder straps adorned with jewels, a capelet, a necklace, detachable bow tails, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_royalblue-silver__49__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_royalblue-silver__50__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_royalblue-silver__49__.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30245/pr30245_royalblue-silver__50__.2000.webp",
+          "sequence": 8,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Curved"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder-Straps",
+          "Features Pocket",
+          "Necklace"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "446",
+        "color_value_id": "68",
+        "handle": "pr30245",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30245",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Curved Cracked Ice Gown w/ Jeweled Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30251-EMERALD-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30251",
+      "color": "Emerald/Gold",
+      "color_hex": "#0c483c/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train",
+      "description_text": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_emerald-gold__88__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_emerald-gold__89__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_emerald-gold__88__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_emerald-gold__89__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "452",
+        "color_value_id": "145",
+        "handle": "pr30251",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30251",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30251-LIGHT-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30251",
+      "color": "Light Blue/Silver",
+      "color_hex": "#cce6fd/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train",
+      "description_text": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_lightblue-silver__90__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_lightblue-silver__91__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_lightblue-silver__90__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_lightblue-silver__91__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "452",
+        "color_value_id": "65",
+        "handle": "pr30251",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30251",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30251-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30251",
+      "color": "Pink",
+      "color_hex": "#e8caca",
+      "category": "quince_gown",
+      "product_title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train",
+      "description_text": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Boning sculpts the bodice to perfection, while the extra-long train sweeps dramatically behind, enhanced by cracked ice, lace appliqués, an oversized back bow, and stone accents. It features pockets, detachable off-the-shoulder straps, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_pink__92__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_pink__94__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_pink__92__.2000.webp",
+          "sequence": 1,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30251/pr30251_pink__94__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "452",
+        "color_value_id": "7",
+        "handle": "pr30251",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30251",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Boned Bodice Quinceañera Gown w/ Extra-Long Train"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30246-EMERALD-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30246",
+      "color": "Emerald/Gold",
+      "color_hex": "#0c483c/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Unbelievable Train Gown w/ Semi-Sheer Bodice",
+      "description_text": "Timeless and poised, this sweetheart quinceañera gown mesmerizes with an unbelievable train and semi-sheer bodice accented by cracked ice, tulle, metallic lace appliqué, beading, sequins, and stone details. It features a separate cloak, detachable off-the-shoulder straps, bow, capelet, and back modesty panel.",
+      "description_html": "Timeless and poised, this sweetheart quinceañera gown mesmerizes with an unbelievable train and semi-sheer bodice accented by cracked ice, tulle, metallic lace appliqué, beading, sequins, and stone details. It features a separate cloak, detachable off-the-shoulder straps, bow, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__52__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__51__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__53__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__54__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__52__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__51__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__53__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_emerald-gold__54__.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Separate Cloak"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "447",
+        "color_value_id": "145",
+        "handle": "pr30246",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30246",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Unbelievable Train Gown w/ Semi-Sheer Bodice"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30246-ROSE-GOLD-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30246",
+      "color": "Rose Gold/Gold",
+      "color_hex": "#CC9900/#EDBCB8",
+      "category": "quince_gown",
+      "product_title": "Unbelievable Train Gown w/ Semi-Sheer Bodice",
+      "description_text": "Timeless and poised, this sweetheart quinceañera gown mesmerizes with an unbelievable train and semi-sheer bodice accented by cracked ice, tulle, metallic lace appliqué, beading, sequins, and stone details. It features a separate cloak, detachable off-the-shoulder straps, bow, capelet, and back modesty panel.",
+      "description_html": "Timeless and poised, this sweetheart quinceañera gown mesmerizes with an unbelievable train and semi-sheer bodice accented by cracked ice, tulle, metallic lace appliqué, beading, sequins, and stone details. It features a separate cloak, detachable off-the-shoulder straps, bow, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__56__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__57__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__55__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__59__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__60__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__56__.2000.webp",
+          "sequence": 1,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__57__.2000.webp",
+          "sequence": 2,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__55__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__59__.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30246/pr30246_rosegold-gold__60__.2000.webp",
+          "sequence": 8,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Separate Cloak"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "447",
+        "color_value_id": "221",
+        "handle": "pr30246",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30246",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Unbelievable Train Gown w/ Semi-Sheer Bodice"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30243-FAIRY-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30243",
+      "color": "Fairy Pink",
+      "color_hex": "#e8abb6",
+      "category": "quince_gown",
+      "product_title": "Cracked Ice Quinceañera Ball Gown w/ Oversized Back Bow",
+      "description_text": "Cracked ice tulle swirls with lace appliqués and three-dimensional flowers, laced with beading and sequins. Detachable overskirt, straps, capelet, and beautiful oversized back bow unveil her majesty—her night forever blooming.",
+      "description_html": "Cracked ice tulle swirls with lace appliqués and three-dimensional flowers, laced with beading and sequins. Detachable overskirt, straps, capelet, and beautiful oversized back bow unveil her majesty—her night forever blooming.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__29__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__30__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__28__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__32__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__29__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__30__.2000.webp",
+          "sequence": 2,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__28__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_fairypink__32__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Overskirt",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "444",
+        "color_value_id": "204",
+        "handle": "pr30243",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30243",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Cracked Ice Quinceañera Ball Gown w/ Oversized Back Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30243-PERIWINKLE",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30243",
+      "color": "Periwinkle",
+      "color_hex": "#bcc3e0",
+      "category": "quince_gown",
+      "product_title": "Cracked Ice Quinceañera Ball Gown w/ Oversized Back Bow",
+      "description_text": "Cracked ice tulle swirls with lace appliqués and three-dimensional flowers, laced with beading and sequins. Detachable overskirt, straps, capelet, and beautiful oversized back bow unveil her majesty—her night forever blooming.",
+      "description_html": "Cracked ice tulle swirls with lace appliqués and three-dimensional flowers, laced with beading and sequins. Detachable overskirt, straps, capelet, and beautiful oversized back bow unveil her majesty—her night forever blooming.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__34__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__33__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__35__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__34__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__33__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30243/pr30243_periwinkle__35__.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Overskirt",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "444",
+        "color_value_id": "82",
+        "handle": "pr30243",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30243",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Cracked Ice Quinceañera Ball Gown w/ Oversized Back Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30248-NAVY-BLUE-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30248",
+      "color": "Navy Blue/Rose Gold",
+      "color_hex": "#2f3c71/#bfac9e",
+      "category": "quince_gown",
+      "product_title": "Oversized Bow Drama Gown w/ Glitter Tulle",
+      "description_text": "This oversized bow is the drama! This sweetheart quinceañera gown commands the spotlight, featuring layers of glitter tulle, metallic lace appliqué, beading, sequins, and stone accents. It features pockets, detachable off-the-shoulder straps, bow tails, a brooch, a capelet, and a back modesty panel.",
+      "description_html": "This oversized bow is the drama! This sweetheart quinceañera gown commands the spotlight, featuring layers of glitter tulle, metallic lace appliqué, beading, sequins, and stone accents. It features pockets, detachable off-the-shoulder straps, bow tails, a brooch, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__67__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__68__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__69__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__67__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__68__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_navyblue-rosegold__69__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Brooch",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "449",
+        "color_value_id": "217",
+        "handle": "pr30248",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30248",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Oversized Bow Drama Gown w/ Glitter Tulle"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30248-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30248",
+      "color": "Rose Gold",
+      "color_hex": "#ddc3b4",
+      "category": "quince_gown",
+      "product_title": "Oversized Bow Drama Gown w/ Glitter Tulle",
+      "description_text": "This oversized bow is the drama! This sweetheart quinceañera gown commands the spotlight, featuring layers of glitter tulle, metallic lace appliqué, beading, sequins, and stone accents. It features pockets, detachable off-the-shoulder straps, bow tails, a brooch, a capelet, and a back modesty panel.",
+      "description_html": "This oversized bow is the drama! This sweetheart quinceañera gown commands the spotlight, featuring layers of glitter tulle, metallic lace appliqué, beading, sequins, and stone accents. It features pockets, detachable off-the-shoulder straps, bow tails, a brooch, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_rosegold__70__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_rosegold__72__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_rosegold__70__.2000.webp",
+          "sequence": 1,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30248/pr30248_rosegold__72__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow Tails",
+          "Detachable Brooch",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "449",
+        "color_value_id": "15",
+        "handle": "pr30248",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30248",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Oversized Bow Drama Gown w/ Glitter Tulle"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30241-LIGHT-BLUE",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30241",
+      "color": "Light Blue",
+      "color_hex": "#cce6fd",
+      "category": "quince_gown",
+      "product_title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows",
+      "description_text": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "description_html": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "image_urls": [],
+      "image_meta": [],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Corset Overskirt",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "442",
+        "color_value_id": "85",
+        "handle": "pr30241",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30241",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30241-RED",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30241",
+      "color": "Red",
+      "color_hex": "#ff0000",
+      "category": "quince_gown",
+      "product_title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows",
+      "description_text": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "description_html": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__16__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__17__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__19__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__16__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__17__.2000.webp",
+          "sequence": 3,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_red__19__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Corset Overskirt",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "442",
+        "color_value_id": "9",
+        "handle": "pr30241",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30241",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30241-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30241",
+      "color": "Rose Gold",
+      "color_hex": "#ddc3b4",
+      "category": "quince_gown",
+      "product_title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows",
+      "description_text": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "description_html": "Glitter tulle cascades into a sweetheart ball gown, alive with lace appliqués, shimmering beading, and sequins. Detachable corset overskirt, capelet, and bows let her reign as timeless royalty—her night, pure enchantment.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_rosegold__20__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_rosegold__22__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_rosegold__20__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30241/pr30241_rosegold__22__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Corset Overskirt",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "442",
+        "color_value_id": "15",
+        "handle": "pr30241",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30241",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Shimmering Glitter Tulle Ball Gown w/ Corset & Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30242-GOLD-BRONZE",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30242",
+      "color": "Gold/Bronze",
+      "color_hex": "#c2b39e/#ac876c",
+      "category": "quince_gown",
+      "product_title": "Metallic Lace Glitter Gown w/ Collar & Capelet",
+      "description_text": "Glitter tulle unfurls into a sweetheart ball gown, adorned with metallic lace appliqués, beading, and sequins that dance in the light. Detachable front collar, capelet, and pockets reveal her timeless enchantment.",
+      "description_html": "Glitter tulle unfurls into a sweetheart ball gown, adorned with metallic lace appliqués, beading, and sequins that dance in the light. Detachable front collar, capelet, and pockets reveal her timeless enchantment.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_gold-bronze__23__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_gold-bronze__25__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_gold-bronze__23__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_gold-bronze__25__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Tip-of-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "443",
+        "color_value_id": "218",
+        "handle": "pr30242",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30242",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Metallic Lace Glitter Gown w/ Collar & Capelet"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30242-PERIWINKLE-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30242",
+      "color": "Periwinkle/Rose Gold",
+      "color_hex": "#bcc3e0/#ddc3b4",
+      "category": "quince_gown",
+      "product_title": "Metallic Lace Glitter Gown w/ Collar & Capelet",
+      "description_text": "Glitter tulle unfurls into a sweetheart ball gown, adorned with metallic lace appliqués, beading, and sequins that dance in the light. Detachable front collar, capelet, and pockets reveal her timeless enchantment.",
+      "description_html": "Glitter tulle unfurls into a sweetheart ball gown, adorned with metallic lace appliqués, beading, and sequins that dance in the light. Detachable front collar, capelet, and pockets reveal her timeless enchantment.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_perwinkle-rosegold__26__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_perwinkle-rosegold__27__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_perwinkle-rosegold__26__.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30242/pr30242_perwinkle-rosegold__27__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Tulle"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Tip-of-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "443",
+        "color_value_id": "219",
+        "handle": "pr30242",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30242",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Metallic Lace Glitter Gown w/ Collar & Capelet"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30254-MAGENTA",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30254",
+      "color": "Magenta",
+      "color_hex": "#D5006C",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ Six Giant Bows",
+      "description_text": "Beautiful bows adorn this sweetheart quinceañera ballgown from every angle, with six giant bows cascading dramatically down the back for unrivaled wow. Cracked ice, lace appliqués, beading, sequins, stone accents, and three-dimensional flowers add to the magic, featuring pockets, detachable off-the-shoulder straps, a bow cape, a train, and a back modesty panel.",
+      "description_html": "Beautiful bows adorn this sweetheart quinceañera ballgown from every angle, with six giant bows cascading dramatically down the back for unrivaled wow. Cracked ice, lace appliqués, beading, sequins, stone accents, and three-dimensional flowers add to the magic, featuring pockets, detachable off-the-shoulder straps, a bow cape, a train, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_hotpink__106__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_hotpink__109__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_hotpink__106__.2000.webp",
+          "sequence": 1,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_hotpink__109__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Statement Bow Train",
+          "Features Pockets",
+          "Separate Bow Shawl"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "455",
+        "color_value_id": "223",
+        "handle": "pr30254",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30254",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ Six Giant Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30254-PETAL",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30254",
+      "color": "Petal",
+      "color_hex": "#dec6bc",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ Six Giant Bows",
+      "description_text": "Beautiful bows adorn this sweetheart quinceañera ballgown from every angle, with six giant bows cascading dramatically down the back for unrivaled wow. Cracked ice, lace appliqués, beading, sequins, stone accents, and three-dimensional flowers add to the magic, featuring pockets, detachable off-the-shoulder straps, a bow cape, a train, and a back modesty panel.",
+      "description_html": "Beautiful bows adorn this sweetheart quinceañera ballgown from every angle, with six giant bows cascading dramatically down the back for unrivaled wow. Cracked ice, lace appliqués, beading, sequins, stone accents, and three-dimensional flowers add to the magic, featuring pockets, detachable off-the-shoulder straps, a bow cape, a train, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__110__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__111__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__112__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__113__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__114__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__110__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__111__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__112__.2000.webp",
+          "sequence": 4,
+          "face": "back",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__113__.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30254/pr30254_petal__114__.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Statement Bow Train",
+          "Features Pockets",
+          "Separate Bow Shawl"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "455",
+        "color_value_id": "84",
+        "handle": "pr30254",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30254",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ Six Giant Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30253-ROYAL-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30253",
+      "color": "Royal Blue/Silver",
+      "color_hex": "#0047ee/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Lace-Up Corset Gown w/ Oversized Bows",
+      "description_text": "Lace-up corset detailing cinches the silhouette with romantic allure on this sweetheart quinceañera ballgown, crowned by oversized bows on the off-the-shoulder straps and back. Shimmering cracked ice, lace appliqués, beading, sequins, and stone accents elevate the drama, with detachable straps, capelet, and back modesty panel included.",
+      "description_html": "Lace-up corset detailing cinches the silhouette with romantic allure on this sweetheart quinceañera ballgown, crowned by oversized bows on the off-the-shoulder straps and back. Shimmering cracked ice, lace appliqués, beading, sequins, and stone accents elevate the drama, with detachable straps, capelet, and back modesty panel included.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__100__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__102__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__103__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__100__.2000.webp",
+          "sequence": 1,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__102__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_royalblue-silver__103__.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "454",
+        "color_value_id": "68",
+        "handle": "pr30253",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30253",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Lace-Up Corset Gown w/ Oversized Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30253-WINE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30253",
+      "color": "Wine/Gold",
+      "color_hex": "#6f0205/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Lace-Up Corset Gown w/ Oversized Bows",
+      "description_text": "Lace-up corset detailing cinches the silhouette with romantic allure on this sweetheart quinceañera ballgown, crowned by oversized bows on the off-the-shoulder straps and back. Shimmering cracked ice, lace appliqués, beading, sequins, and stone accents elevate the drama, with detachable straps, capelet, and back modesty panel included.",
+      "description_html": "Lace-up corset detailing cinches the silhouette with romantic allure on this sweetheart quinceañera ballgown, crowned by oversized bows on the off-the-shoulder straps and back. Shimmering cracked ice, lace appliqués, beading, sequins, and stone accents elevate the drama, with detachable straps, capelet, and back modesty panel included.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_wine-gold__104__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_wine-gold__105__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_wine-gold__104__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30253/pr30253_wine-gold__105__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "454",
+        "color_value_id": "52",
+        "handle": "pr30253",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30253",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Lace-Up Corset Gown w/ Oversized Bows"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30249-BLUSH",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30249",
+      "color": "Blush",
+      "color_hex": "#F9DDD2",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ 3D Flowers",
+      "description_text": "Three-dimensional organza flowers bloom dramatically at the skirt's base on this sweetheart quinceañera gown, set against cracked ice on glitter tulle, lace appliqués, beading, sequins, and stone accents. It features pockets, detachable back bow, jeweled shoulder straps, off-the-shoulder straps, capelet, and back modesty panel.",
+      "description_html": "Three-dimensional organza flowers bloom dramatically at the skirt's base on this sweetheart quinceañera gown, set against cracked ice on glitter tulle, lace appliqués, beading, sequins, and stone accents. It features pockets, detachable back bow, jeweled shoulder straps, off-the-shoulder straps, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__73__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__74__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__76__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__77__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__78__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__73__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__74__.2000.webp",
+          "sequence": 2,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__76__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__77__.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_blush__78__.2000.webp",
+          "sequence": 8,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice on Glitter Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers Organza"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Icluded",
+          "Detachable Back Bow",
+          "Detachable Jeweled Shoulder Straps",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "450",
+        "color_value_id": "35",
+        "handle": "pr30249",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30249",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ 3D Flowers"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30249-LILAC",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30249",
+      "color": "Lilac",
+      "color_hex": "#cec6f9",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ 3D Flowers",
+      "description_text": "Three-dimensional organza flowers bloom dramatically at the skirt's base on this sweetheart quinceañera gown, set against cracked ice on glitter tulle, lace appliqués, beading, sequins, and stone accents. It features pockets, detachable back bow, jeweled shoulder straps, off-the-shoulder straps, capelet, and back modesty panel.",
+      "description_html": "Three-dimensional organza flowers bloom dramatically at the skirt's base on this sweetheart quinceañera gown, set against cracked ice on glitter tulle, lace appliqués, beading, sequins, and stone accents. It features pockets, detachable back bow, jeweled shoulder straps, off-the-shoulder straps, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__79__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__80__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__81__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__79__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__80__.2000.webp",
+          "sequence": 4,
+          "face": "back",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30249/pr30249_lilac__81__.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice on Glitter Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers Organza"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Icluded",
+          "Detachable Back Bow",
+          "Detachable Jeweled Shoulder Straps",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "450",
+        "color_value_id": "77",
+        "handle": "pr30249",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30249",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ 3D Flowers"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30252-LIGHT-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30252",
+      "color": "Light Pink",
+      "color_hex": "#fae5e4",
+      "category": "quince_gown",
+      "product_title": "Illusion Neckline Gown w/ Glitter Dot Cutouts",
+      "description_text": "All-over glitter dot tulle sparkles endlessly on this ballgown, with an illusion sweetheart neckline and semi-sheer bodice cutouts adding alluring mystery. Enhanced by lace appliqués, beading, sequins, and stone accents, it features pockets, detachable off-the-shoulder straps, a bow, a capelet, and a back modesty panel.",
+      "description_html": "All-over glitter dot tulle sparkles endlessly on this ballgown, with an illusion sweetheart neckline and semi-sheer bodice cutouts adding alluring mystery. Enhanced by lace appliqués, beading, sequins, and stone accents, it features pockets, detachable off-the-shoulder straps, a bow, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_lightpink__95__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_lightpink__96__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_lightpink__95__.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_lightpink__96__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Dot Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "453",
+        "color_value_id": "78",
+        "handle": "pr30252",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30252",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Illusion Neckline Gown w/ Glitter Dot Cutouts"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30252-NAVY-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30252",
+      "color": "Navy Blue/Silver",
+      "color_hex": "#2F3C71/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Illusion Neckline Gown w/ Glitter Dot Cutouts",
+      "description_text": "All-over glitter dot tulle sparkles endlessly on this ballgown, with an illusion sweetheart neckline and semi-sheer bodice cutouts adding alluring mystery. Enhanced by lace appliqués, beading, sequins, and stone accents, it features pockets, detachable off-the-shoulder straps, a bow, a capelet, and a back modesty panel.",
+      "description_html": "All-over glitter dot tulle sparkles endlessly on this ballgown, with an illusion sweetheart neckline and semi-sheer bodice cutouts adding alluring mystery. Enhanced by lace appliqués, beading, sequins, and stone accents, it features pockets, detachable off-the-shoulder straps, a bow, a capelet, and a back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__97__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__98__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__99__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__97__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__98__.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30252/pr30252_navyblue-silver__99__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Dot Tulle",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "453",
+        "color_value_id": "51",
+        "handle": "pr30252",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30252",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Illusion Neckline Gown w/ Glitter Dot Cutouts"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30244-LIGHT-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30244",
+      "color": "Light Blue/Silver",
+      "color_hex": "#cce6fd/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Structured Jacquard Ball Gown w/ Lace & Pockets",
+      "description_text": "Radiant and poised, this sweetheart quinceañera gown dazzles with structured jacquard beneath layered lace appliqués, sparkling beading, sequins, and stone accents. It features a detachable bow, delicate capelet, hidden pockets, and back modesty panel.",
+      "description_html": "Radiant and poised, this sweetheart quinceañera gown dazzles with structured jacquard beneath layered lace appliqués, sparkling beading, sequins, and stone accents. It features a detachable bow, delicate capelet, hidden pockets, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__36__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__37__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__38__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__39__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__36__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__37__.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__38__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightblue-silver__39__.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Jacquard",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Dropped"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "445",
+        "color_value_id": "65",
+        "handle": "pr30244",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30244",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Structured Jacquard Ball Gown w/ Lace & Pockets"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30244-LIGHT-PINK-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30244",
+      "color": "Light Pink/Gold",
+      "color_hex": "#FDECF4/#CC9900",
+      "category": "quince_gown",
+      "product_title": "Structured Jacquard Ball Gown w/ Lace & Pockets",
+      "description_text": "Radiant and poised, this sweetheart quinceañera gown dazzles with structured jacquard beneath layered lace appliqués, sparkling beading, sequins, and stone accents. It features a detachable bow, delicate capelet, hidden pockets, and back modesty panel.",
+      "description_html": "Radiant and poised, this sweetheart quinceañera gown dazzles with structured jacquard beneath layered lace appliqués, sparkling beading, sequins, and stone accents. It features a detachable bow, delicate capelet, hidden pockets, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightpink-gold__40__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightpink-gold__41__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightpink-gold__40__.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30244/pr30244_lightpink-gold__41__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Jacquard",
+          "Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Bow",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Dropped"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "445",
+        "color_value_id": "220",
+        "handle": "pr30244",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30244",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Structured Jacquard Ball Gown w/ Lace & Pockets"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30250-EMERALD-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30250",
+      "color": "Emerald/Gold",
+      "color_hex": "#0c483c/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ Flower Straps",
+      "description_text": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_emerald-gold__82__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_emerald-gold__83__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_emerald-gold__82__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_emerald-gold__83__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Dot Tulle",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Sleeve Drape",
+          "Detachable Train"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "451",
+        "color_value_id": "145",
+        "handle": "pr30250",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30250",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ Flower Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30250-IVORY-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30250",
+      "color": "Ivory/Gold",
+      "color_hex": "#F5F0ED/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ Flower Straps",
+      "description_text": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "image_urls": [],
+      "image_meta": [],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Dot Tulle",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Sleeve Drape",
+          "Detachable Train"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "451",
+        "color_value_id": "96",
+        "handle": "pr30250",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30250",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ Flower Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30250-RED-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30250",
+      "color": "Red/Gold",
+      "color_hex": "#FF0000/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Quinceañera Ball Gown w/ Flower Straps",
+      "description_text": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "description_html": "Shine all night long in this gorgeous ballgown. Glitter dot tulle cascades over the skirt, while three-dimensional flowers bloom delicately on the off-the-shoulder straps—complemented by metallic lace appliqués, beading, sequins, and stone accents. It features a detachable train, off-the-shoulder straps, sleeve drape, bow, capelet, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__84__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__86__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__85__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__87__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__84__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__86__.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__85__.2000.webp",
+          "sequence": 2,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30250/pr30250_red-gold__87__.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Dot Tulle",
+          "Glitter Tulle",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents",
+          "Three-Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel lncluded",
+          "Capelet Included",
+          "Detachable Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Detachable Sleeve Drape",
+          "Detachable Train"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "451",
+        "color_value_id": "54",
+        "handle": "pr30250",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30250",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Quinceañera Ball Gown w/ Flower Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30247-AMETHYST-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30247",
+      "color": "Amethyst/Gold",
+      "color_hex": "#c2b39e/#4d385c",
+      "category": "quince_gown",
+      "product_title": "Liquid Satin Gown w/ Draped Jewel Sleeves",
+      "description_text": "Step into magic with this sweetheart quinceañera gown, where elegant liquid satin flows and draped jewels grace the off-the-shoulder sleeves, accented by metallic lace appliqué, beading, sequins, and stone details. It features pockets, a detachable back bow, detachable off-the-shoulder straps, and back modesty panel.",
+      "description_html": "Step into magic with this sweetheart quinceañera gown, where elegant liquid satin flows and draped jewels grace the off-the-shoulder sleeves, accented by metallic lace appliqué, beading, sequins, and stone details. It features pockets, a detachable back bow, detachable off-the-shoulder straps, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__62__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__63__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__64__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__62__.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__63__.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_amethyst-gold__64__.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Liquid Satin",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "448",
+        "color_value_id": "222",
+        "handle": "pr30247",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30247",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Liquid Satin Gown w/ Draped Jewel Sleeves"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30247-EMERALD-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30247",
+      "color": "Emerald/Gold",
+      "color_hex": "#0c483c/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Liquid Satin Gown w/ Draped Jewel Sleeves",
+      "description_text": "Step into magic with this sweetheart quinceañera gown, where elegant liquid satin flows and draped jewels grace the off-the-shoulder sleeves, accented by metallic lace appliqué, beading, sequins, and stone details. It features pockets, a detachable back bow, detachable off-the-shoulder straps, and back modesty panel.",
+      "description_html": "Step into magic with this sweetheart quinceañera gown, where elegant liquid satin flows and draped jewels grace the off-the-shoulder sleeves, accented by metallic lace appliqué, beading, sequins, and stone details. It features pockets, a detachable back bow, detachable off-the-shoulder straps, and back modesty panel.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_emerald-gold__65__.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_emerald-gold__66__.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_emerald-gold__65__.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/13735/pr30247/pr30247_emerald-gold__66__.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Liquid Satin",
+          "Metallic Lace Appliqué",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "13735",
+        "product_id": "448",
+        "color_value_id": "145",
+        "handle": "pr30247",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/fall-2026/pr30247",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Fall 2026",
+        "title": "Liquid Satin Gown w/ Draped Jewel Sleeves"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30221-FAIRY-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30221",
+      "color": "Fairy Pink",
+      "color_hex": "#e8abb6",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles",
+      "description_text": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "description_html": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_fairy-pink_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_fairy-pink__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_fairy-pink_.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_fairy-pink__2.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "418",
+        "color_value_id": "204",
+        "handle": "pr30221",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30221",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30221-NAVY-BLUE-ANTIQUE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30221",
+      "color": "Navy Blue/Antique Gold",
+      "color_hex": "#2F3C71/#b89b77",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles",
+      "description_text": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "description_html": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30221/pr30221_navy-blue-antique-gold__4.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "418",
+        "color_value_id": "205",
+        "handle": "pr30221",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30221",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30221-SLATE-ANTIQUE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30221",
+      "color": "Slate/Antique Gold",
+      "color_hex": "#afb7c0/#B89B77",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles",
+      "description_text": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "description_html": "This off-the-shoulder ball gown features a structured boned bodice for support and shape, complemented by soft ruffles gracefully cascading across the hip. Delicate sequins and stone accents on glitter tulle enhance the romantic silhouette.",
+      "image_urls": [
+        "uploads/images/products/418/1a3b5b78_200f_41e0_9f28_75b14bb79b3d.webp?w=340",
+        "uploads/images/products/418/f7b73870_93f1_4a7c_80a2_670437cf6513.webp?w=340"
+      ],
+      "image_meta": [
+        {
+          "url": "uploads/images/products/418/1a3b5b78_200f_41e0_9f28_75b14bb79b3d.webp?w=340",
+          "sequence": 2,
+          "face": "unknown",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "uploads/images/products/418/f7b73870_93f1_4a7c_80a2_670437cf6513.webp?w=340",
+          "sequence": 5,
+          "face": "unknown",
+          "crop": "full",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "418",
+        "color_value_id": "206",
+        "handle": "pr30221",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30221",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Ball Gown w/ Boned Bodice & Ruffles"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30230-CHAMPAGNE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30230",
+      "color": "Champagne/Gold",
+      "color_hex": "#dfceb4/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace",
+      "description_text": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "description_html": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_champagne-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_champagne-gold__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_champagne-gold_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_champagne-gold__2.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "427",
+        "color_value_id": "22",
+        "handle": "pr30230",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30230",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30230-NAVY-BLUE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30230",
+      "color": "Navy Blue/Gold",
+      "color_hex": "#2F3C71/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace",
+      "description_text": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "description_html": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_navy-blue-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_navy-blue-gold__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_navy-blue-gold_.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_navy-blue-gold__2.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "427",
+        "color_value_id": "95",
+        "handle": "pr30230",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30230",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30230-ROSE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30230",
+      "color": "Rose Gold",
+      "color_hex": "#ddc3b4",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace",
+      "description_text": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "description_html": "Radiate charm in this off‑the‑shoulder ball gown dazzles with a sweetheart neckline framed by a sparkling necklace that catches every light. Beading, sequins, and lace appliqué shimmer across layers of glitter tulle and crinoline, creating a radiant, full silhouette. A dramatic detachable back bow and flowing capelet add a signature finish, while removable straps and a modesty panel offer a beautifully refined fit.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_rose-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_rose-gold__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_rose-gold_.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30230/pr30230_rose-gold__4.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps",
+          "Necklace Included"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "427",
+        "color_value_id": "15",
+        "handle": "pr30230",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30230",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ Detachable Bow & Necklace"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30226-CHAMPAGNE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30226",
+      "color": "Champagne/Gold",
+      "color_hex": "#dfceb4/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ Bow & Pockets",
+      "description_text": "Radiant and youthful, this sweetheart quinceañera gown shines with glitter tulle, lace appliqué, and sparkling bead and sequin accents. It features a detachable back bow with tails, a delicate capelet, hidden pockets, and a coordinating necklace.",
+      "description_html": "Radiant and youthful, this sweetheart quinceañera gown shines with glitter tulle, lace appliqué, and sparkling bead and sequin accents. It features a detachable back bow with tails, a delicate capelet, hidden pockets, and a coordinating necklace.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_champagne-gold__4.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "423",
+        "color_value_id": "22",
+        "handle": "pr30226",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30226",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ Bow & Pockets"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30226-LAVENDER-LIGHT-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30226",
+      "color": "Lavender/Light Gold",
+      "color_hex": "#967BB6/#D5C19E",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ Bow & Pockets",
+      "description_text": "Radiant and youthful, this sweetheart quinceañera gown shines with glitter tulle, lace appliqué, and sparkling bead and sequin accents. It features a detachable back bow with tails, a delicate capelet, hidden pockets, and a coordinating necklace.",
+      "description_html": "Radiant and youthful, this sweetheart quinceañera gown shines with glitter tulle, lace appliqué, and sparkling bead and sequin accents. It features a detachable back bow with tails, a delicate capelet, hidden pockets, and a coordinating necklace.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_lavender-light-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_lavender-light-gold__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_lavender-light-gold_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30226/pr30226_lavender-light-gold__2.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "423",
+        "color_value_id": "140",
+        "handle": "pr30226",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30226",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ Bow & Pockets"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30228-BALLERINA-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30228",
+      "color": "Ballerina Pink",
+      "color_hex": "#F8B5BE",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Cracked Ice Ball Gown w/ Tiered Straps",
+      "description_text": "This breathtaking ball gown shines in cracked ice fabric, its sweetheart neckline framed by three‑tier off‑the‑shoulder straps that shimmer with beading, sequins, and lace appliqué. Layers of crinoline create a regal silhouette accented by radiant stone details and a flowing capelet.",
+      "description_html": "This breathtaking ball gown shines in cracked ice fabric, its sweetheart neckline framed by three‑tier off‑the‑shoulder straps that shimmer with beading, sequins, and lace appliqué. Layers of crinoline create a regal silhouette accented by radiant stone details and a flowing capelet.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_ballerina-pink_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_ballerina-pink__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_ballerina-pink_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_ballerina-pink__2.2000.webp",
+          "sequence": 5,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "425",
+        "color_value_id": "211",
+        "handle": "pr30228",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30228",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Cracked Ice Ball Gown w/ Tiered Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30228-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30228",
+      "color": "Gold",
+      "color_hex": "#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Cracked Ice Ball Gown w/ Tiered Straps",
+      "description_text": "This breathtaking ball gown shines in cracked ice fabric, its sweetheart neckline framed by three‑tier off‑the‑shoulder straps that shimmer with beading, sequins, and lace appliqué. Layers of crinoline create a regal silhouette accented by radiant stone details and a flowing capelet.",
+      "description_html": "This breathtaking ball gown shines in cracked ice fabric, its sweetheart neckline framed by three‑tier off‑the‑shoulder straps that shimmer with beading, sequins, and lace appliqué. Layers of crinoline create a regal silhouette accented by radiant stone details and a flowing capelet.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__3.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__4.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__5.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__3.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__4.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30228/pr30228_gold__5.2000.webp",
+          "sequence": 4,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "425",
+        "color_value_id": "5",
+        "handle": "pr30228",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30228",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Cracked Ice Ball Gown w/ Tiered Straps"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30229-ROYAL-BLUE",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30229",
+      "color": "Royal Blue",
+      "color_hex": "#0047ee",
+      "category": "quince_gown",
+      "product_title": "Beaded Ball Gown w/ Pockets & Detachable Bow",
+      "description_text": "Crafted for modern royal flair, this off‑the‑shoulder ball gown features a sculpted sweetheart bodice adorned with beading, sequins, and lace appliqué. The dramatic detachable back bow adds a statement finish, balancing grandeur with graceful movement.",
+      "description_html": "Crafted for modern royal flair, this off‑the‑shoulder ball gown features a sculpted sweetheart bodice adorned with beading, sequins, and lace appliqué. The dramatic detachable back bow adds a statement finish, balancing grandeur with graceful movement.",
+      "image_urls": [],
+      "image_meta": [],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "426",
+        "color_value_id": "48",
+        "handle": "pr30229",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30229",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Beaded Ball Gown w/ Pockets & Detachable Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30229-RUBY",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30229",
+      "color": "Ruby",
+      "color_hex": "#AD2227",
+      "category": "quince_gown",
+      "product_title": "Beaded Ball Gown w/ Pockets & Detachable Bow",
+      "description_text": "Crafted for modern royal flair, this off‑the‑shoulder ball gown features a sculpted sweetheart bodice adorned with beading, sequins, and lace appliqué. The dramatic detachable back bow adds a statement finish, balancing grandeur with graceful movement.",
+      "description_html": "Crafted for modern royal flair, this off‑the‑shoulder ball gown features a sculpted sweetheart bodice adorned with beading, sequins, and lace appliqué. The dramatic detachable back bow adds a statement finish, balancing grandeur with graceful movement.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby__3.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30229/pr30229_ruby__3.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Glitter Tulle",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Bow Tails",
+          "Detachable Off-the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "426",
+        "color_value_id": "100",
+        "handle": "pr30229",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30229",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Beaded Ball Gown w/ Pockets & Detachable Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30224-DIAMOND-CHAMPAGNE-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30224",
+      "color": "Diamond/Champagne/Gold",
+      "color_hex": "#c2b39e/#F7E7CE/#EDEEEE",
+      "category": "quince_gown",
+      "product_title": "Glitter Tulle Ball Gown w/ Stone-Accented Sleeves & Back Bow",
+      "description_text": "Sophisticated and radiant, this sweetheart ball gown showcases cracked ice fabric layered with metallic lace appliqué, sparkling sequins, and stone accents. It features elegant off-the-shoulder straps, a detachable back bow, and a graceful capelet.",
+      "description_html": "Sophisticated and radiant, this sweetheart ball gown showcases cracked ice fabric layered with metallic lace appliqué, sparkling sequins, and stone accents. It features elegant off-the-shoulder straps, a detachable back bow, and a graceful capelet.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_diamond-champagne-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_diamond-champagne-gold__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_diamond-champagne-gold_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_diamond-champagne-gold__2.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Metallic Lace Applique",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "421",
+        "color_value_id": "208",
+        "handle": "pr30224",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30224",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Glitter Tulle Ball Gown w/ Stone-Accented Sleeves & Back Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30224-ROYAL-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30224",
+      "color": "Royal/Silver",
+      "color_hex": "#002366/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Glitter Tulle Ball Gown w/ Stone-Accented Sleeves & Back Bow",
+      "description_text": "Sophisticated and radiant, this sweetheart ball gown showcases cracked ice fabric layered with metallic lace appliqué, sparkling sequins, and stone accents. It features elegant off-the-shoulder straps, a detachable back bow, and a graceful capelet.",
+      "description_html": "Sophisticated and radiant, this sweetheart ball gown showcases cracked ice fabric layered with metallic lace appliqué, sparkling sequins, and stone accents. It features elegant off-the-shoulder straps, a detachable back bow, and a graceful capelet.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__5.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__6.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__2.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__5.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30224/pr30224_royal-blue-silver__6.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Metallic Lace Applique",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "421",
+        "color_value_id": "127",
+        "handle": "pr30224",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30224",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Glitter Tulle Ball Gown w/ Stone-Accented Sleeves & Back Bow"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30222-DUSTY-ROSE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30222",
+      "color": "Dusty Rose/Silver",
+      "color_hex": "#CEABA9/#c0c0c0",
+      "category": "quince_gown",
+      "product_title": "Double-Tier Sweetheart Neckline Gown w/ Halter Cape",
+      "description_text": "This elegant ball gown features a double-tier sweetheart neckline crafted from shimmering cracked ice fabric and metallic lace appliqué. A detachable halter-style cape and stone accents give this dress a dramatic finish.",
+      "description_html": "This elegant ball gown features a double-tier sweetheart neckline crafted from shimmering cracked ice fabric and metallic lace appliqué. A detachable halter-style cape and stone accents give this dress a dramatic finish.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__3.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__2.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__3.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_dusty-rose-silver__4.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Cracked Ice",
+          "Metallic Lace Applique",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Back Bow Tails",
+          "Detachable Back Long Drapes",
+          "Detachable Off-the-Shoulder-Necklace-Drape"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "419",
+        "color_value_id": "207",
+        "handle": "pr30222",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30222",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Double-Tier Sweetheart Neckline Gown w/ Halter Cape"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30222-RED-GOLD",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30222",
+      "color": "Red/Gold",
+      "color_hex": "#FF0000/#c2b39e",
+      "category": "quince_gown",
+      "product_title": "Double-Tier Sweetheart Neckline Gown w/ Halter Cape",
+      "description_text": "This elegant ball gown features a double-tier sweetheart neckline crafted from shimmering cracked ice fabric and metallic lace appliqué. A detachable halter-style cape and stone accents give this dress a dramatic finish.",
+      "description_html": "This elegant ball gown features a double-tier sweetheart neckline crafted from shimmering cracked ice fabric and metallic lace appliqué. A detachable halter-style cape and stone accents give this dress a dramatic finish.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__3.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__3.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30222/pr30222_red-gold__4.2000.webp",
+          "sequence": 7,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Cracked Ice",
+          "Metallic Lace Applique",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Back Bow Tails",
+          "Detachable Back Long Drapes",
+          "Detachable Off-the-Shoulder-Necklace-Drape"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "419",
+        "color_value_id": "54",
+        "handle": "pr30222",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30222",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Double-Tier Sweetheart Neckline Gown w/ Halter Cape"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30225-PETAL-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30225",
+      "color": "Petal Pink",
+      "color_hex": "#E5ABC7",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ 3D Butterflies",
+      "description_text": "Delightfully whimsical, this strapless sweetheart ball gown dazzles with glitter tulle, cracked ice fabric, and lace appliqué accented by shimmering sequins and stone details. Three-dimensional butterflies and a detachable draped beaded bow overlay add enchanting dimension, complemented by a graceful capelet.",
+      "description_html": "Delightfully whimsical, this strapless sweetheart ball gown dazzles with glitter tulle, cracked ice fabric, and lace appliqué accented by shimmering sequins and stone details. Three-dimensional butterflies and a detachable draped beaded bow overlay add enchanting dimension, complemented by a graceful capelet.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink__3.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30225/pr30225_petal-pink__3.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Butterflies",
+          "Cracked Ice",
+          "Glitter Tulle",
+          "Lace applique",
+          "Sequin",
+          "Stone Accents",
+          "Three Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Strapless"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Draped Beaded Bow Overlay",
+          "Detachable Long Over-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "422",
+        "color_value_id": "209",
+        "handle": "pr30225",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30225",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ 3D Butterflies"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30225-LIGHT-BLUE",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30225",
+      "color": "Light Blue",
+      "color_hex": "#cce6fd",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Glitter Tulle Ball Gown w/ 3D Butterflies",
+      "description_text": "Delightfully whimsical, this strapless sweetheart ball gown dazzles with glitter tulle, cracked ice fabric, and lace appliqué accented by shimmering sequins and stone details. Three-dimensional butterflies and a detachable draped beaded bow overlay add enchanting dimension, complemented by a graceful capelet.",
+      "description_html": "Delightfully whimsical, this strapless sweetheart ball gown dazzles with glitter tulle, cracked ice fabric, and lace appliqué accented by shimmering sequins and stone details. Three-dimensional butterflies and a detachable draped beaded bow overlay add enchanting dimension, complemented by a graceful capelet.",
+      "image_urls": [
+        "uploads/images/products/422/7254d556_f0df_406d_be35_5eb8f6e66a38.webp?w=340",
+        "uploads/images/products/422/0ccacc1a_09f4_49d6_9278_61a54f1c31f9.webp?w=340"
+      ],
+      "image_meta": [
+        {
+          "url": "uploads/images/products/422/7254d556_f0df_406d_be35_5eb8f6e66a38.webp?w=340",
+          "sequence": 2,
+          "face": "unknown",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "uploads/images/products/422/0ccacc1a_09f4_49d6_9278_61a54f1c31f9.webp?w=340",
+          "sequence": 3,
+          "face": "unknown",
+          "crop": "full",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Butterflies",
+          "Cracked Ice",
+          "Glitter Tulle",
+          "Lace applique",
+          "Sequin",
+          "Stone Accents",
+          "Three Dimensional Flowers"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Strapless"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Draped Beaded Bow Overlay",
+          "Detachable Long Over-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "422",
+        "color_value_id": "85",
+        "handle": "pr30225",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30225",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Glitter Tulle Ball Gown w/ 3D Butterflies"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30223-LILAC-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30223",
+      "color": "Lilac/Silver",
+      "color_hex": "#cec6f9/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Semi-Sheer Bodice Ball Gown w/ Jeweled Cape",
+      "description_text": "Delicate semi-sheer detailing adorns the sweetheart bodice, beautifully accented by shimmering beadwork. A sparkling jeweled cape completes this strapless ball gown, adding an elegant touch.",
+      "description_html": "Delicate semi-sheer detailing adorns the sweetheart bodice, beautifully accented by shimmering beadwork. A sparkling jeweled cape completes this strapless ball gown, adding an elegant touch.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_lilac-silver_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_lilac-silver__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_lilac-silver_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_lilac-silver__2.2000.webp",
+          "sequence": 6,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Sequin Applique",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Strapless"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Long Cape"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "420",
+        "color_value_id": "55",
+        "handle": "pr30223",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30223",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Semi-Sheer Bodice Ball Gown w/ Jeweled Cape"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30223-NAVY-BLUE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30223",
+      "color": "Navy Blue/Silver",
+      "color_hex": "#2F3C71/#C9C9C9",
+      "category": "quince_gown",
+      "product_title": "Sweetheart Semi-Sheer Bodice Ball Gown w/ Jeweled Cape",
+      "description_text": "Delicate semi-sheer detailing adorns the sweetheart bodice, beautifully accented by shimmering beadwork. A sparkling jeweled cape completes this strapless ball gown, adding an elegant touch.",
+      "description_html": "Delicate semi-sheer detailing adorns the sweetheart bodice, beautifully accented by shimmering beadwork. A sparkling jeweled cape completes this strapless ball gown, adding an elegant touch.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver__4.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver__5.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver_.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver__4.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30223/pr30223_navy-blue-silver__5.2000.webp",
+          "sequence": 5,
+          "face": "back",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Glitter Tulle",
+          "Sequin Applique",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Strapless"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Long Cape"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "420",
+        "color_value_id": "51",
+        "handle": "pr30223",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30223",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Sweetheart Semi-Sheer Bodice Ball Gown w/ Jeweled Cape"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30231-HONEYSUCKLE-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30231",
+      "color": "Honeysuckle/Silver",
+      "color_hex": "#c8b99c/#c0c0c0",
+      "category": "quince_gown",
+      "product_title": "Stone Accent Off-the-Shoulder Ball Gown",
+      "description_text": "Dazzle from every angle in this sparkling ball gown featuring a cracked ice overlay and intricate lace appliqués. The draped off-the-shoulder straps shimmer with radiant stone accents. The sweetheart neckline, corset-style bodice, and detachable bow add a regal finish to this unforgettable look!",
+      "description_html": "Dazzle from every angle in this sparkling ball gown featuring a cracked ice overlay and intricate lace appliqués. The draped off-the-shoulder straps shimmer with radiant stone accents. The sweetheart neckline, corset-style bodice, and detachable bow add a regal finish to this unforgettable look!",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__3.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__4.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__2.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__3.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_honeysuckle-silver__4.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "428",
+        "color_value_id": "213",
+        "handle": "pr30231",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30231",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Stone Accent Off-the-Shoulder Ball Gown"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30231-PINK-SILVER",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30231",
+      "color": "Pink/Silver",
+      "color_hex": "#e8caca/#c0c0c0",
+      "category": "quince_gown",
+      "product_title": "Stone Accent Off-the-Shoulder Ball Gown",
+      "description_text": "Dazzle from every angle in this sparkling ball gown featuring a cracked ice overlay and intricate lace appliqués. The draped off-the-shoulder straps shimmer with radiant stone accents. The sweetheart neckline, corset-style bodice, and detachable bow add a regal finish to this unforgettable look!",
+      "description_html": "Dazzle from every angle in this sparkling ball gown featuring a cracked ice overlay and intricate lace appliqués. The draped off-the-shoulder straps shimmer with radiant stone accents. The sweetheart neckline, corset-style bodice, and detachable bow add a regal finish to this unforgettable look!",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_pink-silver_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_pink-silver__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_pink-silver_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30231/pr30231_pink-silver__2.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Cracked Ice",
+          "Lace Appliques",
+          "Sequin",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Back Modesty Panel Included",
+          "Capelet Included",
+          "Detachable Back Bow",
+          "Detachable Off-the-Shoulder Straps"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "428",
+        "color_value_id": "212",
+        "handle": "pr30231",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30231",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Stone Accent Off-the-Shoulder Ball Gown"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30232-PETAL-PINK",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30232",
+      "color": "Petal Pink",
+      "color_hex": "#E5ABC7",
+      "category": "quince_gown",
+      "product_title": "Off-the-Shoulder 3D Floral Organza Ball Gown",
+      "description_text": "A romance of structure and sparkle, this off‑the‑shoulder ball gown captivates with its sweetheart neckline and shimmering stone‑accented beading. Layers of organza and crinoline create a full, sculpted silhouette enhanced by detachable straps and a flowing capelet for a look that transforms effortlessly. Hidden pockets bring a modern, effortless detail to this enchanting design.",
+      "description_html": "A romance of structure and sparkle, this off‑the‑shoulder ball gown captivates with its sweetheart neckline and shimmering stone‑accented beading. Layers of organza and crinoline create a full, sculpted silhouette enhanced by detachable straps and a flowing capelet for a look that transforms effortlessly. Hidden pockets bring a modern, effortless detail to this enchanting design.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink__2.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink__3.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink_.2000.webp",
+          "sequence": 0,
+          "face": "front",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink__2.2000.webp",
+          "sequence": 1,
+          "face": "back",
+          "crop": "full",
+          "is_default": true
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_petal-pink__3.2000.webp",
+          "sequence": 4,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Organza",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Capelet Included",
+          "Detachable Off -the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "429",
+        "color_value_id": "209",
+        "handle": "pr30232",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30232",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Off-the-Shoulder 3D Floral Organza Ball Gown"
+      }
+    },
+    {
+      "internal_sku": "ARIA-PR30232-RED",
+      "designer": "Ariana Vara",
+      "house_name": "Princesa",
+      "style_number": "PR30232",
+      "color": "Red",
+      "color_hex": "#ff0000",
+      "category": "quince_gown",
+      "product_title": "Off-the-Shoulder 3D Floral Organza Ball Gown",
+      "description_text": "A romance of structure and sparkle, this off‑the‑shoulder ball gown captivates with its sweetheart neckline and shimmering stone‑accented beading. Layers of organza and crinoline create a full, sculpted silhouette enhanced by detachable straps and a flowing capelet for a look that transforms effortlessly. Hidden pockets bring a modern, effortless detail to this enchanting design.",
+      "description_html": "A romance of structure and sparkle, this off‑the‑shoulder ball gown captivates with its sweetheart neckline and shimmering stone‑accented beading. Layers of organza and crinoline create a full, sculpted silhouette enhanced by detachable straps and a flowing capelet for a look that transforms effortlessly. Hidden pockets bring a modern, effortless detail to this enchanting design.",
+      "image_urls": [
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_red_.2000.webp",
+        "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_red__2.2000.webp"
+      ],
+      "image_meta": [
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_red_.2000.webp",
+          "sequence": 2,
+          "face": "front",
+          "crop": "full",
+          "is_default": false
+        },
+        {
+          "url": "https://dy9ihb9itgy3g.cloudfront.net/products/12887/pr30232/pr30232_red__2.2000.webp",
+          "sequence": 3,
+          "face": "front",
+          "crop": "cropped",
+          "is_default": false
+        }
+      ],
+      "size_range": "00 - 26",
+      "attributes": {
+        "fabric": [
+          "Beading",
+          "Organza",
+          "Stone Accents"
+        ],
+        "length": [
+          "Long"
+        ],
+        "neckline": [
+          "Sweetheart"
+        ],
+        "silhouette": [
+          "Ball Gown"
+        ],
+        "sleeve_type": [
+          "Off-the-Shoulder"
+        ],
+        "special_features": [
+          "Capelet Included",
+          "Detachable Off -the-Shoulder Straps",
+          "Features Pockets"
+        ],
+        "waistline": [
+          "Basque"
+        ]
+      },
+      "raw_tags": [],
+      "public_code": null,
+      "active": true,
+      "is_sample": false,
+      "source": {
+        "platform": "syvo_storefront",
+        "vendor_account": "12887",
+        "product_id": "429",
+        "color_value_id": "9",
+        "handle": "pr30232",
+        "product_url": "https://www.arianavara.com/princesa-quinceanera-dresses/spring-2026/pr30232",
+        "source_url": "https://www.arianavara.com/categories/latest-collection",
+        "product_type": "Princesa Quinceanera Dresses › Spring 2026",
+        "title": "Off-the-Shoulder 3D Floral Organza Ball Gown"
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{# Phase 6: shared payment schedule table for both quote and invoice
+   PDFs. The invoice variant adds a Status column so customers see
+   what they have already paid; the quote variant omits it (quotes
+   never carry payment state). Header text is parameterised so the
+   quote PDF can read "Payment terms" while the invoice PDF keeps
+   the historical "Payment schedule" wording. #}
+{% if installments %}
+<h2>{{ schedule_header or "Payment schedule" }}</h2>
+<table class="schedule-table">
+  <thead>
+    <tr>
+      <th>What</th>
+      <th>When</th>
+      <th>Amount</th>
+      {% if show_payment_status %}<th>Status</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for inst in installments %}
+    <tr>
+      <td>{{ inst.label or "Installment %d" | format(loop.index) }}</td>
+      <td>{{ inst.due_date | fdate }}</td>
+      <td>{{ inst.amount_cents | money }}</td>
+      {% if show_payment_status %}
+      <td>{% if inst.paid_at %}<span class="paid">Paid</span>{% else %}<span class="due">Due</span>{% endif %}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

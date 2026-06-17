@@ -1,0 +1,77 @@
+{% extends "portal/base.html" %}
+{% block title %}Invoice {{ inv.invoice_number or '' }} · {{ business.legal_name }}{% endblock %}
+
+{% block main %}
+<section class="portal-doc-head">
+  <div class="doc-title">
+    <div class="doc-kind">Invoice</div>
+    <div class="doc-number">{{ inv.invoice_number or 'Draft' }}</div>
+  </div>
+  <div class="doc-meta">
+    <div><span class="meta-label">Issued</span> {{ inv.issue_date }}</div>
+    {% if inv.due_date %}<div><span class="meta-label">Due</span> {{ inv.due_date }}</div>{% endif %}
+    <div><span class="meta-label">For</span> {{ inv.contact.display_name }}</div>
+  </div>
+</section>
+
+{% if inv.public_notes %}
+<section class="portal-public-notes">{{ inv.public_notes }}</section>
+{% endif %}
+
+{% with line_items=inv.line_items, subtotal_cents=inv.subtotal_cents, discount_cents=inv.discount_cents, tax_cents=inv.tax_cents, total_cents=inv.total_cents %}
+{% include "portal/_lineitems.html" %}
+{% endwith %}
+
+{% if inv.installments %}
+<section class="portal-schedule">
+  <h2>Payment schedule</h2>
+  <table class="portal-schedule-table">
+    <thead>
+      <tr><th>What</th><th>When</th><th>Amount</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for inst in inv.installments %}
+      <tr>
+        <td>{{ inst.label }}</td>
+        <td>{{ inst.due_date }}</td>
+        <td>{{ inst.amount_cents | money }}</td>
+        <td>{% if inst.paid %}<span class="paid">Paid</span>{% else %}<span class="due">Due</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="portal-balance-summary">
+  <div class="balance-row"><span>Paid to date</span><span>{{ inv.paid_to_date_cents | money }}</span></div>
+  <div class="balance-row balance-row-due"><span>Balance due</span><span>{{ inv.balance_cents | money }}</span></div>
+</section>
+
+<section class="portal-cta">
+  <p>To send a payment, please get in touch with us at {{ business.phone or business.email or 'the boutique' }}. Online payment is coming soon.</p>
+  <p><a class="btn btn-secondary" href="{{ pdf_url }}">Download PDF</a></p>
+</section>
+
+{% if inv.terms %}
+<section class="portal-terms">
+  <h2>Terms</h2>
+  <pre>{{ inv.terms }}</pre>
+</section>
+{% endif %}
+
+{% if inv.footer %}
+<section class="portal-footer-text">{{ inv.footer }}</section>
+{% endif %}
+
+<script>
+// Idempotent first-view ping. Hits the view-receipt endpoint so the
+// staff side knows the invoice was opened. Best-effort only; failures
+// are silent because the page already rendered.
+(function () {
+  try {
+    fetch({{ view_receipt_url | tojson }}, { method: 'POST', credentials: 'omit' });
+  } catch (_) {}
+})();
+</script>
+{% endblock %}

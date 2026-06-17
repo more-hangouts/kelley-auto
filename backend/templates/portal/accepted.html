@@ -1,0 +1,11 @@
+{% extends "portal/base.html" %}
+{% block title %}Quote signed · {{ business.legal_name }}{% endblock %}
+
+{% block main %}
+<section class="portal-accepted">
+  <h1>Thank you for signing.</h1>
+  <p>Your quote {{ q.quote_number or '' }} has been accepted on {{ q.signed_at.strftime('%B %-d, %Y') }}.</p>
+  <p>We will be in touch shortly to confirm next steps and your deposit.</p>
+  <p class="muted">A signed copy is now on file. If you need a copy for your records, please reach out at {{ business.phone or business.email or 'the boutique' }}.</p>
+</section>
+{% endblock %}

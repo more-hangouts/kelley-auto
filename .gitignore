@@ -1,0 +1,47 @@
+# ---- Env (keep *.env.example, ignore real env files) ----
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# ---- Node / Next.js / Vite ----
+node_modules/
+.next/
+out/
+dist/
+build/
+.pnpm-store/
+.vercel/
+*.tsbuildinfo
+
+# ---- Python / FastAPI ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Databases / local data ----
+*.sqlite
+*.sqlite3
+*.db
+uploads/
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Build/import artifacts we never commit ----
+*.zip
+coverage/
+.cache/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
