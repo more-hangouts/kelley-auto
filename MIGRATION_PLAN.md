@@ -76,16 +76,29 @@ the backend over HTTP. The backend/admin is the only system of record.
 
 ## Hosting Status
 
-No server or hosting exists yet. **We build and test entirely locally** and keep the
-code host-agnostic so a purchased server slots in with only env + DNS changes:
+Server size is selected, but the server is not provisioned yet. **We build and
+test entirely locally** and keep the code host-agnostic so the selected server
+slots in with only env + DNS changes:
 
 - All URLs, origins, secrets, DB/Redis, SMTP/Twilio, and cookie domains come from
   `.env` — never hardcoded. This is a Phase 0 constraint, not a Phase 7 task.
-- Phase 7 (Deployment) is **deferred** until a server is purchased. Everything
+- Phase 7 (Deployment) is **deferred** until the server is provisioned. Everything
   before it is fully verifiable on localhost.
 - Repo: single GitHub monorepo (`frontend/` + `backend/`) — different stacks but
   one source of truth, simplest for solo dev and matches the Phase 0 layout. Each
   app deploys independently later from its subfolder.
+
+Selected VPS target:
+
+```text
+$17/mo
+2 CPU cores
+4 GB RAM
+80 GB SSD
+3 TB bandwidth
+Ubuntu 24.04
+4 GB swapfile
+```
 
 ## Target Domains (intended — not provisioned yet)
 
@@ -458,14 +471,33 @@ Exit criteria:
 - A real or representative inventory CSV imports cleanly.
 - Public SEO metadata uses Kelley Autoplex.
 
-### Phase 7 - Deployment (DEFERRED until a server is purchased)
+### Phase 7 - Deployment (DEFERRED until the selected server is provisioned)
 
 Goal: production-ready services with clear rollback. Do not start until hosting
-exists. Because Phase 0 keeps all config in env, this phase should be mostly
-provisioning + DNS + TLS, with no code changes.
+exists. Target the selected `$17/mo` VPS: 2 CPU cores, 4 GB RAM, 80 GB SSD, and
+3 TB bandwidth, with Ubuntu 24.04 and a 4 GB swapfile. Because Phase 0 keeps all
+config in env, this phase should be mostly provisioning + DNS + TLS, with no code
+changes.
+
+> **Full step-by-step runbook: [VPS_SETUP.md](VPS_SETUP.md)** — provisioning, SSH
+> hardening, automatic security updates, swap, UFW firewall, fail2ban, Docker log
+> rotation, per-container memory limits, worker recycling, Redis/Postgres memory
+> caps, earlyoom, backups, TLS, and a security sign-off checklist.
+
+> **Hard constraint — run the backend as a single worker.** The rate limiters and
+> the two background workers (`workers/notifications`, `workers/daily`) run
+> in-process in the FastAPI lifespan and hold state in-process. Multiple uvicorn
+> workers would duplicate the background loops and split rate-limit counters. Deploy
+> `--workers 1` until that state is moved to Redis. See `backend/docs/ARCHITECTURE.md`.
 
 Tasks:
 
+- Server:
+  - provision selected `$17/mo` 2-core / 4 GB RAM / 80 GB SSD VPS
+  - add 4 GB swap
+  - install Docker and Docker Compose plugin
+  - configure firewall for SSH, HTTP, and HTTPS only
+  - keep Postgres and Redis private to the host/container network.
 - Backend:
   - provision Postgres and Redis
   - configure `.env`
@@ -475,6 +507,7 @@ Tasks:
   - configure log rotation and backups.
 - Frontend:
   - build Next.js
+  - if memory is tight, build one heavy service at a time or build frontend in CI
   - run under the chosen process manager
   - set API base URL to `https://api.kelleyautoplex.com/api`.
 - Admin SPA:
@@ -559,7 +592,8 @@ Exit criteria:
    document storage before launch.
 7. **Blog migration:** migrate existing Payload posts if real; otherwise seed new
    markdown posts.
-8. **Deployment host:** same VPS/Lightsail style, or a new managed host.
+8. **Deployment host:** selected `$17/mo` VPS, 2 cores, 4 GB RAM, 80 GB SSD,
+   3 TB bandwidth, Ubuntu 24.04, plus 4 GB swap.
 
 ## Recommended First Sprint
 
