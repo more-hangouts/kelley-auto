@@ -526,6 +526,14 @@ Tasks:
   - nightly Postgres dump
   - uploaded media/logo backup
   - restore test before launch.
+- Current-site capture:
+  - keep `backend/scripts/scrape_kelley_current_site.py` read-only
+  - after the new app is deployed and before final DNS/cutover, run it against
+    `https://www.kelleyautoplex.com/`
+  - write `data/reports/kelley_current_site_scrape.json`
+  - review VINs, specs, photos, hours, phone/email/address, and scrape failures
+  - feed the reviewed JSON into the Day 9 vehicle import path
+  - do not run it during early local development because inventory may change.
 
 Exit criteria:
 
@@ -534,6 +542,7 @@ Exit criteria:
 - Admin login works.
 - Salesman PIN login works.
 - Backup restore has been tested once.
+- Current Carsforsale site scrape has been dry-run and reviewed before import.
 
 ### Phase 8 - QA, Launch, And Cleanup
 
@@ -564,6 +573,8 @@ Technical gates:
 - Admin SPA build passes.
 - Browser smoke on desktop and mobile widths for home, shop, detail, contact,
   blog, admin login, pipeline, inventory admin, salesman portal.
+- Current-site scraper limited dry-run succeeds:
+  `python scripts/scrape_kelley_current_site.py --dry-run --max-vehicles 2`
 - `rg` confirms no removed stack or old brand strings in user-facing code.
 
 Cleanup:

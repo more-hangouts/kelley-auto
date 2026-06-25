@@ -948,6 +948,102 @@ Exit criteria:
 - Backup job exists.
 - Rollback command is documented.
 
+## Post-Deploy Current Site Capture
+
+Goal: after the new Kelley app is deployed and tested, capture the current
+Carsforsale-powered site inventory/business data from `https://www.kelleyautoplex.com/`
+so the final import has fresh VINs, specs, photos, and business details.
+
+Timing:
+
+- Do not run this during early local development.
+- Run it after backend vehicle fields, public API, admin inventory, and VPS
+  deployment are working.
+- Run it before final DNS cutover or before the old Carsforsale site stops
+  serving the current inventory.
+- Treat the output as a migration artifact; commit the script, not the real
+  scrape output unless the business explicitly wants inventory snapshots in git.
+
+Script:
+
+```bash
+cd backend
+python scripts/scrape_kelley_current_site.py \
+  --output data/reports/kelley_current_site_scrape.json
+```
+
+Dry-run / limited validation:
+
+```bash
+cd backend
+python scripts/scrape_kelley_current_site.py --dry-run --max-vehicles 2
+```
+
+Current site structure observed while planning:
+
+- Home page exposes business name, phone, address, email, hours, and inventory
+  category counts.
+- Inventory page is `https://www.kelleyautoplex.com/cars-for-sale`.
+- Vehicle detail pages use `/Inventory/Details/{id}` URLs.
+- Detail pages expose useful fields such as VIN, trim, condition, engine,
+  drivetrain, fuel, body type, description, features, and images.
+
+Output shape:
+
+```text
+business_profile
+vehicles[]
+  source_url
+  source_platform
+  source_product_id
+  title
+  year
+  make
+  model
+  trim
+  condition
+  vin
+  price_cents
+  mileage
+  engine
+  transmission
+  drivetrain
+  fuel_type
+  body_type
+  exterior_color
+  interior_color
+  mpg_city
+  mpg_highway
+  description_text
+  features
+  image_urls
+```
+
+Import rule:
+
+- The scraper itself is read-only and does not write to Postgres.
+- After reviewing the JSON, feed it into the vehicle import path from Day 9.
+- Match existing records by VIN first, then stock/source id if VIN is missing.
+- Do not overwrite staff-edited prices, statuses, or descriptions without an
+  explicit update flag.
+
+Edge cases:
+
+- Inventory count changes while scraping.
+- A detail page disappears between list and detail fetch.
+- A car has no VIN, no price, no mileage, or no photos.
+- Carsforsale changes markup.
+- Images are lazy-loaded or hosted behind transformed URLs.
+- Robots.txt disallows a path.
+- The old site is already replaced by the new site.
+
+Exit criteria:
+
+- Script produces JSON without writing to DB.
+- Failures are listed per vehicle URL instead of aborting the whole run.
+- At least one limited dry-run has been tested.
+- The final JSON can be reviewed before import.
+
 ## Final Launch Checklist
 
 - [ ] DNS points to VPS.
@@ -959,6 +1055,8 @@ Exit criteria:
 - [ ] Public inquiry form tested.
 - [ ] Appointment request tested.
 - [ ] Salesperson assignment tested.
+- [ ] Current Carsforsale site scraper dry-run completed.
+- [ ] Current Carsforsale inventory JSON reviewed before import.
 - [ ] Quote/invoice/payment smoke tested.
 - [ ] Daily Postgres backup configured.
 - [ ] Upload/media backup configured.
