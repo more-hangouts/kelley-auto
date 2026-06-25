@@ -22,6 +22,43 @@ pipeline, and appointments can be requested and confirmed.
 - Keep deployment cheap: one VPS, one Postgres, one Redis, Docker Compose.
 - Selected VPS target: `$17/mo`, 2 cores, 4 GB RAM, 80 GB SSD, 3 TB bandwidth.
 
+## Efficiency Pass
+
+This pass is the working order adjustment for a fast sprint:
+
+1. **Brand shell first.** Before changing inventory/deal logic, make the admin
+   and sales shell say Kelley Autoplex, use dealership navigation labels, and
+   use the black/night admin theme. This prevents every later screenshot/manual
+   check from looking like the old boutique app.
+2. **Env/domain naming first.** Use Kelley names in `.env.example`, README,
+   cookie domains, upload paths, and deploy docs before the VPS is configured.
+   Do not carry `shopbellasxv.com`, `bellas_xv`, or `/var/lib/bellas-xv` into
+   the new server.
+3. **Keep internal compatibility names until their phase.** Do not rename
+   `catalog_items`, `events`, `appointments`, `celebrant_*`, or old quince
+   workflow columns globally at the start. Add vehicle/deal fields beside them,
+   then hide old language in user-facing DTOs and UI. Full internal renames can
+   wait until after the MVP is stable.
+4. **Build the backend contract before deleting Payload.** Public inventory and
+   lead endpoints must be stable before the Next.js rewrite. That avoids a
+   frontend rewrite against moving backend shapes.
+5. **Deploy manually before automating.** On the selected 4 GB VPS, get manual
+   `git pull` / build / restart boring first. Add GitHub Actions only after the
+   one-box deploy is proven.
+
+## Rebrand Boundaries
+
+Use this rule to avoid wasted work:
+
+| Layer | Sprint behavior |
+|---|---|
+| User-facing public site | Must say Kelley Autoplex before launch. No Reliable/Bellas/Payload admin surfaces. |
+| Admin/sales shell | Must say Kelley Autoplex early. Dark dealership theme, inventory/deal/customer language. |
+| Admin/sales deep forms | Reword when touched for vehicle/deal work. Hide boutique-only sections for v1. |
+| Backend public DTOs | Must use vehicle/deal/customer names only. |
+| Database table names | Keep existing names during MVP unless a new field/table is needed. |
+| Legacy tests/docs | May mention Bellas/quince if they are not user-facing and still protect old compatibility. |
+
 ## MVP Definition
 
 The MVP is done when this full workflow works end to end:
@@ -81,11 +118,31 @@ The MVP is done when this full workflow works end to end:
 
 ## Day 0 - Baseline And Local Boot
 
-Goal: prove the imported apps run before changing behavior.
+Goal: prove the imported apps run and lock the Kelley naming/environment
+baseline before behavior changes.
 
 Tasks:
 
 - Work from `kelley-auto/`, not the zip extracts.
+- Confirm the selected VPS spec is reflected in docs:
+  - `$17/mo`
+  - 2 CPU cores
+  - 4 GB RAM
+  - 80 GB SSD
+  - 3 TB bandwidth
+  - Ubuntu 24.04
+  - 4 GB swapfile
+- Confirm env examples use Kelley defaults:
+  - `DATABASE_URL=postgresql://kelley_user:.../kelley_autoplex`
+  - local `SESSION_COOKIE_DOMAIN=` stays blank for localhost
+  - production `SESSION_COOKIE_DOMAIN=.kelleyautoplex.com` is documented in
+    VPS/deploy config
+  - `DOCUMENT_STORAGE_ROOT=/var/lib/kelley-autoplex/uploads`
+  - `CORS_ORIGINS` includes Kelley public/admin/sales domains.
+- Confirm the admin shell uses Kelley Autoplex branding and the dark/night
+  dealership theme.
+- Confirm sales shell nav hides attendance/time-off/clock surfaces for Kelley
+  v1 unless the dealership explicitly wants employee time tracking.
 - Confirm env templates exist:
   - `backend/.env.example`
   - `backend/frontend/.env.example`
@@ -121,6 +178,8 @@ Exit criteria:
 
 - Backend health endpoint returns OK.
 - Admin SPA opens.
+- Admin shell says Kelley Autoplex and uses the dark dealership theme.
+- Sales login/shell says Kelley Autoplex.
 - Public site opens.
 - Baseline failures are documented with exact command and error.
 
@@ -206,13 +265,15 @@ Exit criteria:
 
 ## Day 2 - Admin Vehicle Upload/Edit UI
 
-Goal: staff can manage vehicle inventory from the admin dashboard.
+Goal: staff can manage vehicle inventory from a Kelley-branded admin dashboard.
 
 Admin UI tasks:
 
 - Update `backend/frontend/src/pages/AdminCatalog.jsx`.
 - Update `backend/frontend/src/components/CatalogDetailModal.jsx`.
 - Relabel catalog UI to inventory language.
+- Keep the admin shell in the black/night dealership theme from Day 0.
+- Use vehicle/deal/customer vocabulary in every touched admin surface.
 - Add vehicle form fields:
   - VIN
   - stock number
@@ -722,7 +783,7 @@ Exit criteria:
 
 ## Day 9 - Branding, Content, Import, And Cleanup
 
-Goal: make the app read as Kelley Autoplex and remove old stack coupling.
+Goal: complete the final user-facing brand pass and remove old stack coupling.
 
 Branding tasks:
 
@@ -740,11 +801,13 @@ Branding tasks:
   - `frontend/src/app/layout.tsx`
   - page titles/descriptions
   - nav/footer
-- Replace visible Reliable/Bellas/quince wording.
-- Update admin theme/logo:
+- Replace remaining visible Reliable/Bellas/quince wording.
+- Verify admin shell/theme/logo stayed Kelley after feature work:
   - `backend/frontend/src/theme.js`
   - `backend/frontend/src/assets/`
   - navigation labels
+- Keep old Bellas/quince strings only in historical docs, migrations, tests, or
+  compatibility comments that are not visible to users.
 
 Import tasks:
 

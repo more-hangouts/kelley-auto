@@ -1,8 +1,8 @@
 # Kelley Autoplex
 
-Used-car dealership platform. Combines the **drivereliable** Next.js marketing site
-(`frontend/`) with the **bellasxv** FastAPI + React/MUI back office (`backend/`),
-rebranded for Kelley Autoplex.
+Used-car dealership platform. Combines the Drivereliable Next.js marketing site
+(`frontend/`) with the Bellas XV FastAPI + React/MUI back office (`backend/`),
+adapted and rebranded for Kelley Autoplex.
 
 The backend is the single system of record (inventory, CRM/deals, quotes, invoices,
 payments, users, notifications). The public site reads everything from the backend
@@ -15,8 +15,9 @@ over HTTP.
 - **[VPS_SETUP.md](VPS_SETUP.md)** — production VPS provisioning, hardening, swap,
   and memory-leak mitigation (Phase 7 / Day 10, deferred until the server exists).
 
-> **Status:** local build only — no server/hosting yet. Everything is configured via
-> `.env` so a purchased server slots in later with only env + DNS changes.
+> **Status:** local build only. Target VPS is selected: `$17/mo`, 2 CPU cores,
+> 4 GB RAM, 80 GB SSD, 3 TB bandwidth, Ubuntu 24.04, plus a 4 GB swapfile.
+> Provisioning still happens in Phase 7 / Day 10.
 
 ## Layout
 
@@ -51,8 +52,8 @@ First create the Postgres role + database that match `DATABASE_URL` in
 
 ```bash
 # defaults match backend/.env.example — change both places if you prefer other creds
-createuser bellas_xv_user --pwprompt   # set password: bellas_xv_pass
-createdb   bellas_xv --owner=bellas_xv_user
+createuser kelley_user --pwprompt   # set password: kelley_pass
+createdb   kelley_autoplex --owner=kelley_user
 redis-cli ping   # -> PONG (start redis-server if not running)
 ```
 
@@ -86,7 +87,8 @@ pnpm dev
 ## Notes
 
 - This is a **baseline import**: `frontend/` still contains Payload/Prisma and
-  `backend/` still uses Bella's branding. Both are rebranded/removed in later phases
-  per the migration plan — do not delete anything ahead of its phase.
+  the backend still has legacy internal Bellas/quince concepts. Public/admin
+  surfaces are being rebranded to Kelley first; internal table/workflow names are
+  changed only when their sprint phase requires it.
 - Secrets, DB URLs, SMTP/Twilio, cookie domains, and CORS origins all come from
   `backend/.env`. Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.

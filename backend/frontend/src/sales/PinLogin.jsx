@@ -20,7 +20,7 @@ const PIN_LENGTH = 6
 
 // Two-step PIN login (Phase 1 design lock-in: kiosk-style picker, not
 // username field). Step 1 lists active sales staff with PINs minted;
-// stylist taps their tile. Step 2 prompts for the 6-digit PIN. The
+// salesperson taps their tile. Step 2 prompts for the 6-digit PIN. The
 // keypad submission posts `{identifier: picked.username, pin}` to
 // `/api/sales/auth/pin` — `users.id` is never exposed by the picker.
 //
@@ -61,7 +61,7 @@ export default function PinLogin() {
         if (!cancelled) {
           setStaff([])
           setPickerError(
-            "Couldn't load the stylist list. Type your username instead.",
+            "Couldn't load the salesperson list. Type your username instead.",
           )
         }
       })
@@ -183,7 +183,7 @@ export default function PinLogin() {
               Sales
             </Typography>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Bellas XV
+              Kelley Autoplex
             </Typography>
             {showPicker && (
               <Typography variant="body2" color="text.secondary">
@@ -221,7 +221,7 @@ export default function PinLogin() {
 
           {showEmptyState && (
             <Alert severity="info">
-              No stylists are set up yet. Ask the owner to add one in
+              No salespeople are set up yet. Ask the owner to add one in
               admin settings.
             </Alert>
           )}

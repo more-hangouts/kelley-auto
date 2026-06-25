@@ -354,21 +354,41 @@ python3 -c "import secrets; print('QUOTE_SIGNATURE_KEY=' + secrets.token_hex(32)
 python3 -c "from cryptography.fernet import Fernet; print('INTEGRATION_TOKEN_KEYS=' + Fernet.generate_key().decode())"
 ```
 
-Production `.env` values that differ from local:
+**We are running IP-first.** DNS + the `*.kelleyautoplex.com` domain get pointed at
+the very end (Step 10), after everything is built and verified on the box. Until
+then, use the **interim IP values** below. The production/domain values are kept for
+the final cutover.
+
+Interim `.env` values — bare IP, plain HTTP, owner-only setup phase
+(replace `SERVER_IP` with the VPS public IP):
 
 ```text
 APP_ENV=production
 DATABASE_URL=postgresql://kelley:STRONG_DB_PASS@postgres:5432/kelley
 REDIS_URL=redis://redis:6379/0
-RATE_LIMIT_FAIL_OPEN=false                 # flip off in prod
+RATE_LIMIT_FAIL_OPEN=false
+SESSION_COOKIE_DOMAIN=                       # BLANK = host-only cookie bound to the IP
+ATTRIBUTION_COOKIE_DOMAIN=
+CORS_ORIGINS=http://SERVER_IP,http://SERVER_IP:3000,http://SERVER_IP:5173
+DOCUMENT_STORAGE_ROOT=/var/lib/kelley/uploads
+NEXT_PUBLIC_API_BASE_URL=http://SERVER_IP:8000
+API_BASE_URL=http://SERVER_IP:8000
+```
+
+Final `.env` deltas — applied only at Step 10 when DNS is pointed:
+
+```text
 SESSION_COOKIE_DOMAIN=.kelleyautoplex.com
 ATTRIBUTION_COOKIE_DOMAIN=.kelleyautoplex.com
 CORS_ORIGINS=https://kelleyautoplex.com,https://admin.kelleyautoplex.com,https://sales.kelleyautoplex.com
-DOCUMENT_STORAGE_ROOT=/var/lib/kelley/uploads
-# Frontend image build/runtime:
 NEXT_PUBLIC_API_BASE_URL=https://api.kelleyautoplex.com
 API_BASE_URL=https://api.kelleyautoplex.com
 ```
+
+> **Cookie-domain rule:** a cookie `Domain` must be a real registered domain — browsers
+> reject `Domain=<an IP>`. So in IP mode `SESSION_COOKIE_DOMAIN` **must be blank**
+> (host-only). The app already defaults it blank for local dev; keep it blank on the IP
+> and only set the dotted domain at cutover.
 
 Create the uploads dir the API service owns:
 
@@ -395,9 +415,58 @@ load the first 5–10 vehicles (CSV import from Day 9).
 
 ---
 
-## Step 10 — DNS + TLS (Caddy)
+## Step 9b — Interim: reach it on the bare IP (no DNS yet)
 
-Point DNS A records at the VPS IP **before** Caddy requests certs (or ACME fails):
+This is the phase you're in: build and verify everything over plain HTTP at the VPS
+IP, then point DNS only when fully done (Step 10). Two ways to expose the services —
+pick one:
+
+**Option A (simplest): publish container ports directly.** In `docker-compose.yml`
+map `frontend → 80`, `backend → 8000`, admin `dist` (served by a small static
+container or Caddy) → `5173`. Then reach:
+
+```text
+http://SERVER_IP        -> public site
+http://SERVER_IP:8000   -> API   (health: http://SERVER_IP:8000/api/health)
+http://SERVER_IP:5173   -> admin SPA  (sales mode via the app's subdomain override)
+```
+
+Open only those ports, and **scope them to your own IP** so the half-built admin/login
+isn't exposed to the internet:
+
+```bash
+sudo ufw allow from YOUR_HOME_IP to any port 8000 proto tcp
+sudo ufw allow from YOUR_HOME_IP to any port 5173 proto tcp
+# port 80 can stay open to all; it's just the read-only public site
+```
+
+**Option B: Caddy on the IP, plain HTTP** (no cert) — a single `Caddyfile`:
+
+```text
+:80        { reverse_proxy frontend:3000 }
+:8000      { reverse_proxy backend:8000 }
+:5173      { root * /srv/admin
+             file_server
+             try_files {path} /index.html }
+```
+
+### ⚠️ Security boundary for IP/HTTP mode
+Plain HTTP on a public IP sends admin and sales-PIN logins **in the clear**. That's
+acceptable for an owner-only setup phase with **test data only**. Do **not**:
+- load real customer PII,
+- take real public leads,
+- create real salesperson PINs you'll keep,
+
+until the domain + HTTPS are live (Step 10). The `admin`/`sales` hostname split and
+HTTPS are both verified at cutover, not now. When the box is built and proven, undo
+the temporary `ufw` port rules, set the final `.env` deltas, and do Step 10.
+
+---
+
+## Step 10 — Final cutover: DNS + TLS (Caddy) — do this LAST
+
+Only when the build is fully verified on the IP and you're ready to go live. Point
+DNS A records at the VPS IP **before** Caddy requests certs (or ACME fails):
 
 ```text
 kelleyautoplex.com        A   SERVER_IP

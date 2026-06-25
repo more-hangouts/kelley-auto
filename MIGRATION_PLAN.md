@@ -18,17 +18,20 @@ the backend over HTTP. The backend/admin is the only system of record.
 
 1. **Baseline first:** copy both apps into the final repo, commit untouched,
    boot backend API, admin SPA, and public frontend locally.
-2. **Make Bellas car-capable:** add vehicle fields to `catalog_items`, add
+2. **Set Kelley shell + env early:** use Kelley domains, database names, upload
+   paths, cookie names, dark admin theme, and dealership nav labels before deep
+   feature work starts.
+3. **Make Bellas car-capable:** add vehicle fields to `catalog_items`, add
    `vehicle_sale` workflow stages, and smoke-test catalog/deal behavior before
    touching the public site.
-3. **Stabilize the public API:** ship `/api/public/inventory`,
+4. **Stabilize the public API:** ship `/api/public/inventory`,
    `/api/public/leads`, `/api/public/business-profile`, and blog endpoints with
    public-safe DTOs.
-4. **Then remove Payload:** rewire Next.js to those endpoints, build the site,
+5. **Then remove Payload:** rewire Next.js to those endpoints, build the site,
    and delete Payload/Prisma only after the pages compile and forms create
    backend deals.
-5. **Finish the back office:** rebrand admin/sales UI, seed Kelley branding and
-   inventory, deploy domains, run the lead-to-delivered QA script.
+6. **Finish the back office:** complete admin/sales UI rebrand, seed Kelley
+   branding and inventory, deploy domains, run the lead-to-delivered QA script.
 
 ## Locked Decisions
 
@@ -47,6 +50,10 @@ the backend over HTTP. The backend/admin is the only system of record.
 - **Booking default:** Website forms create a lead/deal immediately. Full slot
   availability/test-drive scheduling can reuse Bellas appointments after the lead
   spine works.
+- **Rebrand boundary:** user-facing surfaces, env examples, cookie/domain
+  defaults, and deploy paths use Kelley immediately. Legacy internal
+  table/workflow names remain until their sprint phase to avoid risky global
+  renames.
 
 ## Gaps Closed In This Version
 

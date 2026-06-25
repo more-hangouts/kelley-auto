@@ -3,8 +3,8 @@
 The double-cookie pattern, set on every successful login/PIN response:
 
   - Session cookie (HttpOnly): the JWT itself. The browser sends it back
-    on every request to `api.shopbellasxv.com` because all surfaces share
-    `.shopbellasxv.com` as the cookie Domain.
+    on every request to `api.kelleyautoplex.com` because all surfaces share
+    `.kelleyautoplex.com` as the cookie Domain.
   - CSRF cookie (NOT HttpOnly): a random nonce. The frontend reads it via
     `document.cookie` on each request and mirrors the value into an
     `X-CSRF-Token` header. The CSRF middleware verifies cookie == header
@@ -18,8 +18,8 @@ it. Acts as a tripwire if someone ever sets these over plaintext.
 Per-surface naming (admin vs sales) keeps the two contexts isolated:
 clearing the admin cookies does not affect a parallel sales session in
 the same browser, and a future sales-only bug cannot scramble admin
-CSRF state. Both still share `Domain=.shopbellasxv.com` so the browser
-hands them back to `api.shopbellasxv.com` from either surface.
+CSRF state. Both still share `Domain=.kelleyautoplex.com` so the browser
+hands them back to `api.kelleyautoplex.com` from either surface.
 """
 
 from __future__ import annotations
@@ -34,10 +34,10 @@ from config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, SESSION_COOKIE_DOMAIN
 ADMIN_SURFACE = "admin"
 SALES_SURFACE = "sales"
 
-ADMIN_SESSION_COOKIE = "__Secure-bellas_xv_session"
-ADMIN_CSRF_COOKIE = "__Secure-bellas_xv_csrf"
-SALES_SESSION_COOKIE = "__Secure-bellas_xv_sales_session"
-SALES_CSRF_COOKIE = "__Secure-bellas_xv_sales_csrf"
+ADMIN_SESSION_COOKIE = "__Secure-kelley_autoplex_session"
+ADMIN_CSRF_COOKIE = "__Secure-kelley_autoplex_csrf"
+SALES_SESSION_COOKIE = "__Secure-kelley_autoplex_sales_session"
+SALES_CSRF_COOKIE = "__Secure-kelley_autoplex_sales_csrf"
 
 CSRF_HEADER_NAME = "X-CSRF-Token"
 

@@ -16,8 +16,8 @@ import {
   Typography,
 } from '@mui/material'
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
-import CheckroomOutlinedIcon from '@mui/icons-material/CheckroomOutlined'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
+import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import ViewKanbanOutlinedIcon from '@mui/icons-material/ViewKanbanOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -45,9 +45,9 @@ const TOPBAR_HEIGHT = 64
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashboardOutlinedIcon, end: true },
-  { to: '/pipeline', label: 'Pipeline', icon: ViewKanbanOutlinedIcon },
-  { to: '/calendar', label: 'Calendar', icon: CalendarMonthOutlinedIcon },
-  { to: '/products', label: 'Products', icon: CheckroomOutlinedIcon },
+  { to: '/pipeline', label: 'Deals', icon: ViewKanbanOutlinedIcon },
+  { to: '/calendar', label: 'Appointments', icon: CalendarMonthOutlinedIcon },
+  { to: '/products', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
   { to: '/settings', label: 'Settings', icon: SettingsOutlinedIcon },
 ]
 
@@ -71,8 +71,8 @@ function SidebarContent({ onNavigate }) {
           borderColor: 'divider',
         }}
       >
-        <Typography variant="h5" sx={{ color: 'primary.main', letterSpacing: 0.3 }}>
-          Bellas XV
+        <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 700 }}>
+          Kelley Autoplex
         </Typography>
       </Box>
 
@@ -259,7 +259,7 @@ export default function DashboardLayout() {
           >
             <SearchIcon fontSize="small" />
             <Typography variant="body2" sx={{ flexGrow: 1 }}>
-              Search events, contacts, invoices…
+              Search deals, customers, vehicles…
             </Typography>
             <Typography
               variant="caption"

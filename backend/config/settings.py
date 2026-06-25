@@ -20,20 +20,20 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 CORS_ORIGINS = _csv("CORS_ORIGINS", "http://localhost:5173")
 
-# D3: session + CSRF cookie domain. `.shopbellasxv.com` lets the cookies
-# set by api.shopbellasxv.com flow to admin.* and sales.* — same eTLD+1,
+# D3: session + CSRF cookie domain. `.kelleyautoplex.com` lets the cookies
+# set by api.kelleyautoplex.com flow to admin.* and sales.* — same eTLD+1,
 # so SameSite=Lax is sufficient. Override to an empty string (or any
 # falsy value) to omit the Domain attribute entirely; the TestClient and
 # any future single-host deploy can run without the suffix.
-SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", ".shopbellasxv.com") or None
+SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", ".kelleyautoplex.com") or None
 
 # Booking widget — public surface
-PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "http://localhost:5173")
+PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "http://localhost:3000")
 WIDGET_PUBLIC_BASE_URL = os.getenv("WIDGET_PUBLIC_BASE_URL", "http://localhost:8000")
 
 # Customer-facing invoice/quote portal. Used to substitute the public link
 # into the email body that ships with mark_sent/resend. Production should
-# point at the customer-facing host (e.g. https://shopbellasxv.com); dev
+# point at the customer-facing host (e.g. https://kelleyautoplex.com); dev
 # falls back to the API origin so the link is reachable from the same
 # uvicorn process.
 PORTAL_BASE_URL = os.getenv("PORTAL_BASE_URL", WIDGET_PUBLIC_BASE_URL)
@@ -64,7 +64,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME") or None
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD") or None
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL") or None
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Bella's XV")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kelley Autoplex")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 BOOKING_INTERNAL_NOTIFICATION_EMAILS = _csv("BOOKING_INTERNAL_NOTIFICATION_EMAILS")
 
@@ -77,7 +77,7 @@ EMAIL_DEV_REDIRECT = os.getenv("EMAIL_DEV_REDIRECT") or None
 
 # Public URL of the admin app, used to build "Open in admin" CTAs in staff
 # notification emails. Default matches the current deployment subdomain.
-ADMIN_BASE_URL = os.getenv("ADMIN_BASE_URL", "https://admin.shopbellasxv.com").rstrip("/")
+ADMIN_BASE_URL = os.getenv("ADMIN_BASE_URL", "https://admin.kelleyautoplex.com").rstrip("/")
 
 # Booking widget — outbound SMS (Twilio, wired in v1.5)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID") or None
@@ -90,7 +90,7 @@ TWILIO_MESSAGING_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID") or None
 # B2/S3 lands later it becomes a real branch in services/document_storage.py.
 DOCUMENT_STORAGE_BACKEND = os.getenv("DOCUMENT_STORAGE_BACKEND", "local")
 DOCUMENT_STORAGE_ROOT = os.getenv(
-    "DOCUMENT_STORAGE_ROOT", "/var/lib/bellas-xv/uploads"
+    "DOCUMENT_STORAGE_ROOT", "/var/lib/kelley-autoplex/uploads"
 )
 DOCUMENT_UPLOAD_MAX_MB = int(os.getenv("DOCUMENT_UPLOAD_MAX_MB", "25"))
 

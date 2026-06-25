@@ -4,17 +4,17 @@ import axios from 'axios'
 // api/cookies.py — keep in sync. The __Secure- prefix is a browser-
 // enforced contract that the cookie MUST be set with Secure (HTTPS
 // only), which matches our production-only target.
-const ADMIN_CSRF_COOKIE = '__Secure-bellas_xv_csrf'
-const SALES_CSRF_COOKIE = '__Secure-bellas_xv_sales_csrf'
+const ADMIN_CSRF_COOKIE = '__Secure-kelley_autoplex_csrf'
+const SALES_CSRF_COOKIE = '__Secure-kelley_autoplex_sales_csrf'
 
-// Surface detection. Sales lives at `sales.shopbellasxv.com`; admin
-// at `admin.shopbellasxv.com` (or anything else, including localhost).
+// Surface detection. Sales lives at `sales.kelleyautoplex.com`; admin
+// at `admin.kelleyautoplex.com` (or anything else, including localhost).
 // The VITE_FORCE_SUBDOMAIN escape hatch lets a dev hit the sales tree
 // on localhost without DNS — set it to `sales` in .env.local.
 //
 // The trailing dot in `startsWith('sales.')` is load-bearing: it
-// keeps a future `salesreports.shopbellasxv.com` (or any other
-// `sales*` host) from accidentally routing into the stylist app.
+// keeps a future `salesreports.kelleyautoplex.com` (or any other
+// `sales*` host) from accidentally routing into the sales app.
 export function isSalesSubdomain() {
   if (typeof window === 'undefined') return false
   if (import.meta.env?.VITE_FORCE_SUBDOMAIN === 'sales') return true
