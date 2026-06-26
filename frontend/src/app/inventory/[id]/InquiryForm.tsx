@@ -114,9 +114,12 @@ const inputClass =
 export default function InquiryForm({
   vehicleId,
   vehicleTitle,
+  telHref,
 }: {
   vehicleId: string;
   vehicleTitle: string;
+  /** tel: href from the business profile NAP; null when no phone is set. */
+  telHref?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0); // 0=name, 1=email, 2=phone, 3=time
@@ -192,7 +195,7 @@ export default function InquiryForm({
             Schedule a Viewing
           </button>
           <a
-            href="tel:+1234567890"
+            href={telHref ?? undefined}
             className="flex items-center gap-2 rounded-xl border border-neutral-100 bg-white px-5 py-3.5 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-25"
           >
             <svg className="size-4" fill="none" viewBox="0 0 20 20">

@@ -5,6 +5,7 @@ import NavbarWrapper from "@/app/components/NavbarWrapper";
 import Features from "@/app/components/Features";
 import Footer from "@/app/components/Footer";
 import { getVehicle, displayYear, displayColor, isSold, lexicalToText } from "@/lib/api";
+import { resolveNap } from "@/lib/nap";
 import ImageGallery from "./ImageGallery";
 import InquiryForm from "./InquiryForm";
 import type { PayloadVehicle } from "@/types/vehicle";
@@ -20,6 +21,8 @@ export default async function CarDetailPage({
   const vehicle = await getVehicle(id);
 
   if (!vehicle) notFound();
+
+  const nap = await resolveNap();
 
   const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
   const sold = isSold(vehicle);
@@ -161,7 +164,7 @@ export default async function CarDetailPage({
 
             {/* CTA */}
             {!sold ? (
-              <InquiryForm vehicleId={vehicle.id} vehicleTitle={title} />
+              <InquiryForm vehicleId={vehicle.id} vehicleTitle={title} telHref={nap.telHref} />
             ) : (
               <div className="rounded-2xl border border-neutral-100 bg-neutral-25 p-6 text-center">
                 <p className="font-medium text-neutral-500">This vehicle has been sold.</p>
