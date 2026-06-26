@@ -104,6 +104,10 @@ EVENT_PARTICIPANT_ADDED = "event.participant_added"
 # to the freshly-created event so the timeline tab shows a single
 # "Captured as walk-in" row at the top of the audit trail.
 EVENT_WALK_IN_CREATED = "event.walk_in_created"
+# Day 4: a customer-submitted inquiry from the public site. Written on both
+# a freshly created vehicle_sale deal and an existing open deal (the dedup
+# append path), so the deal timeline shows every inbound touch.
+PUBLIC_LEAD_SUBMITTED = "lead.public_submitted"
 
 # Appointment lifecycle (Phase 3 of the sales portal). These activity
 # rows are still scoped by `event_id`; if the appointment has no
@@ -198,6 +202,7 @@ _KNOWN_TYPES = frozenset(
         EVENT_STATUS_CHANGED,
         EVENT_PARTICIPANT_ADDED,
         EVENT_WALK_IN_CREATED,
+        PUBLIC_LEAD_SUBMITTED,
         APPOINTMENT_ARRIVED,
         APPOINTMENT_NO_SHOW,
         APPOINTMENT_CANCELLED,

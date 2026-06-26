@@ -197,3 +197,27 @@ def get_public_vehicle(
 
     item = db.execute(stmt).scalars().first()
     return public_vehicle_dto(item) if item is not None else None
+
+
+def resolve_linkable_vehicle(db: Session, id_or_listing_code: str | None):
+    """Return the ``CatalogItem`` a public lead may LINK to, or ``None``.
+
+    Stricter than :func:`get_public_vehicle`: linking requires a still-for-
+    sale car (``PUBLIC_LIST_STATUSES`` — available/pending), so a lead whose
+    referenced car went sold/delivered (or hidden/wholesale/inactive, or is
+    a non-vehicle row, or doesn't exist) resolves to ``None`` and the caller
+    files a general (unlinked) lead instead of crashing or leaking. Returns
+    the ORM row (not a DTO) because the caller needs the id + make/model to
+    link and name the deal.
+    """
+    token = (id_or_listing_code or "").strip()
+    if not token:
+        return None
+    stmt = _public_base().where(
+        CatalogItem.vehicle_status.in_(PUBLIC_LIST_STATUSES)
+    )
+    if token.isdigit():
+        stmt = stmt.where(CatalogItem.id == int(token))
+    else:
+        stmt = stmt.where(func.upper(CatalogItem.public_code) == token.upper())
+    return db.execute(stmt).scalars().first()

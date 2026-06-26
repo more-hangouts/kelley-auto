@@ -13,17 +13,27 @@ lives in services.public_inventory_service so the router stays thin.
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
+from api.redis_rate_limit import enforce_or_raise, rate_limit
 from database.connection import get_db
 from services import public_inventory_service as inventory
+from services import public_lead_service
 from services.public_inventory_service import InventoryFilters
+from services.public_lead_service import LeadInput, PublicLeadError
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Per-IP cap on lead submissions. The TestClient bypass in redis_rate_limit
+# means smokes don't trip this unless they set X-Forwarded-For explicitly.
+_lead_ip_limit = rate_limit(bucket="public_lead_ip", limit=10, window=600)
 
 
 class InventoryListResponse(BaseModel):
@@ -102,3 +112,120 @@ def get_inventory_item(
     if dto is None:
         raise HTTPException(status_code=404, detail="vehicle_not_found")
     return dto
+
+
+class PublicLeadRequest(BaseModel):
+    # Tolerate extra keys: a marketing form may post fields we don't model
+    # yet, and a public endpoint shouldn't 422 a real customer over one.
+    model_config = ConfigDict(extra="ignore")
+
+    name: str | None = Field(default=None, max_length=200)
+    phone: str | None = Field(default=None, max_length=40)
+    email: str | None = Field(default=None, max_length=255)
+    # Vehicle reference — either is accepted; listing_code wins when both
+    # are sent. A ref that no longer points at a for-sale car degrades to a
+    # general lead server-side (it is not an error).
+    vehicle_id: int | None = None
+    listing_code: str | None = Field(default=None, max_length=40)
+    message: str | None = Field(default=None, max_length=4000)
+    preferred_day: str | None = Field(default=None, max_length=60)
+    preferred_time: str | None = Field(default=None, max_length=60)
+    source_page: str | None = Field(default=None, max_length=500)
+    utm_source: str | None = Field(default=None, max_length=120)
+    utm_medium: str | None = Field(default=None, max_length=120)
+    utm_campaign: str | None = Field(default=None, max_length=120)
+    utm_term: str | None = Field(default=None, max_length=120)
+    utm_content: str | None = Field(default=None, max_length=120)
+    # Honeypot — must stay empty. A bot that fills it gets a normal-looking
+    # acknowledgement and no record is written.
+    company_website: str | None = Field(default=None, max_length=200)
+    # Turnstile token: accepted for forward-compat with the contract, not
+    # verified until a TURNSTILE_SECRET is wired up.
+    turnstile_token: str | None = Field(default=None, max_length=4000)
+
+    @model_validator(mode="after")
+    def _require_contact_channel(self) -> "PublicLeadRequest":
+        if not (self.phone and self.phone.strip()) and not (
+            self.email and self.email.strip()
+        ):
+            raise ValueError("either phone or email is required")
+        return self
+
+    def vehicle_ref(self) -> str | None:
+        if self.listing_code and self.listing_code.strip():
+            return self.listing_code.strip()
+        if self.vehicle_id is not None:
+            return str(self.vehicle_id)
+        return None
+
+    def utm(self) -> dict[str, str]:
+        pairs = {
+            "source": self.utm_source,
+            "medium": self.utm_medium,
+            "campaign": self.utm_campaign,
+            "term": self.utm_term,
+            "content": self.utm_content,
+        }
+        return {k: v for k, v in pairs.items() if v}
+
+
+class PublicLeadResponse(BaseModel):
+    ok: bool
+    message: str
+
+
+# Fixed acknowledgement for EVERY successful path — new deal, duplicate
+# append, or honeypot drop. Never leaks IDs or whether a contact/deal
+# already existed.
+_LEAD_ACK = PublicLeadResponse(ok=True, message="Thanks, we received your request.")
+
+
+@router.post(
+    "/leads",
+    response_model=PublicLeadResponse,
+    dependencies=[Depends(_lead_ip_limit)],
+)
+def submit_lead(
+    payload: PublicLeadRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> PublicLeadResponse:
+    """Public lead intake. Creates or appends to a vehicle_sale deal and
+    returns a generic acknowledgement (no IDs, no existence hints)."""
+    # Honeypot: acknowledge like normal, write nothing.
+    if payload.company_website and payload.company_website.strip():
+        log.info("public_lead.honeypot_triggered")
+        return _LEAD_ACK
+
+    # Per-identifier cap so one email/phone can't hammer the endpoint past
+    # the per-IP bucket (e.g. rotating IPs). request= honors the TestClient
+    # bypass so unrelated smokes don't 429.
+    ident = (payload.email or payload.phone or "").strip().lower()
+    if ident:
+        enforce_or_raise(
+            bucket="public_lead_identifier",
+            scoped=ident,
+            limit=5,
+            window=600,
+            request=request,
+        )
+
+    lead = LeadInput(
+        name=payload.name,
+        phone=payload.phone,
+        email=payload.email,
+        vehicle_ref=payload.vehicle_ref(),
+        message=payload.message,
+        preferred_day=payload.preferred_day,
+        preferred_time=payload.preferred_time,
+        source_page=payload.source_page,
+        utm=payload.utm(),
+    )
+    try:
+        public_lead_service.submit_public_lead(db, lead)
+    except PublicLeadError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=exc.code) from exc
+
+    db.commit()
+    return _LEAD_ACK
