@@ -14,7 +14,7 @@ export default async function Hero() {
   const ctaLabel = hero.ctaLabel || "Shop Now";
   const ctaHref = hero.ctaHref || "/shop";
   const headline = hero.headline || "Find the perfect car that fits your journey";
-  const bgSrc = isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.jpg";
+  const bgSrc = isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.webp";
   const showCarImage = hero.showCarImage !== false;
   const carSrc = isMediaDoc(hero.carImage) && hero.carImage.url ? hero.carImage.url : null;
 

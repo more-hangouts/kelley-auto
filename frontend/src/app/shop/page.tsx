@@ -15,7 +15,7 @@ export default async function ShopPage() {
 
   const available = vehicles.filter((v) => v.status !== "SOLD");
   const bannerBgSrc =
-    isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.jpg";
+    isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.webp";
 
   return (
     <div className="min-h-screen">
