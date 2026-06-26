@@ -1,9 +1,17 @@
 """Public site endpoints — Day 4.
 
 Unauthenticated, CORS-allowed reads for the customer-facing marketing/sales
-site. Mounted at ``/api/public``. This slice ships the vehicle inventory
-contract (list + detail); the leads / posts / business-profile endpoints in
-the Day 4 plan are separate follow-ups.
+site. Mounted at ``/api/public``. Endpoints:
+
+  * ``GET  /inventory`` + ``/inventory/{idOrListingCode}`` — vehicle list/detail
+  * ``POST /leads``                                         — lead intake -> vehicle_sale deal
+  * ``GET  /business-profile``                              — storefront NAP
+
+Posts/blog/content are intentionally NOT served here: the Next.js site's
+Payload CMS owns public content and remains its source of truth. A second
+FastAPI posts table would duplicate authoring/publishing/media/SEO surface
+for no benefit — the Day 5 site reads content from Payload directly. Revisit
+only if there's a concrete reason Payload cannot serve it.
 
 Every vehicle projection is the camelCase ``public_vehicle_dto`` allowlist —
 no internal_sku / stock_number / wholesale / source / compat fields ever
@@ -22,8 +30,10 @@ from sqlalchemy.orm import Session
 
 from api.redis_rate_limit import enforce_or_raise, rate_limit
 from database.connection import get_db
+from services import business_profile_service
 from services import public_inventory_service as inventory
 from services import public_lead_service
+from services.business_profile_service import BusinessProfileError
 from services.public_inventory_service import InventoryFilters
 from services.public_lead_service import LeadInput, PublicLeadError
 
@@ -229,3 +239,15 @@ def submit_lead(
 
     db.commit()
     return _LEAD_ACK
+
+
+@router.get("/business-profile")
+def get_business_profile(
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Public storefront NAP — name, address, phone, email, website. No
+    tax/invoice/reminder/operational fields."""
+    try:
+        return business_profile_service.get_public_profile(db)
+    except BusinessProfileError as exc:
+        raise HTTPException(status_code=404, detail=exc.code) from exc

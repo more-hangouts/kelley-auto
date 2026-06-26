@@ -307,6 +307,30 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(resp.status_code == 404, "hidden by code 404", resp.text)
         print("404 gating ok")
 
+        # --- public business profile (NAP only, no operational fields) ----
+        resp = client.get("/api/public/business-profile")
+        _assert(resp.status_code == 200, "public business-profile", resp.text)
+        prof = resp.json()
+        for k in ("name", "address", "phone", "email", "website"):
+            _assert(k in prof, f"profile has {k}", prof)
+        _assert(isinstance(prof["address"], dict), "address is object", prof)
+        # Operational/financial fields must NEVER appear.
+        forbidden_profile = {
+            "default_tax_rate",
+            "default_tax_name",
+            "default_invoice_terms",
+            "default_invoice_footer",
+            "default_payment_instructions",
+            "reminder1_enabled",
+            "attendance_gate_enabled",
+            "trusted_clock_in_ips",
+            "target_labor_pct",
+            "updated_by_user_id",
+        }
+        leaked = forbidden_profile & set(prof.keys())
+        _assert(not leaked, "business-profile leaks operational fields", leaked)
+        print("public business-profile ok")
+
         print()
         print("public site smoke ok")
         return 0

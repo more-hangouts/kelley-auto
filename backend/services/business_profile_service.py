@@ -172,6 +172,37 @@ def get_profile(db: Session) -> BusinessProfileView:
     return _to_view(row)
 
 
+def get_public_profile(db: Session) -> dict[str, Any]:
+    """Customer-facing business NAP (name, address, phone) for the public
+    site — Day 4.
+
+    An explicit allowlist: only the storefront-public identity + contact
+    fields. Deliberately EXCLUDES every operational/financial field on the
+    singleton — tax rate/name, invoice terms/footer/payment instructions,
+    all reminder settings, attendance/selfie/GPS/trusted-network config,
+    labor targets, pay-period anchor, and the updated_by audit. camelCase to
+    match the other public DTOs. Returns ``{}``-safe values (nulls) rather
+    than raising when optional fields are blank; the singleton always exists
+    in a provisioned DB, so a missing row surfaces as the service error.
+    """
+    v = get_profile(db)
+    return {
+        "name": v.display_name or v.legal_name,
+        "legalName": v.legal_name,
+        "address": {
+            "line1": v.address_line1,
+            "line2": v.address_line2,
+            "city": v.city,
+            "state": v.state,
+            "postalCode": v.postal_code,
+            "country": v.country,
+        },
+        "phone": v.phone,
+        "email": v.email,
+        "website": v.website,
+    }
+
+
 def update_profile(
     db: Session,
     *,
