@@ -25,15 +25,24 @@ cannot quietly rewrite codes already on issued invoices.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Any
 
 from sqlalchemy import case, func, or_
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
+from config.settings import PUBLIC_API_BASE_URL, VEHICLE_PHOTO_MAX_MB
 from database.models import CatalogItem
+from services import document_storage
+from services.upload_validation import (
+    HEAD_BYTES_NEEDED,
+    UploadValidationError,
+    validate_magic_bytes,
+)
 
 
 class CatalogServiceError(Exception):
@@ -314,6 +323,20 @@ def public_render_dict(value: Any) -> dict[str, Any]:
 # Construction is an explicit allowlist (not a row dump minus a denylist)
 # so a column added later is private by default until someone adds it
 # here on purpose.
+def _resolve_photo_url(url: str) -> str:
+    """Vehicle photos are stored as origin-relative paths
+    (``/api/public/media/...``) so the DB stays host-independent. The
+    storefront runs on a different origin and can't resolve those, so
+    resolve them to absolute URLs on the configured public API origin.
+    External (http/https) URLs — e.g. a future CDN or a manually-entered
+    link — pass through unchanged."""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    if url.startswith("/"):
+        return f"{PUBLIC_API_BASE_URL}{url}"
+    return url
+
+
 def public_vehicle_dto(item: CatalogItem) -> dict[str, Any]:
     """Project a vehicle ``CatalogItem`` into the public inventory DTO
     (camelCase, matches MIGRATION_PLAN.md "Public API Contract").
@@ -354,7 +377,7 @@ def public_vehicle_dto(item: CatalogItem) -> dict[str, Any]:
         "bodyType": item.body_type,
         "drivetrain": item.drivetrain,
         "vin": item.vin,
-        "photos": list(item.image_urls or []),
+        "photos": [_resolve_photo_url(u) for u in (item.image_urls or [])],
         "features": list(item.features_json or []),
         "carfaxUrl": item.carfax_url,
         "videoUrl": item.video_url,
@@ -609,6 +632,87 @@ def validate_vehicle_fields(values: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Writes
 # ---------------------------------------------------------------------------
+
+
+# Vehicle photo upload (local FastAPI storage, v1). Stored under
+# `vehicles/{catalog_id}/{uuid}.{ext}`; image_urls holds the ordered list of
+# origin-relative public paths (first = thumbnail). SVG is intentionally
+# excluded (script-injection risk on a user upload); HEIC is excluded because
+# browsers won't render it inline.
+VEHICLE_PHOTO_ALLOWED_EXT = ("jpg", "jpeg", "png", "webp")
+_PHOTO_CT_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+_VEHICLE_MEDIA_PREFIX = "vehicles"
+_VEHICLE_PHOTO_MAX_BYTES = VEHICLE_PHOTO_MAX_MB * 1024 * 1024
+
+
+def _photo_extension(filename: str, content_type: str) -> str:
+    if "." in (filename or ""):
+        ext = filename.rsplit(".", 1)[1].lower()
+        if ext in VEHICLE_PHOTO_ALLOWED_EXT:
+            return ext
+    ext = _PHOTO_CT_TO_EXT.get((content_type or "").lower(), "")
+    if ext in VEHICLE_PHOTO_ALLOWED_EXT:
+        return ext
+    raise CatalogServiceError(
+        "unsupported photo type — allowed: jpg, png, webp",
+        code="vehicle_photo_unsupported_type",
+    )
+
+
+def add_vehicle_photo(
+    db: Session,
+    *,
+    catalog_item_id: int,
+    filename: str,
+    content_type: str,
+    body: bytes,
+) -> CatalogItem:
+    """Store one uploaded vehicle photo and append its public URL to the
+    row's ``image_urls`` (ordered; first is the thumbnail). Validates the
+    content type by extension AND magic bytes, caps the size, and guards
+    disk space. Caller owns the transaction (we ``flush`` only)."""
+    item = db.get(CatalogItem, catalog_item_id)
+    if item is None or not item.is_vehicle:
+        raise CatalogServiceError(
+            "vehicle not found", code="catalog_item_not_found"
+        )
+    if not body:
+        raise CatalogServiceError(
+            "photo file is empty", code="vehicle_photo_empty"
+        )
+    if len(body) > _VEHICLE_PHOTO_MAX_BYTES:
+        raise CatalogServiceError(
+            f"photo too large (max {VEHICLE_PHOTO_MAX_MB} MB)",
+            code="vehicle_photo_too_large",
+            max_mb=VEHICLE_PHOTO_MAX_MB,
+        )
+    ext = _photo_extension(filename, content_type)
+    try:
+        validate_magic_bytes(declared_ext=ext, head=body[:HEAD_BYTES_NEEDED])
+    except UploadValidationError as exc:
+        raise CatalogServiceError(
+            "photo content does not match an allowed image type",
+            code="vehicle_photo_unsupported_type",
+        ) from exc
+    if document_storage.free_bytes() < _VEHICLE_PHOTO_MAX_BYTES * 4:
+        raise CatalogServiceError(
+            "insufficient disk space for photo upload",
+            code="vehicle_photo_insufficient_storage",
+        )
+
+    storage_key = (
+        f"{_VEHICLE_MEDIA_PREFIX}/{catalog_item_id}/{uuid.uuid4().hex}.{ext}"
+    )
+    document_storage.put_object(storage_key, BytesIO(body))
+    public_path = f"/api/public/media/{storage_key}"
+    item.image_urls = list(item.image_urls or []) + [public_path]
+    item.updated_at = datetime.now(timezone.utc)
+    db.flush()
+    return item
 
 
 def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:

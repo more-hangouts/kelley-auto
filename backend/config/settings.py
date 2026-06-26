@@ -31,6 +31,17 @@ SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", ".kelleyautoplex.com"
 PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "http://localhost:3000")
 WIDGET_PUBLIC_BASE_URL = os.getenv("WIDGET_PUBLIC_BASE_URL", "http://localhost:8000")
 
+# Externally-reachable API origin used to build ABSOLUTE public media URLs
+# (vehicle photos) for the storefront, which runs on a different origin and
+# can't resolve origin-relative paths against the API. Defaults to 127.0.0.1
+# in dev (matches the public site's next/image allowlist); set to
+# https://api.kelleyautoplex.com in production.
+PUBLIC_API_BASE_URL = os.getenv(
+    "PUBLIC_API_BASE_URL", "http://127.0.0.1:8000"
+).rstrip("/")
+# Per-file cap for staff-uploaded vehicle photos.
+VEHICLE_PHOTO_MAX_MB = int(os.getenv("VEHICLE_PHOTO_MAX_MB", "10"))
+
 # Customer-facing invoice/quote portal. Used to substitute the public link
 # into the email body that ships with mark_sent/resend. Production should
 # point at the customer-facing host (e.g. https://kelleyautoplex.com); dev

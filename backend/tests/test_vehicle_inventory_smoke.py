@@ -39,6 +39,9 @@ from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem, User  # noqa: E402
+import base64  # noqa: E402
+
+from services import document_storage  # noqa: E402
 from services.catalog_service import public_vehicle_dto  # noqa: E402
 
 client = TestClient(app)
@@ -189,6 +192,61 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(veh["public_code"].startswith("BVX-"), "public_code minted", veh)
         veh_id = veh["id"]
         print("create vehicle ok")
+
+        # --- 1b. Photo upload (local storage) ------------------------
+        _png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4"
+            "2mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        )
+        resp = client.post(
+            f"/api/catalog/{veh_id}/photos",
+            headers=admin,
+            files={"file": ("front.png", _png, "image/png")},
+        )
+        _assert(resp.status_code == 201, "photo upload", resp.text)
+        _imgs = resp.json()["image_urls"]
+        _assert(
+            _imgs[-1].startswith(f"/api/public/media/vehicles/{veh_id}/")
+            and _imgs[-1].endswith(".png"),
+            "uploaded photo appended to image_urls as relative path",
+            _imgs,
+        )
+        _key = _imgs[-1].replace("/api/public/media/", "")
+        # public detail exposes the uploaded photo as an ABSOLUTE url
+        pdto = client.get(f"/api/public/inventory/{veh['public_code']}").json()
+        _assert(
+            pdto["photos"]
+            and pdto["photos"][-1].startswith("http")
+            and pdto["photos"][-1].endswith(_key.rsplit("/", 1)[-1]),
+            "public DTO resolves uploaded photo to absolute url",
+            pdto.get("photos"),
+        )
+        # media route serves it; logo and traversal are NOT public
+        _m = client.get(f"/api/public/media/{_key}")
+        _assert(_m.status_code == 200, "public media serves photo", _m.status_code)
+        _assert(
+            _m.headers.get("content-type") == "image/png",
+            "media content-type",
+            _m.headers.get("content-type"),
+        )
+        _assert(
+            client.get("/api/public/media/business/logo.png").status_code == 404,
+            "public media is scoped to vehicles/ (logo not exposed)",
+        )
+        # non-image is rejected
+        resp = client.post(
+            f"/api/catalog/{veh_id}/photos",
+            headers=admin,
+            files={"file": ("notes.txt", b"not an image", "text/plain")},
+        )
+        _assert(resp.status_code == 415, "non-image photo rejected", resp.text)
+        # reorder/clear via PATCH image_urls still works; clear + delete file
+        resp = client.patch(
+            f"/api/catalog/{veh_id}", headers=admin, json={"image_urls": []}
+        )
+        _assert(resp.status_code == 200, "clear image_urls", resp.text)
+        document_storage.delete_object(_key)
+        print("photo upload + public serve ok")
 
         # --- 2. Patch the vehicle ------------------------------------
         resp = client.patch(

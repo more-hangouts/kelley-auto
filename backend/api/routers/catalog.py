@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -26,6 +26,7 @@ from services.catalog_service import (
     MIN_VEHICLE_YEAR,
     VEHICLE_STATUS_VALUES,
     VIN_LENGTH,
+    add_vehicle_photo,
     create_catalog_item,
     find_catalog_items,
     get_by_internal_sku,
@@ -224,6 +225,42 @@ def create_catalog_item_route(
         raise HTTPException(status_code=409, detail="catalog_item_conflict") from exc
 
 
+@router.post(
+    "/{catalog_item_id}/photos",
+    response_model=CatalogItemResponse,
+    status_code=201,
+)
+async def upload_vehicle_photo_route(
+    catalog_item_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(require_admin_scope)],
+    file: Annotated[UploadFile, File(...)],
+) -> CatalogItem:
+    """Upload one vehicle photo (admin-only, like every catalog write).
+    Stores it under the document root and appends an origin-relative public
+    URL to the row's ``image_urls`` (ordered; first = thumbnail). Reorder or
+    remove via PATCH ``image_urls``."""
+    body = await file.read()
+    try:
+        item = add_vehicle_photo(
+            db,
+            catalog_item_id=catalog_item_id,
+            filename=file.filename or "photo",
+            content_type=file.content_type or "",
+            body=body,
+        )
+        db.commit()
+        db.refresh(item)
+        return item
+    except CatalogServiceError as exc:
+        db.rollback()
+        status = _CATALOG_ERROR_STATUS.get(exc.code, 400)
+        detail: dict[str, object] = {"code": exc.code}
+        if exc.extra:
+            detail.update(exc.extra)
+        raise HTTPException(status_code=status, detail=detail) from exc
+
+
 @router.get("", response_model=list[CatalogItemResponse])
 def list_catalog_items_route(
     db: Annotated[Session, Depends(get_db)],
@@ -410,6 +447,10 @@ _CATALOG_ERROR_STATUS: dict[str, int] = {
     "vehicle_mileage_invalid": 422,
     "vehicle_status_invalid": 422,
     "vehicle_features_invalid": 422,
+    "vehicle_photo_unsupported_type": 415,
+    "vehicle_photo_too_large": 413,
+    "vehicle_photo_empty": 400,
+    "vehicle_photo_insufficient_storage": 507,
 }
 
 

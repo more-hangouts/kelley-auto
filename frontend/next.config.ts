@@ -3,12 +3,27 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      // Vehicle photos come from the FastAPI public inventory
-      // (public_vehicle_dto.photos) as absolute URLs. Add the real
-      // production photo CDN host(s) here once known, e.g.:
-      //   { protocol: 'https', hostname: '<cdn-host>', pathname: '/**' }
-      // Until then, off-host vehicle images won't optimize through
-      // next/image (add the host, or set `unoptimized` on those <Image>s).
+      // Vehicle photos are served by the FastAPI backend at
+      // /api/public/media/vehicles/... as absolute URLs (built from
+      // PUBLIC_API_BASE_URL). Allow the API origins so next/image can
+      // optimize them. Dev: 127.0.0.1/localhost:8000. Prod: the API host.
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '8000',
+        pathname: '/api/public/media/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/api/public/media/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.kelleyautoplex.com',
+        pathname: '/api/public/media/**',
+      },
     ],
   },
 }

@@ -874,6 +874,16 @@ export async function updateVehicle(catalogItemId, patch) {
   return data
 }
 
+// Upload one vehicle photo (multipart). Returns the full updated catalog
+// item, whose `image_urls` now ends with the new origin-relative photo path.
+// The vehicle must already exist (create first, then add photos).
+export async function uploadVehiclePhoto(catalogItemId, file) {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post(`/catalog/${catalogItemId}/photos`, form)
+  return data
+}
+
 // Global Search Phase 2. Returns { query, results: [{type, id, label,
 // sublabel, score, route}, ...] }. The `signal` lets React Query
 // cancel in-flight requests when the debounced query supersedes

@@ -34,8 +34,14 @@ import AddIcon from '@mui/icons-material/Add'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined'
 
-import { createVehicle, listVehicles, updateVehicle } from '../services/api'
+import {
+  createVehicle,
+  listVehicles,
+  updateVehicle,
+  uploadVehiclePhoto,
+} from '../services/api'
 import { formatDollars, formatUSD, parseDollars } from '../utils/money'
 
 // Admin vehicle inventory, mounted at /inventory (top-level nav).
@@ -250,6 +256,17 @@ function buildPayload(form, { isEdit }) {
 // Editor for an ordered list of free-text strings (photo URLs, features).
 // `reorder` adds up/down controls and flags the first item as the public
 // thumbnail — order is meaningful for image_urls (first = public thumb).
+const PHOTO_API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+// Stored vehicle photos are origin-relative (`/api/public/media/...`) so the
+// DB stays host-independent. Build an absolute src for <img> previews in the
+// admin (a different origin from the API); external URLs pass through.
+function photoSrc(url) {
+  if (!url) return ''
+  if (/^https?:\/\//.test(url)) return url
+  return `${PHOTO_API_ORIGIN}${url}`
+}
+
 function StringListEditor({ label, values, onChange, placeholder, helperText, reorder }) {
   const update = (idx, val) => {
     const next = [...values]
@@ -388,6 +405,7 @@ export default function AdminVehicles() {
   const [form, setForm] = useState(DEFAULT_FORM)
   const [actionError, setActionError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   async function refresh() {
     setLoadError(null)
@@ -511,6 +529,28 @@ export default function AdminVehicles() {
       setActionError(extractApiError(err))
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Upload appends to the row's image_urls and persists immediately (the
+  // server is the source of truth), so the form mirrors the returned list.
+  // Requires an existing vehicle — there is no id to attach to before create.
+  async function handlePhotoUpload(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = '' // allow re-selecting the same file
+    if (!files.length || !editing) return
+    setActionError(null)
+    setUploadingPhoto(true)
+    try {
+      let latest = null
+      for (const file of files) {
+        latest = await uploadVehiclePhoto(editing.id, file)
+      }
+      if (latest) setForm((f) => ({ ...f, image_urls: latest.image_urls || [] }))
+    } catch (err) {
+      setActionError(extractApiError(err))
+    } finally {
+      setUploadingPhoto(false)
     }
   }
 
@@ -978,12 +1018,85 @@ export default function AdminVehicles() {
             <Typography variant="subtitle2" color="text.secondary">
               Media
             </Typography>
+            <Box>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 1 }}
+              >
+                <Typography variant="subtitle2">Photos</Typography>
+                <Button
+                  component="label"
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PhotoCameraOutlinedIcon />}
+                  disabled={!editing || uploadingPhoto}
+                >
+                  {uploadingPhoto ? 'Uploading…' : 'Upload'}
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    onChange={handlePhotoUpload}
+                  />
+                </Button>
+              </Stack>
+              {!editing && (
+                <Typography variant="caption" color="text.secondary">
+                  Save the vehicle first, then re-open it to upload photos.
+                </Typography>
+              )}
+              {form.image_urls.length > 0 && (
+                <Stack
+                  direction="row"
+                  sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}
+                >
+                  {form.image_urls.map((u, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{ position: 'relative', width: 84, height: 84 }}
+                    >
+                      <Box
+                        component="img"
+                        src={photoSrc(u)}
+                        alt={`Photo ${idx + 1}`}
+                        sx={{
+                          width: 84,
+                          height: 84,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'action.hover',
+                        }}
+                      />
+                      {idx === 0 && (
+                        <Chip
+                          size="small"
+                          label="Thumb"
+                          color="primary"
+                          sx={{
+                            position: 'absolute',
+                            bottom: 2,
+                            left: 2,
+                            height: 18,
+                            fontSize: 10,
+                          }}
+                        />
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </Box>
             <StringListEditor
               label="Photo URLs"
               values={form.image_urls}
               onChange={(image_urls) => setForm({ ...form, image_urls })}
               placeholder="https://…/photo.jpg"
-              helperText="The first photo is the public thumbnail. Use the arrows to reorder."
+              helperText="Uploaded photos appear here. The first is the public thumbnail — use the arrows to reorder. You can also paste external URLs."
               reorder
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

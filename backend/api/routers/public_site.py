@@ -25,12 +25,14 @@ import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
 from api.redis_rate_limit import enforce_or_raise, rate_limit
 from database.connection import get_db
 from services import business_profile_service
+from services import document_storage
 from services import public_inventory_service as inventory
 from services import public_lead_service
 from services.business_profile_service import BusinessProfileError
@@ -251,3 +253,30 @@ def get_business_profile(
         return business_profile_service.get_public_profile(db)
     except BusinessProfileError as exc:
         raise HTTPException(status_code=404, detail=exc.code) from exc
+
+
+_MEDIA_CONTENT_TYPES = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "webp": "image/webp",
+}
+
+
+@router.get("/media/{key:path}")
+def get_public_media(key: str) -> Response:
+    """Serve a stored vehicle photo by storage key. PUBLIC + unauthenticated,
+    but STRICTLY scoped to the ``vehicles/`` prefix so business logos, event
+    documents, and any other stored object can never be read through here.
+    ``document_storage.resolve_path`` independently rejects path traversal."""
+    if not key.startswith("vehicles/"):
+        raise HTTPException(status_code=404, detail="not_found")
+    try:
+        path = document_storage.resolve_path(key)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="not_found")
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    media_type = _MEDIA_CONTENT_TYPES.get(ext, "application/octet-stream")
+    return FileResponse(path, media_type=media_type)
