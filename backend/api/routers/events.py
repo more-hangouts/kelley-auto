@@ -271,8 +271,22 @@ class EventDetailResponse(EventResponse):
     status_history: list[StatusHistoryEntry]
 
 
+class VehicleCardSummary(BaseModel):
+    """Linked-vehicle snapshot for a vehicle_sale board/detail card. None on
+    quinceanera cards and on vehicle deals whose catalog link was cleared."""
+
+    id: int
+    year: int | None
+    make: str | None
+    model: str | None
+    vin: str | None
+    vehicle_status: str | None
+    mileage: int | None
+
+
 class BoardCardResponse(BaseModel):
     id: int
+    event_type: str
     event_name: str
     event_date: date | None
     court_size: int | None
@@ -289,6 +303,8 @@ class BoardCardResponse(BaseModel):
     # appointment/quote/invoice on this event. 0 means no buyer-journey
     # signal yet (the celebrant's rows are likely untagged today).
     named_buyer_count: int = 0
+    # Linked vehicle for vehicle_sale deals; None for quinceanera cards.
+    vehicle: VehicleCardSummary | None = None
 
 
 class BoardColumnResponse(BaseModel):
@@ -397,6 +413,7 @@ def get_board(
                 cards=[
                     BoardCardResponse(
                         id=c.id,
+                        event_type=c.event_type,
                         event_name=c.event_name,
                         event_date=c.event_date,
                         court_size=c.court_size,
@@ -415,6 +432,17 @@ def get_board(
                         has_outstanding_invoice=c.has_outstanding_invoice,
                         outstanding_balance_cents=c.outstanding_balance_cents,
                         named_buyer_count=c.named_buyer_count,
+                        vehicle=VehicleCardSummary(
+                            id=c.vehicle_id,
+                            year=c.vehicle_year,
+                            make=c.vehicle_make,
+                            model=c.vehicle_model,
+                            vin=c.vehicle_vin,
+                            vehicle_status=c.vehicle_status,
+                            mileage=c.vehicle_mileage,
+                        )
+                        if c.vehicle_id is not None
+                        else None,
                     )
                     for c in col.cards
                 ],

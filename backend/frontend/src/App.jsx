@@ -79,6 +79,16 @@ export default function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="pipeline" element={<Pipeline />} />
+                <Route
+                  path="sales"
+                  element={
+                    <Pipeline
+                      eventType="vehicle_sale"
+                      title="Vehicle Deals"
+                      subtitleNoun="Vehicle sale deals"
+                    />
+                  }
+                />
                 <Route path="events/:eventId" element={<EventDetailLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<Overview />} />

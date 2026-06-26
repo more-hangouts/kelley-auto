@@ -18,6 +18,7 @@ import {
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
+import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import ViewKanbanOutlinedIcon from '@mui/icons-material/ViewKanbanOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -46,6 +47,7 @@ const TOPBAR_HEIGHT = 64
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashboardOutlinedIcon, end: true },
   { to: '/pipeline', label: 'Deals', icon: ViewKanbanOutlinedIcon },
+  { to: '/sales', label: 'Vehicle Deals', icon: SellOutlinedIcon },
   { to: '/calendar', label: 'Appointments', icon: CalendarMonthOutlinedIcon },
   { to: '/inventory', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
   { to: '/settings', label: 'Settings', icon: SettingsOutlinedIcon },

@@ -463,6 +463,7 @@ def restore_event(
 @dataclass
 class BoardCard:
     id: int
+    event_type: str
     event_name: str
     event_date: date | None
     court_size: int | None
@@ -484,6 +485,17 @@ class BoardCard:
     # design — NULL means "celebrant or unspecified" and we don't want
     # legacy untagged data inflating the buyer signal.
     named_buyer_count: int
+    # Vehicle overlay (event_type='vehicle_sale'). Populated from the linked
+    # catalog_items row via vehicle_catalog_item_id; all None for quinceanera
+    # cards (and for vehicle deals whose link was cleared). Lets the kanban
+    # render make/model/VIN/inventory-status chips without a second fetch.
+    vehicle_id: int | None = None
+    vehicle_year: int | None = None
+    vehicle_make: str | None = None
+    vehicle_model: str | None = None
+    vehicle_vin: str | None = None
+    vehicle_status: str | None = None
+    vehicle_mileage: int | None = None
 
 
 @dataclass
@@ -600,6 +612,7 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
     rows = db.execute(
         select(
             Event.id,
+            Event.event_type,
             Event.event_name,
             Event.event_date,
             Event.court_size,
@@ -615,9 +628,19 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
             outstanding_subq.c.has_outstanding_invoice,
             outstanding_subq.c.outstanding_balance_cents,
             named_buyer_subq.c.named_buyer_count,
+            CatalogItem.id.label("vehicle_id"),
+            CatalogItem.year.label("vehicle_year"),
+            CatalogItem.make.label("vehicle_make"),
+            CatalogItem.model.label("vehicle_model"),
+            CatalogItem.vin.label("vehicle_vin"),
+            CatalogItem.vehicle_status.label("vehicle_status"),
+            CatalogItem.mileage.label("vehicle_mileage"),
         )
         .join(Contact, Contact.id == Event.primary_contact_id)
         .outerjoin(User, User.id == Event.owner_user_id)
+        .outerjoin(
+            CatalogItem, CatalogItem.id == Event.vehicle_catalog_item_id
+        )
         .outerjoin(last_appt_subq, last_appt_subq.c.event_id == Event.id)
         .outerjoin(profile_subq, profile_subq.c.event_id == Event.id)
         .outerjoin(outstanding_subq, outstanding_subq.c.event_id == Event.id)
@@ -641,6 +664,7 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
         by_status[r.status].append(
             BoardCard(
                 id=r.id,
+                event_type=r.event_type,
                 event_name=r.event_name,
                 event_date=r.event_date,
                 court_size=r.court_size,
@@ -660,6 +684,13 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
                     r.outstanding_balance_cents or 0
                 ),
                 named_buyer_count=int(r.named_buyer_count or 0),
+                vehicle_id=r.vehicle_id,
+                vehicle_year=r.vehicle_year,
+                vehicle_make=r.vehicle_make,
+                vehicle_model=r.vehicle_model,
+                vehicle_vin=r.vehicle_vin,
+                vehicle_status=r.vehicle_status,
+                vehicle_mileage=r.vehicle_mileage,
             )
         )
 

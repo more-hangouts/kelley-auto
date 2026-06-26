@@ -141,9 +141,47 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
             <Divider sx={{ my: 2.5 }} />
 
             <Stack spacing={0.5}>
-              <KV label="Event date" value={formatDate(card.event_date)} />
-              <KV label="Court size" value={card.court_size ?? '—'} />
-              <KV label="Theme" value={card.quince_theme} />
+              {card.vehicle ? (
+                <>
+                  <KV
+                    label="Vehicle"
+                    value={
+                      [card.vehicle.year, card.vehicle.make, card.vehicle.model]
+                        .filter(Boolean)
+                        .join(' ') || '—'
+                    }
+                  />
+                  <KV label="VIN" value={card.vehicle.vin} />
+                  <KV
+                    label="Inventory"
+                    value={
+                      card.vehicle.vehicle_status ? (
+                        <Chip
+                          size="small"
+                          label={card.vehicle.vehicle_status}
+                          sx={{ height: 20, textTransform: 'capitalize' }}
+                        />
+                      ) : (
+                        '—'
+                      )
+                    }
+                  />
+                  <KV
+                    label="Mileage"
+                    value={
+                      card.vehicle.mileage != null
+                        ? `${card.vehicle.mileage.toLocaleString()} mi`
+                        : '—'
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <KV label="Event date" value={formatDate(card.event_date)} />
+                  <KV label="Court size" value={card.court_size ?? '—'} />
+                  <KV label="Theme" value={card.quince_theme} />
+                </>
+              )}
               <KV
                 label="Status changed"
                 value={dayjs(card.status_changed_at).fromNow()}

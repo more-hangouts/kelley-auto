@@ -18,6 +18,9 @@ import GroupIcon from '@mui/icons-material/Group'
 import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
+import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
+import FingerprintOutlinedIcon from '@mui/icons-material/FingerprintOutlined'
+import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import {
   DndContext,
   DragOverlay,
@@ -40,7 +43,21 @@ import { formatUSD } from '../utils/money'
 
 dayjs.extend(relativeTime)
 
-const EVENT_TYPE = 'quinceanera'
+// Inventory-status chip color for vehicle_sale cards. Mirrors the
+// vehicle_status CHECK values; unknowns fall through to a neutral chip.
+const VEHICLE_STATUS_COLORS = {
+  available: { bg: 'success.light', fg: 'success.dark' },
+  pending: { bg: 'warning.light', fg: 'warning.dark' },
+  sold: { bg: 'info.light', fg: 'info.dark' },
+  delivered: { bg: 'action.selected', fg: 'text.secondary' },
+  wholesale: { bg: 'action.hover', fg: 'text.secondary' },
+  hidden: { bg: 'action.hover', fg: 'text.disabled' },
+}
+
+function formatMileage(mi) {
+  if (mi == null) return null
+  return `${mi.toLocaleString()} mi`
+}
 
 function columnCollisionDetection(args) {
   const pointerCollisions = pointerWithin(args)
@@ -187,6 +204,67 @@ function CardBody({ card, dragging = false }) {
             }}
           />
         </Tooltip>
+        {card.vehicle && (
+          <>
+            {[card.vehicle.year, card.vehicle.make, card.vehicle.model]
+              .filter(Boolean)
+              .join(' ') && (
+              <Tooltip title="Linked vehicle">
+                <Chip
+                  size="small"
+                  icon={<DirectionsCarOutlinedIcon sx={{ fontSize: 14 }} />}
+                  label={[card.vehicle.year, card.vehicle.make, card.vehicle.model]
+                    .filter(Boolean)
+                    .join(' ')}
+                  variant="outlined"
+                  sx={{ fontSize: 11, height: 22, maxWidth: 170 }}
+                />
+              </Tooltip>
+            )}
+            {card.vehicle.vehicle_status && (
+              <Tooltip title={`Inventory status: ${card.vehicle.vehicle_status}`}>
+                <Chip
+                  size="small"
+                  label={card.vehicle.vehicle_status}
+                  sx={{
+                    fontSize: 11,
+                    height: 22,
+                    textTransform: 'capitalize',
+                    fontWeight: 600,
+                    bgcolor:
+                      VEHICLE_STATUS_COLORS[card.vehicle.vehicle_status]?.bg ||
+                      'action.hover',
+                    color:
+                      VEHICLE_STATUS_COLORS[card.vehicle.vehicle_status]?.fg ||
+                      'text.secondary',
+                  }}
+                />
+              </Tooltip>
+            )}
+            {card.vehicle.mileage != null && (
+              <Tooltip title="Mileage">
+                <Chip
+                  size="small"
+                  icon={<SpeedOutlinedIcon sx={{ fontSize: 14 }} />}
+                  label={formatMileage(card.vehicle.mileage)}
+                  variant="outlined"
+                  sx={{ fontSize: 11, height: 22 }}
+                />
+              </Tooltip>
+            )}
+            {card.vehicle.vin && (
+              <Tooltip title={`VIN ${card.vehicle.vin}`}>
+                <Chip
+                  size="small"
+                  icon={<FingerprintOutlinedIcon sx={{ fontSize: 14 }} />}
+                  label={card.vehicle.vin.slice(-6)}
+                  variant="outlined"
+                  sx={{ fontSize: 11, height: 22 }}
+                />
+              </Tooltip>
+            )}
+          </>
+        )}
         {card.court_size != null && (
           <Tooltip title="Court size">
             <Chip
@@ -345,15 +423,19 @@ function DroppableColumn({ column, onCardClick }) {
   )
 }
 
-export default function Pipeline() {
+export default function Pipeline({
+  eventType = 'quinceanera',
+  title = 'Pipeline',
+  subtitleNoun = 'Quinceañera events',
+}) {
   const queryClient = useQueryClient()
-  const queryKey = ['events', 'board', EVENT_TYPE]
+  const queryKey = ['events', 'board', eventType]
   const [selectedCard, setSelectedCard] = useState(null)
   const [activeDrag, setActiveDrag] = useState(null)
 
   const { data: board, isLoading, isFetching, error, refetch } = useQuery({
     queryKey,
-    queryFn: () => getEventBoard(EVENT_TYPE),
+    queryFn: () => getEventBoard(eventType),
   })
 
   const changeStatus = useMutation({
@@ -425,9 +507,9 @@ export default function Pipeline() {
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
         <Box>
-          <Typography variant="h4">Pipeline</Typography>
+          <Typography variant="h4">{title}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Quinceañera events · {totalCards} active
+            {subtitleNoun} · {totalCards} active
           </Typography>
         </Box>
         <IconButton onClick={() => refetch()} disabled={isFetching}>
