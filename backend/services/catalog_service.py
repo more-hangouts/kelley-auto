@@ -84,6 +84,30 @@ class CatalogItemInput:
     is_sample: bool = False
     active: bool = True
     unit_price_cents: int | None = None
+    # Vehicle inventory overlay (migration 085). All optional so the dress
+    # importer/admin shape is unchanged. `is_vehicle` is the discriminator;
+    # the API vehicle-create path sets it true with category='vehicle' and
+    # mirrors stock_number->internal_sku / exterior_color->color so the
+    # NOT NULL legacy columns are satisfied.
+    is_vehicle: bool = False
+    vin: str | None = None
+    stock_number: str | None = None
+    year: int | None = None
+    make: str | None = None
+    model: str | None = None
+    trim: str | None = None
+    mileage: int | None = None
+    transmission: str | None = None
+    fuel_type: str | None = None
+    exterior_color: str | None = None
+    interior_color: str | None = None
+    body_type: str | None = None
+    drivetrain: str | None = None
+    condition: str | None = None
+    vehicle_status: str | None = None
+    carfax_url: str | None = None
+    video_url: str | None = None
+    features_json: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +121,12 @@ _CATEGORY_LABELS = {
     "formal_gown": "Formal gown",
     "accessory": "Accessory",
     "service": "Alteration",
+    # Kelley Autoplex (migration 085): vehicles get their own honest
+    # category value rather than overloading 'service' (which renders as
+    # "Alteration"). _CATALOG_CATEGORIES derives from this dict, so adding
+    # the label here is also what lets update_catalog_item accept
+    # category='vehicle'.
+    "vehicle": "Vehicle",
 }
 
 # UI grouping for the admin catalog page and the editor picker tabs.
@@ -109,6 +139,7 @@ CATEGORY_GROUPS: dict[str, tuple[str, ...]] = {
     "dress": ("quince_gown", "bridal_gown", "formal_gown"),
     "accessory": ("accessory",),
     "addon": ("service",),
+    "vehicle": ("vehicle",),
 }
 
 FORBIDDEN_PUBLIC_RENDER_KEYS = frozenset(
@@ -279,6 +310,61 @@ def public_render_dict(value: Any) -> dict[str, Any]:
     )
 
 
+# Public-safe vehicle DTO fields the customer site is allowed to see.
+# Construction is an explicit allowlist (not a row dump minus a denylist)
+# so a column added later is private by default until someone adds it
+# here on purpose.
+def public_vehicle_dto(item: CatalogItem) -> dict[str, Any]:
+    """Project a vehicle ``CatalogItem`` into the public inventory DTO
+    (camelCase, matches MIGRATION_PLAN.md "Public API Contract").
+
+    Deliberately EXCLUDES every internal field:
+      - ``internal_sku`` (staff identifier)
+      - ``stock_number`` (private per the v1 decision — public uses
+        ``listingCode``; flip only if the business explicitly approves)
+      - ``wholesale_cents`` / ``wholesale_as_of`` / ``wholesale_source``
+      - ``designer`` / ``style_number`` / ``color`` (internal compat
+        columns; the public values are ``make`` / ``model`` /
+        ``exteriorColor``)
+      - all ``source_*`` scrape metadata
+
+    ``vin`` IS included: dealer listings publish it (Carfax linkage) and
+    the Day 4 contract's exclusion list does not name it. Drop the key
+    here if the business decides VIN should be private.
+
+    ``assert_public_render_keys`` runs as a backstop so a forbidden key
+    can never ship even if this allowlist is edited carelessly.
+    """
+    dto: dict[str, Any] = {
+        "id": item.id,
+        "listingCode": item.public_code,
+        "title": item.product_title,
+        "make": item.make,
+        "model": item.model,
+        "year": item.year,
+        "trim": item.trim,
+        "priceCents": item.unit_price_cents,
+        "mileage": item.mileage,
+        "status": item.vehicle_status,
+        "condition": item.condition,
+        "exteriorColor": item.exterior_color,
+        "interiorColor": item.interior_color,
+        "transmission": item.transmission,
+        "fuelType": item.fuel_type,
+        "bodyType": item.body_type,
+        "drivetrain": item.drivetrain,
+        "vin": item.vin,
+        "photos": list(item.image_urls or []),
+        "features": list(item.features_json or []),
+        "carfaxUrl": item.carfax_url,
+        "videoUrl": item.video_url,
+        "createdAt": item.created_at,
+        "updatedAt": item.updated_at,
+    }
+    assert_public_render_keys(dto)
+    return dto
+
+
 @dataclass
 class CustomerLineView:
     """Customer-safe projection of one invoice/quote line.
@@ -425,6 +511,102 @@ def _assign_catalog_public_code(db: Session) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Vehicle field validation (Kelley Autoplex — migration 085)
+# ---------------------------------------------------------------------------
+
+
+# Mirrors chk_catalog_items_vehicle_status in migration 085. Kept here so
+# the create/patch paths reject a bad status with a friendly domain error
+# before the row ever reaches the DB CHECK.
+VEHICLE_STATUS_VALUES: frozenset[str] = frozenset(
+    {"available", "pending", "sold", "delivered", "wholesale", "hidden"}
+)
+VIN_LENGTH = 17
+MIN_VEHICLE_YEAR = 1980
+
+
+def _max_vehicle_year() -> int:
+    """Upper bound for a plausible model year: next calendar year.
+
+    Computed at call time (not import time) because the bound moves each
+    January. This is the half of the year rule the DB CHECK cannot express
+    — 085 keeps a loose 1980..2100 backstop; the strict ceiling lives
+    here, the same split used for unit_price_cents (>=0 in DB, friendly
+    error in the service).
+    """
+    return datetime.now(timezone.utc).year + 1
+
+
+def validate_vehicle_fields(values: dict[str, Any]) -> None:
+    """Friendly validation for the vehicle overlay fields.
+
+    Only inspects the keys it knows about, so it is safe to call with a
+    full create-input dict or a partial patch dict; unrelated keys
+    (designer, image_urls, ...) are ignored. Uniqueness of vin/
+    stock_number is intentionally NOT checked here — the DB partial-unique
+    indexes own that and surface as IntegrityError -> 409, which also
+    closes the check-then-insert race a Python pre-check would leave open.
+    """
+    if values.get("vin") not in (None, ""):
+        vin = values["vin"]
+        if not isinstance(vin, str) or len(vin.strip()) != VIN_LENGTH:
+            raise CatalogServiceError(
+                f"vin must be {VIN_LENGTH} characters when present",
+                code="vehicle_vin_invalid",
+                field="vin",
+            )
+
+    if values.get("year") is not None:
+        year = values["year"]
+        if not isinstance(year, int) or isinstance(year, bool):
+            raise CatalogServiceError(
+                "year must be an integer",
+                code="vehicle_year_invalid",
+                field="year",
+            )
+        if year < MIN_VEHICLE_YEAR or year > _max_vehicle_year():
+            raise CatalogServiceError(
+                f"year must be between {MIN_VEHICLE_YEAR} and "
+                f"{_max_vehicle_year()}",
+                code="vehicle_year_out_of_range",
+                field="year",
+            )
+
+    if values.get("mileage") is not None:
+        mileage = values["mileage"]
+        if (
+            not isinstance(mileage, int)
+            or isinstance(mileage, bool)
+            or mileage < 0
+        ):
+            raise CatalogServiceError(
+                "mileage must be a non-negative integer",
+                code="vehicle_mileage_invalid",
+                field="mileage",
+            )
+
+    if values.get("vehicle_status") is not None:
+        status = values["vehicle_status"]
+        if status not in VEHICLE_STATUS_VALUES:
+            raise CatalogServiceError(
+                "vehicle_status is not allowed",
+                code="vehicle_status_invalid",
+                field="vehicle_status",
+            )
+
+    if values.get("features_json") is not None:
+        feats = values["features_json"]
+        if not isinstance(feats, list) or any(
+            not isinstance(f, str) for f in feats
+        ):
+            raise CatalogServiceError(
+                "features_json must be a list of strings",
+                code="vehicle_features_invalid",
+                field="features_json",
+            )
+
+
+# ---------------------------------------------------------------------------
 # Writes
 # ---------------------------------------------------------------------------
 
@@ -447,13 +629,42 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
 
     `public_code` is set by the service, not by the caller. The
     `CatalogItemInput` dataclass intentionally omits the field.
+
+    Vehicle rows (``is_vehicle=True``): the vehicle field values are
+    validated up front (friendly errors), and the legacy NOT NULL/compat
+    columns are mirrored from the vehicle fields when the caller did not
+    set them explicitly — ``designer<-make``, ``style_number<-model`` —
+    so legacy readers (designer filter, search) still work on a car row.
+    ``color`` and ``internal_sku`` are required NOT NULL columns; the API
+    vehicle-create path supplies them (``color<-exterior_color``,
+    ``internal_sku<-stock_number``) before calling here.
     """
+    validate_vehicle_fields(
+        {
+            "vin": data.vin,
+            "year": data.year,
+            "mileage": data.mileage,
+            "vehicle_status": data.vehicle_status,
+            "features_json": data.features_json,
+        }
+    )
+
+    designer = data.designer
+    style_number = data.style_number
+    if data.is_vehicle:
+        # Forward-mirror so the compat columns are populated on car rows
+        # the same way the 085 backfill populated them on legacy rows.
+        if not designer:
+            designer = data.make
+        if not style_number:
+            style_number = data.model
+
     public_code = _assign_catalog_public_code(db)
     item = CatalogItem(
         internal_sku=data.internal_sku,
         public_code=public_code,
-        designer=data.designer,
-        style_number=data.style_number,
+        designer=designer,
+        style_number=style_number,
         color=data.color,
         house_name=data.house_name,
         product_title=data.product_title,
@@ -469,6 +680,25 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
         is_sample=data.is_sample,
         active=data.active,
         unit_price_cents=data.unit_price_cents,
+        is_vehicle=data.is_vehicle,
+        vin=data.vin,
+        stock_number=data.stock_number,
+        year=data.year,
+        make=data.make,
+        model=data.model,
+        trim=data.trim,
+        mileage=data.mileage,
+        transmission=data.transmission,
+        fuel_type=data.fuel_type,
+        exterior_color=data.exterior_color,
+        interior_color=data.interior_color,
+        body_type=data.body_type,
+        drivetrain=data.drivetrain,
+        condition=data.condition,
+        vehicle_status=data.vehicle_status,
+        carfax_url=data.carfax_url,
+        video_url=data.video_url,
+        features_json=list(data.features_json),
     )
     db.add(item)
     db.flush()
@@ -600,10 +830,23 @@ _SEARCH_COLUMNS: tuple[Any, ...] = (
     CatalogItem.color,
     CatalogItem.house_name,
     CatalogItem.product_title,
+    # Vehicle overlay (migration 085). vin/stock_number are identifier-
+    # like (exact lookups), so they also go in _IDENTIFIER_COLUMNS below
+    # for exact/prefix rank priority. make/model are listed explicitly —
+    # they're currently mirrored to designer/style_number, but searching
+    # the real columns keeps staff "search by make/model" working even if
+    # that mirror is ever dropped. This is the staff route; matching on
+    # stock_number/vin here does not affect the public DTO's privacy.
+    CatalogItem.vin,
+    CatalogItem.stock_number,
+    CatalogItem.make,
+    CatalogItem.model,
 )
 _IDENTIFIER_COLUMNS: tuple[Any, ...] = (
     CatalogItem.internal_sku,
     CatalogItem.public_code,
+    CatalogItem.vin,
+    CatalogItem.stock_number,
 )
 
 
@@ -736,6 +979,27 @@ _ADMIN_PATCHABLE_FIELDS = {
     "is_sample",
     "active",
     "unit_price_cents",
+    # Vehicle overlay (migration 085). `is_vehicle` is intentionally NOT
+    # patchable: a row's vehicle-vs-gown identity is fixed at create, not
+    # flipped in place.
+    "vin",
+    "stock_number",
+    "year",
+    "make",
+    "model",
+    "trim",
+    "mileage",
+    "transmission",
+    "fuel_type",
+    "exterior_color",
+    "interior_color",
+    "body_type",
+    "drivetrain",
+    "condition",
+    "vehicle_status",
+    "carfax_url",
+    "video_url",
+    "features_json",
 }
 _CATALOG_CATEGORIES = set(_CATEGORY_LABELS)
 _ADMIN_PATCH_REQUIRED_FIELDS = {
@@ -744,6 +1008,9 @@ _ADMIN_PATCH_REQUIRED_FIELDS = {
     "image_urls",
     "is_sample",
     "active",
+    # NOT NULL in the DB (DEFAULT '[]'); reject an explicit null patch
+    # with a friendly error instead of a raw IntegrityError.
+    "features_json",
 }
 
 
@@ -795,6 +1062,9 @@ def update_catalog_item(
             f"cannot patch fields: {sorted(unknown)}",
             code="unknown_fields",
         )
+    # Vehicle overlay validation (vin/year/mileage/vehicle_status/
+    # features_json). Inspects only the vehicle keys present in the patch.
+    validate_vehicle_fields(patch)
     for field_name, value in patch.items():
         if field_name in _ADMIN_PATCH_REQUIRED_FIELDS and value is None:
             raise CatalogServiceError(

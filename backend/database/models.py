@@ -1155,6 +1155,28 @@ class CatalogItem(Base):
     is_sample = Column(Boolean, nullable=False, server_default=text("FALSE"))
     active = Column(Boolean, nullable=False, server_default=text("TRUE"))
     unit_price_cents = Column(Integer)
+    # Vehicle inventory overlay (migration 085). `is_vehicle` is the
+    # discriminator; legacy gown rows may have mirrored vehicle fields from
+    # the compatibility backfill but keep is_vehicle=false.
+    is_vehicle = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    vin = Column(String(17))
+    stock_number = Column(String(64))
+    year = Column(SmallInteger)
+    make = Column(String(80))
+    model = Column(String(80))
+    trim = Column(String(80))
+    mileage = Column(Integer)
+    transmission = Column(String(40))
+    fuel_type = Column(String(40))
+    exterior_color = Column(String(60))
+    interior_color = Column(String(60))
+    body_type = Column(String(40))
+    drivetrain = Column(String(20))
+    condition = Column(String(20))
+    vehicle_status = Column(String(20))
+    carfax_url = Column(Text)
+    video_url = Column(Text)
+    features_json = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     # Wholesale inputs/provenance behind the computed unit_price_cents.
     # See services/pricing.py and migration 084.
     wholesale_cents = Column(Integer)

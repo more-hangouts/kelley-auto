@@ -7,10 +7,11 @@ is staff-only and may expose internal SKU/search fields.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,9 @@ from services.catalog_service import (
     CATEGORY_GROUPS,
     CatalogItemInput,
     CatalogServiceError,
+    MIN_VEHICLE_YEAR,
+    VEHICLE_STATUS_VALUES,
+    VIN_LENGTH,
     create_catalog_item,
     find_catalog_items,
     get_by_internal_sku,
@@ -44,9 +48,9 @@ router = APIRouter()
 class CatalogItemCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    internal_sku: str = Field(min_length=1, max_length=160)
-    color: str = Field(min_length=1, max_length=80)
-    category: str = Field(min_length=1, max_length=40)
+    internal_sku: str | None = Field(default=None, min_length=1, max_length=160)
+    color: str | None = Field(default=None, min_length=1, max_length=80)
+    category: str | None = Field(default=None, min_length=1, max_length=40)
     designer: str | None = Field(default=None, max_length=120)
     style_number: str | None = Field(default=None, max_length=80)
     house_name: str | None = Field(default=None, max_length=120)
@@ -62,9 +66,68 @@ class CatalogItemCreate(BaseModel):
     is_sample: bool = False
     active: bool = True
     unit_price_cents: int | None = Field(default=None, ge=0)
+    is_vehicle: bool = False
+    vin: str | None = Field(default=None, max_length=17)
+    stock_number: str | None = Field(default=None, max_length=64)
+    year: int | None = Field(default=None, ge=MIN_VEHICLE_YEAR)
+    make: str | None = Field(default=None, max_length=80)
+    model: str | None = Field(default=None, max_length=80)
+    trim: str | None = Field(default=None, max_length=80)
+    mileage: int | None = Field(default=None, ge=0)
+    transmission: str | None = Field(default=None, max_length=40)
+    fuel_type: str | None = Field(default=None, max_length=40)
+    exterior_color: str | None = Field(default=None, max_length=60)
+    interior_color: str | None = Field(default=None, max_length=60)
+    body_type: str | None = Field(default=None, max_length=40)
+    drivetrain: str | None = Field(default=None, max_length=20)
+    condition: str | None = Field(default=None, max_length=20)
+    vehicle_status: str | None = Field(default=None, max_length=20)
+    carfax_url: str | None = None
+    video_url: str | None = None
+    features_json: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_create_shape(self) -> "CatalogItemCreate":
+        max_vehicle_year = datetime.now(timezone.utc).year + 1
+        if self.year is not None and self.year > max_vehicle_year:
+            raise ValueError(
+                f"year must be between {MIN_VEHICLE_YEAR} and {max_vehicle_year}"
+            )
+        if self.vin not in (None, "") and len(self.vin.strip()) != VIN_LENGTH:
+            raise ValueError(f"vin must be {VIN_LENGTH} characters when present")
+        if (
+            self.vehicle_status is not None
+            and self.vehicle_status not in VEHICLE_STATUS_VALUES
+        ):
+            raise ValueError("vehicle_status is not allowed")
+
+        if self.is_vehicle:
+            if not self.stock_number:
+                raise ValueError("stock_number is required for vehicle create")
+            if not self.exterior_color:
+                raise ValueError("exterior_color is required for vehicle create")
+            if self.category is not None and self.category != "vehicle":
+                raise ValueError("vehicle create must use category='vehicle'")
+            return self
+
+        missing = [
+            field_name
+            for field_name in ("internal_sku", "color", "category")
+            if not getattr(self, field_name)
+        ]
+        if missing:
+            raise ValueError(
+                "non-vehicle create requires: " + ", ".join(missing)
+            )
+        return self
 
     def to_input(self) -> CatalogItemInput:
-        return CatalogItemInput(**self.model_dump())
+        data = self.model_dump()
+        if self.is_vehicle:
+            data["category"] = "vehicle"
+            data["internal_sku"] = self.internal_sku or self.stock_number
+            data["color"] = self.color or self.exterior_color
+        return CatalogItemInput(**data)
 
 
 class CatalogItemResponse(BaseModel):
@@ -90,6 +153,25 @@ class CatalogItemResponse(BaseModel):
     is_sample: bool
     active: bool
     unit_price_cents: int | None
+    is_vehicle: bool
+    vin: str | None
+    stock_number: str | None
+    year: int | None
+    make: str | None
+    model: str | None
+    trim: str | None
+    mileage: int | None
+    transmission: str | None
+    fuel_type: str | None
+    exterior_color: str | None
+    interior_color: str | None
+    body_type: str | None
+    drivetrain: str | None
+    condition: str | None
+    vehicle_status: str | None
+    carfax_url: str | None
+    video_url: str | None
+    features_json: list[str]
 
 
 class PriceBreakdownItem(BaseModel):
@@ -130,6 +212,13 @@ def create_catalog_item_route(
         db.commit()
         db.refresh(item)
         return item
+    except CatalogServiceError as exc:
+        db.rollback()
+        status = _CATALOG_ERROR_STATUS.get(exc.code, 400)
+        detail: dict[str, object] = {"code": exc.code}
+        if exc.extra:
+            detail.update(exc.extra)
+        raise HTTPException(status_code=status, detail=detail) from exc
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=409, detail="catalog_item_conflict") from exc
@@ -155,10 +244,12 @@ def list_catalog_items_route(
     group: str | None = Query(
         default=None,
         description=(
-            "UI category bucket: 'dress', 'accessory', or 'addon'. "
+            "UI category bucket: 'dress', 'accessory', 'addon', or "
+            "'vehicle'. "
             "'dress' expands to the three gown enum values, 'accessory' "
-            "to the accessory enum value, 'addon' to 'service'. Unknown "
-            "values return an empty list."
+            "to the accessory enum value, 'addon' to 'service', and "
+            "'vehicle' to the vehicle enum value. Unknown values return "
+            "an empty list."
         ),
     ),
     limit: int = Query(default=100, ge=1, le=500),
@@ -267,9 +358,43 @@ class CatalogItemPatch(BaseModel):
     is_sample: bool | None = None
     active: bool | None = None
     unit_price_cents: int | None = Field(default=None, ge=0)
+    vin: str | None = Field(default=None, max_length=17)
+    stock_number: str | None = Field(default=None, max_length=64)
+    year: int | None = Field(default=None, ge=MIN_VEHICLE_YEAR)
+    make: str | None = Field(default=None, max_length=80)
+    model: str | None = Field(default=None, max_length=80)
+    trim: str | None = Field(default=None, max_length=80)
+    mileage: int | None = Field(default=None, ge=0)
+    transmission: str | None = Field(default=None, max_length=40)
+    fuel_type: str | None = Field(default=None, max_length=40)
+    exterior_color: str | None = Field(default=None, max_length=60)
+    interior_color: str | None = Field(default=None, max_length=60)
+    body_type: str | None = Field(default=None, max_length=40)
+    drivetrain: str | None = Field(default=None, max_length=20)
+    condition: str | None = Field(default=None, max_length=20)
+    vehicle_status: str | None = Field(default=None, max_length=20)
+    carfax_url: str | None = None
+    video_url: str | None = None
+    features_json: list[str] | None = None
+
+    @model_validator(mode="after")
+    def validate_vehicle_patch_shape(self) -> "CatalogItemPatch":
+        max_vehicle_year = datetime.now(timezone.utc).year + 1
+        if self.year is not None and self.year > max_vehicle_year:
+            raise ValueError(
+                f"year must be between {MIN_VEHICLE_YEAR} and {max_vehicle_year}"
+            )
+        if self.vin not in (None, "") and len(self.vin.strip()) != VIN_LENGTH:
+            raise ValueError(f"vin must be {VIN_LENGTH} characters when present")
+        if (
+            self.vehicle_status is not None
+            and self.vehicle_status not in VEHICLE_STATUS_VALUES
+        ):
+            raise ValueError("vehicle_status is not allowed")
+        return self
 
 
-_PATCH_ERROR_STATUS: dict[str, int] = {
+_CATALOG_ERROR_STATUS: dict[str, int] = {
     "catalog_item_not_found": 404,
     "internal_sku_immutable": 422,
     "public_code_immutable": 422,
@@ -279,6 +404,12 @@ _PATCH_ERROR_STATUS: dict[str, int] = {
     "image_urls_invalid": 422,
     "unit_price_cents_invalid": 422,
     "unit_price_cents_negative": 422,
+    "vehicle_vin_invalid": 422,
+    "vehicle_year_invalid": 422,
+    "vehicle_year_out_of_range": 422,
+    "vehicle_mileage_invalid": 422,
+    "vehicle_status_invalid": 422,
+    "vehicle_features_invalid": 422,
 }
 
 
@@ -311,7 +442,7 @@ def patch_catalog_item_route(
         return item
     except CatalogServiceError as exc:
         db.rollback()
-        status = _PATCH_ERROR_STATUS.get(exc.code, 400)
+        status = _CATALOG_ERROR_STATUS.get(exc.code, 400)
         detail: dict[str, object] = {"code": exc.code}
         if exc.extra:
             detail.update(exc.extra)
