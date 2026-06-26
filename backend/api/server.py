@@ -42,6 +42,7 @@ from api.routers import events as events_router
 from api.routers import invoices as invoices_routers
 from api.routers import payments as payments_routers
 from api.routers import portal as portal_routers
+from api.routers import public_site as public_site_router
 from api.routers import quotes as quotes_routers
 from api.routers import sales as sales_router
 from api.routers import sales_appointments as sales_appointments_router
@@ -232,6 +233,11 @@ app.include_router(
     catalog_router.router,
     prefix="/api/catalog",
     tags=["catalog"],
+)
+app.include_router(
+    public_site_router.router,
+    prefix="/api/public",
+    tags=["public-site"],
 )
 app.include_router(
     search_router.router,
