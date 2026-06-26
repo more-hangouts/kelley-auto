@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 import { getSiteSettings } from "@/lib/api";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -55,6 +56,7 @@ export default async function RootLayout({
     >
       <body className={`${inter.variable} ${bebasNeue.variable} antialiased`}>
         {children}
+        <GoogleAnalytics />
       </body>
     </html>
   );
