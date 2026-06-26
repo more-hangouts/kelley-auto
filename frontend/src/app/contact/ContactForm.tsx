@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { submitLead } from "@/lib/publicApi";
 
 type FormState = {
   firstName: string;
@@ -62,26 +63,19 @@ export default function ContactForm() {
     setError(null);
     const tomorrow = getTomorrow();
     const preferredTime = `${formatSlot(form.preferredSlot)} on ${tomorrow}`;
-    try {
-      const res = await fetch("/api/inquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: form.firstName,
-          lastName: form.lastName,
-          email: form.email,
-          phone: form.phone,
-          message: form.message,
-          preferredTime,
-        }),
-      });
-      if (res.ok) {
-        setSent(true);
-      } else {
-        setError("Something went wrong. Please try again or call us.");
-      }
-    } catch {
-      setError("Could not connect. Please call us directly.");
+    const result = await submitLead({
+      name: `${form.firstName} ${form.lastName}`.trim(),
+      email: form.email,
+      phone: form.phone,
+      message: form.message,
+      preferredTime,
+      sourcePage:
+        typeof window !== "undefined" ? window.location.pathname : "/contact",
+    });
+    if (result.ok) {
+      setSent(true);
+    } else {
+      setError(result.message || "Something went wrong. Please call us.");
     }
     setLoading(false);
   }

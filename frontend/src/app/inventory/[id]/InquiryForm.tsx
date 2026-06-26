@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { submitLead } from "@/lib/publicApi";
 
 // — time slot helpers —
 const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
@@ -139,24 +140,17 @@ export default function InquiryForm({
     setLoading(true);
     setError(null);
     const preferredTime = `${fmtSlot(slot)} on ${getTomorrow()}`;
-    try {
-      const res = await fetch("/api/inquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          phone,
-          vehicle: vehicleId,
-          preferredTime,
-        }),
-      });
-      if (res.ok) setSent(true);
-      else setError("Something went wrong. Please try again or call us.");
-    } catch {
-      setError("Could not connect. Please call us directly.");
-    }
+    const result = await submitLead({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      phone,
+      vehicleId,
+      preferredTime,
+      sourcePage:
+        typeof window !== "undefined" ? window.location.pathname : undefined,
+    });
+    if (result.ok) setSent(true);
+    else setError(result.message || "Something went wrong. Please call us.");
     setLoading(false);
   }
 

@@ -2,7 +2,6 @@ import type { NextConfig } from 'next'
 import { withPayload } from '@payloadcms/next/withPayload'
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pg', '@prisma/client', 'prisma'],
   images: {
     remotePatterns: [
       {

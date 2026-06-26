@@ -1,5 +1,10 @@
+# Single-package repo. pnpm rejects a workspace file with no `packages:`
+# field (baseline failure F1), so declare the repo root as the sole package.
+packages:
+  - '.'
+
+# Native deps that are allowed to run install scripts. (Prisma entries
+# dropped with the legacy Prisma data layer in the Day 5 rewrite.)
 allowBuilds:
   esbuild: true
-  '@prisma/engines': true
-  prisma: true
   sharp: true
