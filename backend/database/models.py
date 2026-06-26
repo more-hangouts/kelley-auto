@@ -870,6 +870,13 @@ class BusinessProfile(Base):
     email = Column(String(255))
     website = Column(String(255))
     logo_storage_key = Column(String(500))
+
+    # Public-facing opening hours (migration 087). Nullable JSONB; NULL means
+    # "not set" and the storefront falls back to a generic hours line. Shape:
+    # {"timezone": str, "days": [{"day": str, "closed": bool} |
+    #  {"day": str, "open": str, "close": str}]}. Owner-editable via PATCH;
+    # part of the public NAP DTO.
+    business_hours = Column(JSONB)
     default_tax_rate = Column(Numeric(7, 5), nullable=False, server_default=text("0"))
     default_tax_name = Column(String(40))
     default_invoice_terms = Column(Text)

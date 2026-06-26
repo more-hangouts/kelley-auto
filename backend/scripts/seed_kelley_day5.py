@@ -46,12 +46,14 @@ from services.catalog_service import create_catalog_item  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# NAP — name already "Kelley Autoplex"; this fills address/phone/email/site.
-# NOTE: business_hours are NOT modeled on `business_profile` (no column, and
-# the public NAP DTO has no hours key), so the doc's hours
-# (Sun closed; Mon-Sat 9:00 AM - 7:00 PM CDT) are intentionally NOT seeded
-# here — that storage remains an open gap. See the run summary.
+# NAP — name already "Kelley Autoplex"; this fills address/phone/email/site
+# and the opening hours (migration 087 added the business_hours column).
+# Hours from the doc: Sunday closed; Monday-Saturday 9:00 AM - 7:00 PM, CDT.
 # ---------------------------------------------------------------------------
+_WEEKDAYS_9_TO_7 = [
+    {"day": d, "open": "9:00 AM", "close": "7:00 PM"}
+    for d in ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+]
 NAP_PATCH = {
     "legal_name": "Kelley Autoplex",
     "display_name": "Kelley Autoplex",
@@ -64,6 +66,10 @@ NAP_PATCH = {
     "phone": "(210) 767-2408",
     "email": "chaserkelley@gmail.com",
     "website": "https://www.kelleyautoplex.com",
+    "business_hours": {
+        "timezone": "America/Chicago",
+        "days": [{"day": "Sunday", "closed": True}, *_WEEKDAYS_9_TO_7],
+    },
 }
 
 

@@ -65,6 +65,14 @@ export default async function Footer() {
                 {nap.email}
               </a>
             )}
+            {nap.hours && (
+              <div>
+                <p className="text-sm text-neutral-500">Hours:</p>
+                <p className="max-w-[248px] text-sm text-neutral-300">
+                  {nap.hoursText}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

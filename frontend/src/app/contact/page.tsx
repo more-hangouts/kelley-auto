@@ -22,11 +22,6 @@ export default async function ContactPage() {
   const tagline = page.tagline || "Get in Touch";
   const heading = page.heading || "Contact Us";
   const formHeading = page.formHeading || "Request an Appointment";
-  // Hours come from the Payload contact page when set; never invent them.
-  const mondayFriday = page.mondayFriday || "";
-  const saturday = page.saturday || "";
-  const sunday = page.sunday || "";
-  const hasHours = Boolean(mondayFriday || saturday || sunday);
 
   const descriptionHtml = lexicalToHtml(page.description) ||
     "<p>All vehicle viewings are <strong><em>by appointment only</em></strong>. Pick a time that works for you and we&apos;ll confirm same day.</p>";
@@ -60,27 +55,25 @@ export default async function ContactPage() {
             {/* Hours */}
             <div>
               <h2 className="text-lg font-semibold text-neutral-700">Hours &amp; Availability</h2>
-              {hasHours ? (
+              {nap.hours ? (
                 <div className="mt-3 flex flex-col gap-2 text-sm text-neutral-600">
-                  {mondayFriday && (
-                    <div className="flex justify-between border-b border-neutral-50 pb-2">
-                      <span>Monday – Friday</span>
-                      <span className="font-medium text-neutral-700">{mondayFriday}</span>
-                    </div>
-                  )}
-                  {saturday && (
-                    <div className="flex justify-between border-b border-neutral-50 pb-2">
-                      <span>Saturday</span>
-                      <span className="font-medium text-neutral-700">{saturday}</span>
-                    </div>
-                  )}
-                  {sunday && (
-                    <div className="flex justify-between pb-2">
-                      <span>Sunday</span>
-                      <span className={`font-medium ${sunday === "Closed" ? "text-neutral-400" : "text-neutral-700"}`}>
-                        {sunday}
+                  {nap.hours.days.map((d) => (
+                    <div
+                      key={d.day}
+                      className="flex justify-between border-b border-neutral-50 pb-2 last:border-0"
+                    >
+                      <span>{d.day}</span>
+                      <span
+                        className={`font-medium ${d.closed ? "text-neutral-400" : "text-neutral-700"}`}
+                      >
+                        {d.display}
                       </span>
                     </div>
+                  ))}
+                  {nap.hours.timezone && (
+                    <p className="pt-1 text-xs text-neutral-400">
+                      Times shown in {nap.hours.timezone}
+                    </p>
                   )}
                 </div>
               ) : (

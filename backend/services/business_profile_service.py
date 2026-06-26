@@ -49,6 +49,7 @@ _EDITABLE_FIELDS = {
     "phone",
     "email",
     "website",
+    "business_hours",
     "default_tax_rate",
     "default_tax_name",
     "default_invoice_terms",
@@ -91,6 +92,87 @@ _SELFIE_POLICY_VALUES = frozenset({"required", "optional", "disabled"})
 
 _REMINDER_OFFSET_BASES = frozenset({"before_due", "after_due", "after_sent"})
 
+# Public opening-hours validation (migration 087). Lenient by design — the
+# owner edits free-form hours; we only enforce the container shape so a typo
+# can't poison the public NAP DTO. Times are display strings ("9:00 AM"); no
+# 24h/parse coercion (kept simple for v1).
+_HOURS_DAY_NAMES = frozenset(
+    {
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+    }
+)
+
+
+def _validate_business_hours(value: Any) -> dict[str, Any] | None:
+    """Normalize/validate the business_hours JSONB payload. Returns the
+    cleaned dict, or None to clear. Raises BusinessProfileError on a bad
+    shape so the owner gets immediate PATCH feedback."""
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise BusinessProfileError(
+            "business_hours must be an object or null",
+            code="invalid_business_hours",
+        )
+    out: dict[str, Any] = {}
+    tz = value.get("timezone")
+    if tz is not None:
+        if not isinstance(tz, str) or not tz.strip():
+            raise BusinessProfileError(
+                "business_hours.timezone must be a non-empty string",
+                code="invalid_business_hours",
+            )
+        out["timezone"] = tz.strip()
+    days = value.get("days", [])
+    if not isinstance(days, list):
+        raise BusinessProfileError(
+            "business_hours.days must be an array",
+            code="invalid_business_hours",
+        )
+    norm_days: list[dict[str, Any]] = []
+    for entry in days:
+        if not isinstance(entry, dict):
+            raise BusinessProfileError(
+                "each business_hours day must be an object",
+                code="invalid_business_hours",
+            )
+        day = entry.get("day")
+        if (
+            not isinstance(day, str)
+            or day.strip().lower() not in _HOURS_DAY_NAMES
+        ):
+            raise BusinessProfileError(
+                "business_hours day must name a weekday",
+                code="invalid_business_hours",
+            )
+        d: dict[str, Any] = {"day": day.strip().title()}
+        if entry.get("closed"):
+            d["closed"] = True
+        else:
+            open_, close = entry.get("open"), entry.get("close")
+            if (
+                not isinstance(open_, str)
+                or not isinstance(close, str)
+                or not open_.strip()
+                or not close.strip()
+            ):
+                raise BusinessProfileError(
+                    f"business_hours for {day} needs open+close, "
+                    "or closed:true",
+                    code="invalid_business_hours",
+                )
+            d["open"] = open_.strip()
+            d["close"] = close.strip()
+        norm_days.append(d)
+    out["days"] = norm_days
+    return out
+
 # Discount presets caps (mirrored by the migration check / planning doc).
 _DISCOUNT_PRESETS_MAX = 12
 _DISCOUNT_PERCENT_MAX = Decimal("50")
@@ -121,6 +203,7 @@ class BusinessProfileView:
     phone: str | None
     email: str | None
     website: str | None
+    business_hours: dict[str, Any] | None
     logo_storage_key: str | None
     default_tax_rate: Decimal
     default_tax_name: str | None
@@ -200,6 +283,7 @@ def get_public_profile(db: Session) -> dict[str, Any]:
         "phone": v.phone,
         "email": v.email,
         "website": v.website,
+        "hours": v.business_hours,
     }
 
 
@@ -276,6 +360,9 @@ def update_profile(
             if isinstance(value, str):
                 value = value.strip() or None
             setattr(row, field_name, value)
+
+    if "business_hours" in patch:
+        row.business_hours = _validate_business_hours(patch["business_hours"])
 
     # Phase 11 reminder schedule.
     for slot in ("reminder1", "reminder2", "reminder3"):
@@ -714,6 +801,7 @@ def _to_view(row: BusinessProfile) -> BusinessProfileView:
         phone=row.phone,
         email=row.email,
         website=row.website,
+        business_hours=row.business_hours,
         logo_storage_key=row.logo_storage_key,
         default_tax_rate=Decimal(str(row.default_tax_rate or 0)),
         default_tax_name=row.default_tax_name,

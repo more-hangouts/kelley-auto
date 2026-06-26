@@ -311,10 +311,11 @@ def main() -> int:  # noqa: C901 - linear smoke script
         resp = client.get("/api/public/business-profile")
         _assert(resp.status_code == 200, "public business-profile", resp.text)
         prof = resp.json()
-        for k in ("name", "address", "phone", "email", "website"):
+        for k in ("name", "address", "phone", "email", "website", "hours"):
             _assert(k in prof, f"profile has {k}", prof)
         _assert(isinstance(prof["address"], dict), "address is object", prof)
-        # Operational/financial fields must NEVER appear.
+        # Operational/financial fields must NEVER appear. `business_hours` is
+        # the raw column name — the DTO exposes it only as the `hours` key.
         forbidden_profile = {
             "default_tax_rate",
             "default_tax_name",
@@ -326,10 +327,79 @@ def main() -> int:  # noqa: C901 - linear smoke script
             "trusted_clock_in_ips",
             "target_labor_pct",
             "updated_by_user_id",
+            "business_hours",
         }
         leaked = forbidden_profile & set(prof.keys())
         _assert(not leaked, "business-profile leaks operational fields", leaked)
         print("public business-profile ok")
+
+        # --- hours write -> public read round-trip (save/restore) ----------
+        from services import business_profile_service  # noqa: E402
+
+        _hdb = SessionLocal()
+        try:
+            _orig_hours = business_profile_service.get_profile(_hdb).business_hours
+        finally:
+            _hdb.close()
+        try:
+            _hdb = SessionLocal()
+            try:
+                business_profile_service.update_profile(
+                    _hdb,
+                    patch={
+                        "business_hours": {
+                            "timezone": "America/Chicago",
+                            "days": [
+                                {"day": "Sunday", "closed": True},
+                                {"day": "Monday", "open": "9:00 AM", "close": "7:00 PM"},
+                            ],
+                        }
+                    },
+                )
+                _hdb.commit()
+            finally:
+                _hdb.close()
+
+            hprof = client.get("/api/public/business-profile").json()
+            _assert(isinstance(hprof.get("hours"), dict), "hours is object", hprof)
+            days = hprof["hours"].get("days")
+            _assert(isinstance(days, list) and len(days) == 2, "hours days round-trip", days)
+            _assert(
+                any(
+                    d.get("day") == "Monday" and d.get("open") == "9:00 AM"
+                    for d in days
+                ),
+                "hours open time round-trips publicly",
+                days,
+            )
+            _assert(
+                any(d.get("day") == "Sunday" and d.get("closed") is True for d in days),
+                "closed day round-trips publicly",
+                days,
+            )
+            # invalid shape is rejected at the service boundary
+            try:
+                _bad = SessionLocal()
+                business_profile_service.update_profile(
+                    _bad, patch={"business_hours": {"days": [{"day": "Funday"}]}}
+                )
+                _bad.rollback()
+                raise AssertionError("invalid business_hours day was accepted")
+            except business_profile_service.BusinessProfileError:
+                pass
+            finally:
+                _bad.close()
+        finally:
+            # Restore whatever the singleton had before this test.
+            _hdb = SessionLocal()
+            try:
+                business_profile_service.update_profile(
+                    _hdb, patch={"business_hours": _orig_hours}
+                )
+                _hdb.commit()
+            finally:
+                _hdb.close()
+        print("public business-profile hours ok")
 
         print()
         print("public site smoke ok")

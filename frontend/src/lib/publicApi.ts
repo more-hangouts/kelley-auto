@@ -86,6 +86,18 @@ export interface InventoryQuery {
   limit?: number;
 }
 
+export interface BusinessHoursDay {
+  day: string;
+  closed?: boolean;
+  open?: string;
+  close?: string;
+}
+
+export interface BusinessHours {
+  timezone?: string | null;
+  days?: BusinessHoursDay[];
+}
+
 export interface PublicBusinessProfile {
   name: string | null;
   legalName: string;
@@ -100,6 +112,7 @@ export interface PublicBusinessProfile {
   phone: string | null;
   email: string | null;
   website: string | null;
+  hours?: BusinessHours | null;
 }
 
 export interface LeadInput {
