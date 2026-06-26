@@ -374,6 +374,13 @@ class Event(Base):
     )
     owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     notes = Column(Text)
+    # Day 3: optional link from a vehicle_sale deal to the catalog_items row
+    # of the car being sold. Nullable — general leads and quinceañera events
+    # leave it NULL. ON DELETE SET NULL so removing a vehicle never blocks
+    # or cascades into its deal history.
+    vehicle_catalog_item_id = Column(
+        Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
+    )
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))

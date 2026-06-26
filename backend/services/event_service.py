@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from database.models import (
     Appointment,
     AppointmentEnrichmentResponse,
+    CatalogItem,
     Contact,
     Event,
     EventParticipant,
@@ -27,8 +28,19 @@ from services.event_workflow import (
     EVENT_WORKFLOWS,
     EventStatus,
     all_statuses,
+    initial_status,
     status_codes,
 )
+
+# Day 3: when a vehicle_sale deal reaches one of these statuses, the linked
+# vehicle's inventory status is driven to match — so a car is marked sold/
+# delivered by the deal closing, not by a casual inventory edit. Only these
+# forward states propagate; backward moves and 'lost' leave inventory alone
+# for staff to adjust deliberately.
+_DEAL_STATUS_TO_VEHICLE_STATUS: dict[str, str] = {
+    "sold": "sold",
+    "delivered": "delivered",
+}
 
 
 class EventServiceError(Exception):
@@ -54,6 +66,7 @@ class EventOverrides:
     budget_range: str | None = None
     notes: str | None = None
     owner_user_id: int | None = None
+    vehicle_catalog_item_id: int | None = None
 
 
 def promote_appointment_to_event(
@@ -117,7 +130,8 @@ def promote_appointment_to_event(
         budget_range=o.budget_range or _enrichment_str(enrichment, "budget_range"),
         notes=o.notes,
         owner_user_id=o.owner_user_id or actor_user_id,
-        status="lead",
+        vehicle_catalog_item_id=o.vehicle_catalog_item_id,
+        status=initial_status(event_type),
     )
     db.add(event)
     db.flush()  # need event.id for the participant + appointment link
@@ -165,7 +179,8 @@ def create_walk_in_event(
         budget_range=o.budget_range,
         notes=o.notes,
         owner_user_id=o.owner_user_id or actor_user_id,
-        status="lead",
+        vehicle_catalog_item_id=o.vehicle_catalog_item_id,
+        status=initial_status(event_type),
     )
     db.add(event)
     db.flush()
@@ -193,28 +208,36 @@ def _seed_initial_event_state(
     participant_phone: str | None = None,
     participant_email: str | None = None,
 ) -> None:
-    """Quinceañera participant + initial 'lead' audit row.
+    """Initial audit row (+ a quinceañera participant for that workflow).
 
     Both promotion and walk-in creation rely on this so the data shape after
-    creation is identical regardless of origin: every event has at least one
-    participant (the celebrant) and a status_history entry tracing back to
-    null -> lead.
+    creation is identical regardless of origin: a status_history entry
+    tracing back to ``null -> <initial status>``, and — for the boutique
+    workflow — the celebrant participant.
+
+    The quinceañera participant is seeded ONLY for ``event_type ==
+    'quinceanera'``. A vehicle_sale deal's buyer is the ``primary_contact``;
+    its car is linked via ``events.vehicle_catalog_item_id``, so a court-
+    style participant row would be meaningless (and would mislabel a buyer
+    with the 'quinceanera' role). The board query left-joins participants,
+    so a participant-less deal renders fine.
     """
-    db.add(
-        EventParticipant(
-            event_id=event.id,
-            contact_id=contact.id,
-            role="quinceanera",
-            display_name=participant_display_name or contact.display_name,
-            phone=participant_phone or contact.phone,
-            email=participant_email or contact.email,
+    if event.event_type == "quinceanera":
+        db.add(
+            EventParticipant(
+                event_id=event.id,
+                contact_id=contact.id,
+                role="quinceanera",
+                display_name=participant_display_name or contact.display_name,
+                phone=participant_phone or contact.phone,
+                email=participant_email or contact.email,
+            )
         )
-    )
     db.add(
         EventStatusChangeEvent(
             event_id=event.id,
             from_status=None,
-            to_status="lead",
+            to_status=event.status,
             changed_by_user_id=actor_user_id,
         )
     )
@@ -281,7 +304,40 @@ def change_event_status(
             "notes": notes,
         },
     )
+
+    _propagate_vehicle_status(db, event, new_status)
     return event
+
+
+def _propagate_vehicle_status(db: Session, event: Event, new_status: str) -> None:
+    """Drive the linked car's inventory status from the deal's status.
+
+    A ``vehicle_sale`` deal reaching ``sold``/``delivered`` marks its linked
+    vehicle the same way — so inventory reflects closed deals rather than
+    relying on a staffer to remember to flip the catalog row. No-ops unless:
+      * the event is a ``vehicle_sale``,
+      * the new status is one we propagate (``sold``/``delivered``),
+      * the deal is linked to a catalog row, and
+      * that row is actually a vehicle (``is_vehicle = true``).
+
+    The ``is_vehicle`` guard is the hard boundary: this never writes to a
+    dress/catalog row even if some future link pointed at one. Backward
+    moves and ``lost`` deliberately do NOT revert inventory — a car may be
+    spoken for by a different deal, so un-selling is left to staff.
+    """
+    if event.event_type != "vehicle_sale":
+        return
+    target = _DEAL_STATUS_TO_VEHICLE_STATUS.get(new_status)
+    if target is None or event.vehicle_catalog_item_id is None:
+        return
+    vehicle = db.get(CatalogItem, event.vehicle_catalog_item_id)
+    if vehicle is None or not vehicle.is_vehicle:
+        return
+    if vehicle.vehicle_status == target:
+        return
+    vehicle.vehicle_status = target
+    vehicle.updated_at = datetime.now(timezone.utc)
+    db.flush()
 
 
 # ---------------------------------------------------------------------------
@@ -628,7 +684,9 @@ def _default_event_name(
     contact: Contact, event_type: str, *, preferred_name: str | None = None
 ) -> str:
     base = preferred_name or contact.first_name or contact.display_name
-    suffix = {"quinceanera": "Quince"}.get(event_type, "Event")
+    suffix = {"quinceanera": "Quince", "vehicle_sale": "Deal"}.get(
+        event_type, "Event"
+    )
     return f"{base}'s {suffix}"
 
 

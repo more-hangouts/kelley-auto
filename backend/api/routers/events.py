@@ -1,7 +1,10 @@
 """CRM events: kanban board, status transitions, promote-from-appointment.
 
-Currently scoped to event_type='quinceanera' — the only workflow defined in
-services/event_workflow.py.
+Workflow-agnostic: each event carries an ``event_type`` (``quinceanera`` or
+``vehicle_sale``) whose column set + terminal semantics live in
+services/event_workflow.py. The status-patch body is a free string validated
+by the service against the event's OWN workflow, so a new workflow needs no
+router change.
 """
 
 from __future__ import annotations
@@ -34,19 +37,6 @@ from services.event_workflow import all_statuses
 router = APIRouter()
 
 
-_QuinceStatus = Literal[
-    "lead",
-    "consulted",
-    "sold",
-    "on_order",
-    "arrived",
-    "in_alterations",
-    "ready_for_pickup",
-    "picked_up",
-    "cancelled",
-]
-
-
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -58,7 +48,7 @@ class EventCreate(BaseModel):
 
     from_appointment_id: int | None = None
     primary_contact_id: int | None = None
-    event_type: Literal["quinceanera"] = "quinceanera"
+    event_type: Literal["quinceanera", "vehicle_sale"] = "quinceanera"
 
     event_name: str | None = Field(default=None, max_length=200)
     event_date: date | None = None
@@ -68,6 +58,9 @@ class EventCreate(BaseModel):
     budget_range: str | None = Field(default=None, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
     owner_user_id: int | None = None
+    # Day 3: link a vehicle_sale deal to the car. Nullable for general leads
+    # and quinceañera events.
+    vehicle_catalog_item_id: int | None = None
 
     @model_validator(mode="after")
     def _require_exactly_one_origin(self) -> "EventCreate":
@@ -87,7 +80,10 @@ class EventCreate(BaseModel):
 
 
 class EventStatusPatch(BaseModel):
-    status: _QuinceStatus
+    # Free string: the service validates it against the event's own workflow
+    # (status_codes(event.event_type)) and 422s an out-of-workflow value, so
+    # this stays workflow-agnostic instead of hardcoding one workflow's set.
+    status: str = Field(min_length=1, max_length=40)
     notes: str | None = Field(default=None, max_length=2000)
 
 
@@ -115,6 +111,7 @@ class EventResponse(BaseModel):
     primary_contact: ContactSummary
     owner: OwnerSummary | None
     notes: str | None
+    vehicle_catalog_item_id: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -327,6 +324,7 @@ def create_event(
         budget_range=payload.budget_range,
         notes=payload.notes,
         owner_user_id=payload.owner_user_id,
+        vehicle_catalog_item_id=payload.vehicle_catalog_item_id,
     )
 
     try:
@@ -797,6 +795,7 @@ def _to_event_response(db: Session, event: Event) -> EventResponse:
         ),
         owner=OwnerSummary(id=owner.id, full_name=owner.full_name) if owner else None,
         notes=event.notes,
+        vehicle_catalog_item_id=event.vehicle_catalog_item_id,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
