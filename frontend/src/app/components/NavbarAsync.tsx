@@ -1,8 +1,10 @@
 import Navbar from "./Navbar";
-import { getSiteSettings } from "@/lib/api";
+import { resolveNap } from "@/lib/nap";
 
-/** Internal async component — fetches CMS phone and renders Navbar. */
+/** Internal async component — resolves business NAP and renders Navbar. */
 export async function NavbarAsync({ light }: { light?: boolean }) {
-  const settings = await getSiteSettings();
-  return <Navbar light={light} phone={settings.phone} />;
+  const nap = await resolveNap();
+  return (
+    <Navbar light={light} phone={nap.phoneDisplay} telHref={nap.telHref} />
+  );
 }

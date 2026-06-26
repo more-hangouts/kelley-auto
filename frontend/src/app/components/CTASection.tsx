@@ -10,7 +10,7 @@ export default function CTASection() {
       <div className="relative mx-auto max-w-[720px] text-center">
         {/* Eyebrow */}
         <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-          Drive Reliable Cars
+          Kelley Autoplex
         </p>
 
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight tracking-tight text-white">

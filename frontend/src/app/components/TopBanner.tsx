@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { getSiteSettings } from "@/lib/api";
+import { resolveNap } from "@/lib/nap";
 
 export default async function TopBanner() {
-  const settings = await getSiteSettings();
-  const phone = settings.phone || "(123) 333-1212";
-  const city = settings.city || "Your City, ST";
-  const bannerLabel = settings.bannerLabel || "Cash Only";
-  const bannerText = settings.bannerText || "Quality pre-owned vehicles at honest prices";
-  const telHref = `tel:+1${phone.replace(/\D/g, "")}`;
+  const nap = await resolveNap();
+  const phone = nap.phoneDisplay;
+  const telHref = nap.telHref;
+  const city = nap.locationLabel;
+  const bannerLabel = "Kelley Autoplex";
+  const bannerText = "Reliable used vehicles · Financing options available";
 
   return (
     <div className="bg-neutral-800 flex items-center justify-center md:justify-between px-5 md:px-10 py-2.5 md:py-3 text-sm text-white">
@@ -22,9 +22,13 @@ export default async function TopBanner() {
             strokeLinejoin="round"
           />
         </svg>
-        <a href={telHref} className="hover:text-primary transition-colors">
-          {phone}
-        </a>
+        {telHref ? (
+          <a href={telHref} className="hover:text-primary transition-colors">
+            {phone}
+          </a>
+        ) : (
+          <span>{phone}</span>
+        )}
       </div>
 
       {/* Center — promo message */}

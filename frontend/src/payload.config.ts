@@ -486,7 +486,7 @@ export default buildConfig({
         {
           name: 'businessName',
           type: 'text',
-          defaultValue: 'Reliable Used Cars',
+          defaultValue: 'Kelley Autoplex',
         },
         {
           name: 'phone',
@@ -556,7 +556,7 @@ export default buildConfig({
           name: 'watermark',
           type: 'text',
           label: 'Background Watermark Text',
-          admin: { description: 'The large text behind the car. Default: "RELIABLE"' },
+          admin: { description: 'The large text behind the car. Default: "KELLEY"' },
         },
         {
           name: 'headline',
@@ -683,8 +683,8 @@ export default buildConfig({
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET || '',
   csrf: [
-    'https://drivereliablecars.com',
-    'http://drivereliablecars.com',
+    'https://www.kelleyautoplex.com',
+    'https://kelleyautoplex.com',
     'http://localhost:3000',
   ],
   typescript: {

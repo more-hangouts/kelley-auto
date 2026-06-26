@@ -10,7 +10,7 @@ import { isMediaDoc } from "@/types/cms";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Blog | Reliable Used Cars",
+  title: "Blog | Kelley Autoplex",
   description: "Automotive guides, tips, and insights to help you buy with confidence.",
 };
 

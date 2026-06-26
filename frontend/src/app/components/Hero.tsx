@@ -7,7 +7,7 @@ import { isMediaDoc } from "@/types/cms";
 export default async function Hero() {
   const hero = await getHeroContent();
 
-  const watermark = hero.watermark || "RELIABLE";
+  const watermark = hero.watermark || "KELLEY";
   const subheadline =
     hero.subheadline ||
     "Choose from quality pre-owned vehicles you can trust, transparently priced, because buying a car should feel exciting.";

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getSiteSettings } from "@/lib/api";
+import { resolveNap } from "@/lib/nap";
 
 const topBrands = ["Honda", "Toyota", "Chevrolet", "Ford", "Nissan", "Hyundai"];
 const quickLinks = [
@@ -14,15 +14,11 @@ const tags = [
   ["Under10k", "Under15k", "LowMileage", "CleanTitle"],
   ["FamilyCar", "FuelEfficient", "Sedan"],
   ["SUV", "Truck", "Compact"],
-  ["Reliable", "CashOnly", "NoFinancing"],
+  ["FinancingAvailable", "GreatValue", "LowMiles"],
 ];
 
 export default async function Footer() {
-  const settings = await getSiteSettings();
-  const phone = settings.phone || "(123) 333-1212";
-  const email = settings.email || "info@drivereliablecars.com";
-  const address = settings.address || "123 Main Street, Your City, ST 00000";
-  const telHref = `tel:+1${phone.replace(/\D/g, "")}`;
+  const nap = await resolveNap();
 
   return (
     <footer className="bg-neutral-800">
@@ -30,43 +26,45 @@ export default async function Footer() {
         {/* Brand info */}
         <div className="flex flex-col gap-6">
           <Image
-            src="/images/logo-white.png"
-            alt="Reliable Used Cars"
-            width={160}
-            height={28}
-            className="object-contain"
+            src="/images/brand/kelley-lockup.svg"
+            alt={nap.name}
+            width={200}
+            height={36}
+            unoptimized
+            className="object-contain brightness-0 invert"
           />
-          <div className="flex items-center gap-3">
-            {["logo-icon-orange", "logo-icon-teal", "logo-icon-blue", "logo-icon-purple", "logo-icon-red"].map(
-              (name) => (
-                <Image
-                  key={name}
-                  src={`/images/${name}.png`}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="object-contain opacity-80 hover:opacity-100 transition-opacity"
-                />
-              )
-            )}
-          </div>
+          <p className="max-w-[248px] text-sm text-neutral-400">
+            Reliable used vehicles · Simple, friendly vehicle shopping.
+          </p>
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-sm text-neutral-500">Contact Us:</p>
-              <a
-                href={telHref}
-                className="text-lg font-medium text-neutral-100 hover:text-primary transition-colors"
-              >
-                {phone}
-              </a>
+              {nap.telHref ? (
+                <a
+                  href={nap.telHref}
+                  className="text-lg font-medium text-neutral-100 hover:text-primary transition-colors"
+                >
+                  {nap.phoneDisplay}
+                </a>
+              ) : (
+                <span className="text-lg font-medium text-neutral-100">
+                  {nap.phoneDisplay}
+                </span>
+              )}
             </div>
-            <p className="max-w-[248px] text-base text-neutral-300">{address}</p>
-            <a
-              href={`mailto:${email}`}
-              className="text-base font-medium text-neutral-100 hover:text-primary transition-colors"
-            >
-              {email}
-            </a>
+            {nap.hasAddress && (
+              <p className="max-w-[248px] text-base text-neutral-300">
+                {nap.addressLines.join(", ")}
+              </p>
+            )}
+            {nap.email && (
+              <a
+                href={`mailto:${nap.email}`}
+                className="text-base font-medium text-neutral-100 hover:text-primary transition-colors"
+              >
+                {nap.email}
+              </a>
+            )}
           </div>
         </div>
 
@@ -154,7 +152,7 @@ export default async function Footer() {
       {/* Copyright */}
       <div className="border-t border-[#303639] px-5 md:px-10 lg:px-20 py-6">
         <p className="text-center text-sm text-neutral-300">
-          Reliable Used Cars &nbsp;&copy; 2026 &nbsp;&mdash;&nbsp; Cash Only &bull; No Financing
+          {nap.name} &nbsp;&copy; 2026 &nbsp;&mdash;&nbsp; Financing options available
         </p>
       </div>
     </footer>

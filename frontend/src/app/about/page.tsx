@@ -4,8 +4,9 @@ import NavbarWrapper from "../components/NavbarWrapper";
 import Footer from "../components/Footer";
 
 export const metadata = {
-  title: "About Us | Reliable Used Cars",
-  description: "A cash-only used car dealership focused on reliable vehicles at honest prices.",
+  title: "About Us | Kelley Autoplex",
+  description:
+    "Simple, friendly vehicle shopping. Reliable used vehicles, financing options available.",
 };
 
 export default function AboutPage() {
@@ -18,10 +19,10 @@ export default function AboutPage() {
       <section className="bg-neutral-25 px-5 md:px-10 lg:px-20 py-12 md:py-16 lg:py-20">
         <p className="text-sm font-medium text-primary uppercase tracking-wide">Our Story</p>
         <h1 className="mt-2 text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-neutral-700 max-w-2xl">
-          Reliable cars at honest prices — no financing, no hassle
+          Reliable used vehicles — simple, friendly vehicle shopping
         </h1>
         <p className="mt-4 max-w-xl text-base md:text-lg text-neutral-500">
-          We started Reliable Used Cars because buying a used car shouldn&apos;t be a stressful experience. Every vehicle on our lot is cash-only, clean-titled, and personally inspected before it goes up for sale.
+          At Kelley Autoplex, buying a used car shouldn&apos;t be stressful. Browse current inventory, ask about a vehicle, or schedule a visit — financing options available. Inventory changes often, so contact us to confirm availability.
         </p>
       </section>
 

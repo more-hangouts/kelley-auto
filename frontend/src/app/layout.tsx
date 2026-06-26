@@ -15,9 +15,16 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
-  title: "Reliable Used Cars — Quality Pre-Owned Vehicles",
+  title: "Kelley Autoplex — Reliable Used Vehicles",
   description:
-    "Browse quality pre-owned vehicles at honest prices. Cash only — no financing, no credit checks. Free test drives. Clean titles.",
+    "Simple, friendly vehicle shopping. Browse current inventory, ask about a vehicle, or schedule a visit. Inventory changes often — contact us to confirm availability.",
+  openGraph: {
+    title: "Kelley Autoplex — Reliable Used Vehicles",
+    description:
+      "Simple, friendly vehicle shopping. Browse current inventory, ask about a vehicle, or schedule a visit.",
+    siteName: "Kelley Autoplex",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import TopBanner from "../components/TopBanner";
-import Navbar from "../components/Navbar";
+import NavbarWrapper from "../components/NavbarWrapper";
 import Footer from "../components/Footer";
+import { resolveNap } from "@/lib/nap";
 
 const steps = [
   {
@@ -49,7 +50,7 @@ const goodCreditLenders = [
   },
   {
     name: "Security Service",
-    descriptor: "San Antonio-based credit union",
+    descriptor: "Texas-based credit union",
     url: "https://www.ssfcu.org",
   },
   {
@@ -103,17 +104,21 @@ const CheckIcon = () => (
   </svg>
 );
 
-export default function FinancingPage() {
+export default async function FinancingPage() {
+  const nap = await resolveNap();
+  // Where the "Apply"/"Call" CTAs point: the phone if we have one, else the
+  // contact page. Never a hardcoded number.
+  const callHref = nap.telHref || "/contact";
   return (
     <div className="min-h-screen">
       <TopBanner />
-      <Navbar />
+      <NavbarWrapper />
 
       {/* SECTION 1: Hero */}
       <section className="bg-neutral-800 px-5 md:px-10 lg:px-20 py-16 md:py-20 lg:py-28">
         <div className="mx-auto max-w-[720px] text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-            Drive Reliable Cars
+            {nap.name}
           </p>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight tracking-tight text-white">
             Financing made simple
@@ -140,16 +145,16 @@ export default function FinancingPage() {
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="tel:+12109328011"
+              href={callHref}
               className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white hover:bg-primary-dark transition-colors"
             >
               Apply for financing
             </a>
             <a
-              href="tel:+12109328011"
+              href={callHref}
               className="w-full sm:w-auto rounded-xl border border-neutral-600 px-8 py-3.5 text-base font-semibold text-neutral-100 hover:border-neutral-400 transition-colors"
             >
-              Call (210) 932-8011
+              {nap.phone ? `Call ${nap.phoneDisplay}` : "Contact us"}
             </a>
           </div>
         </div>
@@ -581,7 +586,7 @@ export default function FinancingPage() {
                 desc: "We walk you through every step so there are no hidden fees.",
               },
               {
-                title: "Local San Antonio business",
+                title: "Local Texas business",
                 desc: "We live here, we work here, and our reputation matters to us.",
               },
               {
@@ -657,10 +662,10 @@ export default function FinancingPage() {
                   Browse inventory
                 </Link>
                 <a
-                  href="tel:+12109328011"
+                  href={callHref}
                   className="w-full sm:w-auto rounded-xl border border-neutral-600 px-8 py-3.5 text-center text-base font-semibold text-neutral-100 hover:border-neutral-400 transition-colors"
                 >
-                  Call (210) 932-8011
+                  {nap.phone ? `Call ${nap.phoneDisplay}` : "Contact us"}
                 </a>
               </div>
             </div>
@@ -669,29 +674,36 @@ export default function FinancingPage() {
               <div>
                 <p className="text-sm text-neutral-500">Dealership</p>
                 <p className="mt-1 text-base font-medium text-neutral-100">
-                  Reliable Used Cars
+                  {nap.name}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-neutral-500">Address</p>
-                <p className="mt-1 text-base text-neutral-200">
-                  San Antonio, TX
-                </p>
-              </div>
+              {nap.hasAddress && (
+                <div>
+                  <p className="text-sm text-neutral-500">Address</p>
+                  <p className="mt-1 text-base text-neutral-200">
+                    {nap.addressLines.join(", ")}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-neutral-500">Phone</p>
-                <a
-                  href="tel:+12109328011"
-                  className="mt-1 block text-base font-medium text-neutral-100 hover:text-primary transition-colors"
-                >
-                  (210) 932-8011
-                </a>
+                {nap.telHref ? (
+                  <a
+                    href={nap.telHref}
+                    className="mt-1 block text-base font-medium text-neutral-100 hover:text-primary transition-colors"
+                  >
+                    {nap.phoneDisplay}
+                  </a>
+                ) : (
+                  <p className="mt-1 text-base font-medium text-neutral-100">
+                    {nap.phoneDisplay}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-sm text-neutral-500">Hours</p>
                 <div className="mt-1 text-base text-neutral-200">
-                  <p>Monday – Saturday: 10am – 6pm</p>
-                  <p>Sunday: Closed</p>
+                  <p>{nap.hoursText}</p>
                 </div>
               </div>
             </div>
