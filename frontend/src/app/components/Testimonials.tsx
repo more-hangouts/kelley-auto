@@ -1,5 +1,15 @@
-import Image from "next/image";
 import { getTestimonials } from "@/lib/api";
+
+function initials(name: string): string {
+  return (
+    (name || "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() || "")
+      .join("") || "?"
+  );
+}
 
 const FALLBACK = [
   {
@@ -45,24 +55,16 @@ export default async function Testimonials() {
 
       <div className="mt-8 md:mt-12 flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4 md:pb-0 md:snap-none md:overflow-visible md:max-w-[1200px] md:mx-auto md:flex-col md:gap-8">
         {list.map((t) => {
-          const photoUrl =
-            "photo" in t && t.photo && typeof t.photo === "object" && "url" in t.photo
-              ? (t.photo as { url: string }).url
-              : "/images/testimonial-person.jpg";
-
           return (
             <div
               key={t.id}
               className="min-w-[90%] snap-center md:min-w-full md:flex-none flex flex-col md:flex-row gap-6"
             >
-              {/* Photo */}
-              <div className="relative h-[250px] md:h-[298px] w-full md:w-[324px] shrink-0 overflow-hidden rounded-2xl">
-                <Image
-                  src={photoUrl}
-                  alt={t.name}
-                  fill
-                  className="object-cover"
-                />
+              {/* Avatar — initials (no stock photo; swap to a real image later) */}
+              <div className="relative flex h-[250px] md:h-[298px] w-full md:w-[324px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15">
+                <span className="text-5xl md:text-6xl font-semibold tracking-wide text-white/90">
+                  {initials(t.name)}
+                </span>
               </div>
 
               {/* Quote card */}
