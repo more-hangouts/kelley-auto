@@ -2128,6 +2128,94 @@ def render_staff_payment_received(
     return RenderedEmail(subject=subject, text=text, html=html)
 
 
+def render_public_lead_notification(
+    *,
+    is_new: bool,
+    contact,
+    vehicle,
+    payload: dict,
+    admin_url: str,
+) -> RenderedEmail:
+    """Staff alert when a customer submits a lead on the public storefront.
+    ``is_new`` distinguishes a brand-new deal from a follow-up appended to an
+    existing open deal. ``vehicle`` is the linked CatalogItem or None (a
+    general inquiry). ``payload`` is the activity payload built by
+    public_lead_service (message/preferred/source_page/utm/listing code)."""
+    name = (
+        contact.display_name
+        or " ".join(filter(None, [contact.first_name, contact.last_name])).strip()
+        or "(no name)"
+    )
+    if vehicle is not None:
+        ymm = " ".join(
+            str(x) for x in (vehicle.year, vehicle.make, vehicle.model) if x
+        ).strip()
+        vehicle_label = ymm or "(vehicle)"
+        code = payload.get("vehicle_listing_code")
+        if code:
+            vehicle_label = f"{vehicle_label} ({code})"
+    else:
+        vehicle_label = "General inquiry (no specific vehicle)"
+
+    phone = contact.phone_e164 or contact.phone or "(not provided)"
+    email = contact.email or "(not provided)"
+    message = (payload.get("message") or "").strip()
+    pref = " ".join(
+        p
+        for p in (payload.get("preferred_day"), payload.get("preferred_time"))
+        if p and str(p).strip()
+    ).strip()
+    source_page = (payload.get("source_page") or "").strip()
+    utm = payload.get("utm") or {}
+    utm_label = ", ".join(f"{k}={v}" for k, v in utm.items()) if utm else ""
+
+    kind = "New" if is_new else "Updated"
+    subject = f"{kind} vehicle lead: {name}"
+
+    rows = [
+        ("Customer", name),
+        ("Phone", phone),
+        ("Email", email),
+        ("Vehicle", vehicle_label),
+    ]
+    if pref:
+        rows.append(("Preferred contact", pref))
+    if source_page:
+        rows.append(("Source page", source_page))
+    if utm_label:
+        rows.append(("Campaign", utm_label))
+
+    lead_line = (
+        "A customer submitted a new inquiry from the website."
+        if is_new
+        else "A customer sent a follow-up on an existing open deal."
+    )
+    text = (
+        f"{lead_line}\n\n"
+        + "".join(f"  {label}: {value}\n" for label, value in rows)
+        + (f"  Message: {message}\n" if message else "")
+        + f"\nOpen the deal in admin:\n    {admin_url}\n"
+    )
+    message_html = (
+        f'<p style="margin-top:12px;"><strong>Message:</strong> '
+        f"{escape(message)}</p>"
+        if message
+        else ""
+    )
+    html = _wrap_html(
+        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
+        f'margin-top:0;">{escape(kind)} vehicle lead</h1>'
+        f"<p>{escape(lead_line)}</p>"
+        + _details_table(rows)
+        + message_html
+        + '<p style="margin-top:22px;">'
+        + _html_button("Open the deal", admin_url)
+        + "</p>",
+        preheader=f"{kind} vehicle lead from {name}.",
+    )
+    return RenderedEmail(subject=subject, text=text, html=html)
+
+
 def render_admin_walk_in_lead_created(
     *,
     captured_by,

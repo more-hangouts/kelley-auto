@@ -78,6 +78,10 @@ SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL") or None
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kelley Autoplex")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 BOOKING_INTERNAL_NOTIFICATION_EMAILS = _csv("BOOKING_INTERNAL_NOTIFICATION_EMAILS")
+# Staff recipients for public storefront lead alerts (comma-separated). When
+# unset, the service falls back to business_profile.email, then to every
+# active admin user's email. Set this to override (e.g. a sales@ alias).
+PUBLIC_LEAD_NOTIFY_EMAILS = _csv("PUBLIC_LEAD_NOTIFY_EMAILS")
 
 # When set, every outbound email is rewritten to land at this address
 # regardless of its real recipient. Subjects get a `[TEST -> original@...]`

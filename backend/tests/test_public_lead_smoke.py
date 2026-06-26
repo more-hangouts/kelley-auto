@@ -222,6 +222,20 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(resp.status_code == 200, "login", resp.text)
         auth = {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
+        # Capture staff-notification sends without real SMTP: swap the
+        # service's mailer for a recorder. Recipients resolve to the seeded
+        # business_profile.email or the active admin, so sends do fire.
+        import services.public_lead_service as _pls
+
+        _notify_calls: list[dict] = []
+
+        def _fake_send(*, to, rendered, scope="email"):
+            if getattr(_fake_send, "boom", False):
+                raise RuntimeError("smtp down (test)")
+            _notify_calls.append({"to": to, "subject": rendered.subject})
+
+        _pls.send_rendered_safely = _fake_send
+
         # seed cars + a dress (non-vehicle)
         codes: dict[str, str] = {}
         ids: dict[str, int] = {}
@@ -267,6 +281,11 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(r.status_code == 200, "honeypot status", r.text)
         _assert(r.json() == _ACK, "honeypot generic ack", r.json())
         _assert(_contact_id_by_email(bot_email) is None, "honeypot wrote no contact")
+        _assert(
+            len(_notify_calls) == 0,
+            "honeypot sends no staff notification",
+            _notify_calls,
+        )
         print("honeypot drops silently ok")
 
         # --- create + link by listingCode --------------------------------
@@ -292,6 +311,12 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(deals[0][1] == "new_lead", "deal in new_lead", deals)
         _assert(deals[0][2] == ids["avail"], "deal linked to vehicle", deals)
         _assert(_lead_activity_count(deals[0][0]) == 1, "one lead activity")
+        _assert(
+            any(c["subject"].startswith("New vehicle lead") for c in _notify_calls),
+            "new lead triggers 'New vehicle lead' notification",
+            _notify_calls,
+        )
+        _new_count = len(_notify_calls)
         print("create + link by listingCode ok")
 
         # --- duplicate submit appends, no second deal --------------------
@@ -308,7 +333,32 @@ def main() -> int:  # noqa: C901 - linear smoke script
         deals = _deals_for(a_cid)
         _assert(len(deals) == 1, "still one deal after duplicate", deals)
         _assert(_lead_activity_count(deals[0][0]) == 2, "activity appended", deals)
+        _assert(
+            len(_notify_calls) > _new_count
+            and _notify_calls[-1]["subject"].startswith("Updated vehicle lead"),
+            "duplicate lead triggers 'Updated vehicle lead' notification",
+            _notify_calls,
+        )
         print("duplicate appends instead of new deal ok")
+
+        # --- notification failure must NOT break the lead request --------
+        _fake_send.boom = True
+        rfail = client.post(
+            "/api/public/leads",
+            json={
+                "name": "Mailer Down",
+                "email": _email("fail"),
+                "listing_code": codes["avail"],
+                "message": "test",
+            },
+        )
+        _assert(
+            rfail.status_code == 200,
+            "lead still succeeds when the mailer raises",
+            rfail.text,
+        )
+        _fake_send.boom = False
+        print("staff notification new/updated + honeypot-silent + mailer-safe ok")
 
         # --- link by numeric vehicle_id ----------------------------------
         b_email = _email("b")
