@@ -822,6 +822,58 @@ export async function getCatalogPriceBreakdown(catalogItemId) {
   return data
 }
 
+// ---------------------------------------------------------------------------
+// Vehicles (Day 2 — Kelley Autoplex inventory)
+// ---------------------------------------------------------------------------
+//
+// Vehicles are `catalog_items` rows with `is_vehicle=true` (migration 085).
+// These wrappers reuse the same /catalog endpoints the dress catalog uses
+// but scope reads to the vehicle group AND re-gate on the `is_vehicle`
+// discriminator client-side — per the Day 1 rule, `is_vehicle` is the only
+// reliable "this is a car" signal, so a backfilled non-vehicle row that
+// happens to carry category='vehicle' or a vehicle_status can never leak
+// onto the vehicle surface.
+
+// Lists vehicles. `group=vehicle` filters on category server-side (and
+// applies in search mode too when `q` is set); we then filter on
+// `is_vehicle` so the discriminator — not the category — is the final
+// gate. `status` filters by vehicle_status client-side (the list route
+// has no status param).
+export async function listVehicles({
+  q = '',
+  includeInactive = false,
+  status,
+  limit = 500,
+} = {}) {
+  const params = { group: 'vehicle', limit }
+  if (q && q.trim()) params.q = q.trim()
+  if (includeInactive) params.include_inactive = true
+  const { data } = await api.get('/catalog', { params })
+  const rows = Array.isArray(data) ? data : []
+  let vehicles = rows.filter((row) => row.is_vehicle === true)
+  if (status) vehicles = vehicles.filter((row) => row.vehicle_status === status)
+  return vehicles
+}
+
+// Create a vehicle. Always stamps `is_vehicle: true` so the caller can
+// never forget it. The API derives internal_sku<-stock_number,
+// color<-exterior_color, category='vehicle', and mirrors make->designer /
+// model->style_number; callers send stock_number, exterior_color, and the
+// vehicle fields only.
+export async function createVehicle(body) {
+  const { data } = await api.post('/catalog', { ...body, is_vehicle: true })
+  return data
+}
+
+// Patch mutable vehicle fields. `is_vehicle` is intentionally never sent —
+// a row's car/not-car identity is fixed at create time. The PATCH route
+// does not re-mirror make->designer, so the page also threads
+// designer/style_number to keep the compat search columns in sync.
+export async function updateVehicle(catalogItemId, patch) {
+  const { data } = await api.patch(`/catalog/${catalogItemId}`, patch)
+  return data
+}
+
 // Global Search Phase 2. Returns { query, results: [{type, id, label,
 // sublabel, score, route}, ...] }. The `signal` lets React Query
 // cancel in-flight requests when the debounced query supersedes

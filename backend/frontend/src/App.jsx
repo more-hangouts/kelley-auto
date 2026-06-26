@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import SalesApp from './sales/SalesApp'
 import { isSalesSubdomain } from './services/api'
 import AdminCatalog from './pages/AdminCatalog'
+import AdminVehicles from './pages/AdminVehicles'
 import AdminHolidays from './pages/AdminHolidays'
 import AdminScheduleFinalizedWeek from './pages/AdminScheduleFinalizedWeek'
 import AdminScheduleGrid from './pages/AdminScheduleGrid'
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="calendar" element={<AppointmentsCalendar />} />
                 <Route path="contacts/:contactId" element={<ContactDetail />} />
                 <Route path="invoices" element={<InvoicesGlobal />} />
+                <Route path="inventory" element={<AdminVehicles />} />
                 <Route path="products" element={<AdminCatalog />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="settings/widget" element={<BookingWidgetSettings />} />

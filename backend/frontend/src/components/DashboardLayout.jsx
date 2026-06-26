@@ -47,7 +47,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashboardOutlinedIcon, end: true },
   { to: '/pipeline', label: 'Deals', icon: ViewKanbanOutlinedIcon },
   { to: '/calendar', label: 'Appointments', icon: CalendarMonthOutlinedIcon },
-  { to: '/products', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
+  { to: '/inventory', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
   { to: '/settings', label: 'Settings', icon: SettingsOutlinedIcon },
 ]
 
