@@ -1,6 +1,21 @@
-# Drive Reliable Cars — drivereliablecars.com
+# Kelley Autoplex — public site
 
-Full-stack web app for a cash-only used car dealership. One repo, one Next.js app — the public-facing storefront and the Payload CMS admin panel live together.
+Next.js storefront for Kelley Autoplex. Payload CMS (in this app) owns
+editorial content (blog/pages/globals); the **FastAPI backend owns the
+business data** — vehicle inventory, lead capture, and the business profile.
+
+> **Data sources (Day 5 rewrite).** Vehicles, leads, and business NAP now come
+> from the FastAPI public API (`/api/public/*`), not Payload/Prisma:
+> - Inventory list/detail → `getInventory` / `getVehicle` in [`src/lib/publicApi.ts`](src/lib/publicApi.ts), adapted to the legacy `PayloadVehicle` shape in [`src/lib/api.ts`](src/lib/api.ts).
+> - Lead forms → `submitLead` → `POST /api/public/leads` (creates a `vehicle_sale` deal in the CRM).
+> - Business NAP → `getBusinessProfile`.
+> - Posts/pages/globals → still Payload.
+>
+> The legacy Prisma data layer and the Payload-backed `/api/inquiries` +
+> Resend relay were **removed** in this rewrite. Sections below that mention
+> Prisma, `prisma generate`, `/api/inquiries`, or Resend are historical.
+> Configure `NEXT_PUBLIC_API_BASE_URL` / `API_BASE_URL` to point at the
+> backend.
 
 ---
 
@@ -9,11 +24,9 @@ Full-stack web app for a cash-only used car dealership. One repo, one Next.js ap
 ```
 src/
 ├── app/
-│   ├── (payload)/          # Payload CMS admin — DO NOT TOUCH
+│   ├── (payload)/          # Payload CMS admin (content) — DO NOT TOUCH
 │   │   ├── admin/          # Admin UI shell + importMap.js (custom component registry)
-│   │   └── api/            # Payload REST API handler
-│   ├── api/
-│   │   └── inquiries/      # POST /api/inquiries — saves to Payload + sends Resend email
+│   │   └── api/            # Payload REST API handler (content collections)
 │   ├── components/         # Public site UI components (Navbar, Footer, cards, etc.)
 │   ├── inventory/[id]/     # Car detail page (ImageGallery, InquiryForm)
 │   ├── shop/               # Inventory listing page
@@ -25,11 +38,12 @@ src/
 │       ├── ModelSelect.tsx # Smart model autocomplete based on selected make
 │       └── VinDecoder.tsx  # VIN input with NHTSA decode button (auto-fills fields)
 ├── lib/
-│   ├── api.ts              # Payload local API helpers (getVehicles, getVehicle, etc.)
-│   └── prisma.ts           # Prisma client (legacy — kept for old API routes)
+│   ├── publicApi.ts        # FastAPI public-API client (inventory/leads/business profile)
+│   ├── api.ts              # Vehicle adapter (FastAPI → PayloadVehicle) + Payload content helpers
+│   └── vehicle-utils.ts    # Pure view helpers (photos, display fields)
 ├── types/
-│   └── vehicle.ts          # TypeScript types for Payload vehicle/media responses
-└── payload.config.ts       # Payload CMS configuration (collections, DB, auth)
+│   └── vehicle.ts          # PayloadVehicle/media view types (consumed by components)
+└── payload.config.ts       # Payload CMS configuration (content collections, DB, auth)
 ```
 
 ---
