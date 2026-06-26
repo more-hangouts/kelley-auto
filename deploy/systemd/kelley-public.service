@@ -1,0 +1,23 @@
+[Unit]
+Description=Kelley Autoplex public website (Next.js, next start)
+After=network-online.target kelley-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/kelley/frontend
+Environment=NODE_ENV=production
+# Runtime API base for server-side fetches. NEXT_PUBLIC_API_BASE_URL is baked
+# at BUILD time (see deploy/env/public.env.production + build.sh).
+EnvironmentFile=/opt/kelley/frontend/.env.production
+# Absolute node path (nvm). Update the version if you upgrade node, or symlink
+# /usr/local/bin/node to avoid the hard-coded path.
+ExecStart=/home/deploy/.nvm/versions/node/v20.20.2/bin/node /opt/kelley/frontend/node_modules/next/dist/bin/next start -p 3000 -H 127.0.0.1
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

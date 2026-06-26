@@ -1,0 +1,48 @@
+# Kelley Autoplex — Caddy reverse proxy with automatic HTTPS.
+#
+# PREREQUISITE: DNS A records for every hostname below must point at this
+# server's PUBLIC IP (currently 50.28.114.31) BEFORE Caddy starts, or the
+# ACME (Let's Encrypt) challenge fails and the site won't get a cert.
+# See deploy/README.md "DNS records".
+#
+# Install:  sudo apt install caddy   (or the official Caddy repo)
+# Place at: /etc/caddy/Caddyfile
+# Reload:   sudo systemctl reload caddy
+
+# --- Public storefront (Next.js on 127.0.0.1:3000) ---
+kelleyautoplex.com, www.kelleyautoplex.com {
+	encode gzip zstd
+	reverse_proxy 127.0.0.1:3000
+}
+
+# --- API (FastAPI/uvicorn on 127.0.0.1:8000) ---
+# Serves /api/* incl. /api/public/media/* (vehicle photos). The public site
+# and admin SPA both point here (PUBLIC_API_BASE_URL / VITE_API_URL).
+api.kelleyautoplex.com {
+	encode gzip zstd
+	reverse_proxy 127.0.0.1:8000
+	# Photos can be large; allow generous upload bodies for admin uploads.
+	request_body {
+		max_size 25MB
+	}
+}
+
+# --- Admin SPA (static Vite build, no Node process) ---
+admin.kelleyautoplex.com {
+	encode gzip zstd
+	root * /opt/kelley/backend/frontend/dist
+	# SPA fallback: client-side routes resolve to index.html.
+	try_files {path} /index.html
+	file_server
+}
+
+# --- OPTIONAL: sales surface on its own host ---
+# The admin SPA self-routes by hostname (isSalesSubdomain) and serves the
+# sales tree from the SAME dist build, so this just reuses the static root.
+# Uncomment + add a DNS record if you want sales.kelleyautoplex.com.
+# sales.kelleyautoplex.com {
+# 	encode gzip zstd
+# 	root * /opt/kelley/backend/frontend/dist
+# 	try_files {path} /index.html
+# 	file_server
+# }

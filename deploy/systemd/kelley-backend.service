@@ -1,0 +1,26 @@
+[Unit]
+Description=Kelley Autoplex FastAPI backend (uvicorn)
+# Postgres + Redis run locally (dev: Docker). If you convert them to native
+# systemd units, add them to After=/Requires= so the API starts after the DB.
+# Restart=always already covers a DB that comes up slightly later.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/kelley/backend
+EnvironmentFile=/opt/kelley/backend/.env
+ExecStart=/opt/kelley/backend/.venv/bin/uvicorn api.server:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=3
+# Uploaded vehicle photos live here (DOCUMENT_STORAGE_ROOT). Must exist and be
+# writable by `deploy`:  sudo install -d -o deploy -g deploy /var/lib/kelley-autoplex/uploads
+ReadWritePaths=/var/lib/kelley-autoplex/uploads
+# Light hardening (loosen if something legitimately needs more).
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
