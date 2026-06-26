@@ -23,16 +23,30 @@ export default function Navbar({
         light ? "text-white" : "text-neutral-700"
       }`}
     >
-      {/* Logo */}
-      <Link href="/" aria-label="Kelley Autoplex — home">
+      {/* Logo — the alien keeps its brand color on every header; only the
+          wordmark flips to white on dark (light) headers so it stays legible. */}
+      <Link
+        href="/"
+        aria-label="Kelley Autoplex — home"
+        className="flex items-center gap-2.5"
+      >
         <Image
-          src="/images/brand/kelley-lockup.svg"
-          alt="Kelley Autoplex"
-          width={180}
-          height={32}
+          src="/images/brand/kelley-alien.svg"
+          alt=""
+          width={15}
+          height={36}
           unoptimized
           priority
-          className={`object-contain ${light ? "brightness-0 invert" : ""}`}
+          className="h-9 w-auto object-contain"
+        />
+        <Image
+          src="/images/brand/kelley-wordmark.svg"
+          alt="Kelley Autoplex"
+          width={198}
+          height={16}
+          unoptimized
+          priority
+          className={`h-4 w-auto object-contain ${light ? "brightness-0 invert" : ""}`}
         />
       </Link>
 

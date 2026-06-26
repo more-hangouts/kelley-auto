@@ -25,14 +25,25 @@ export default async function Footer() {
       <div className="flex flex-col lg:flex-row gap-10 lg:gap-6 px-5 md:px-10 lg:px-20 py-10 md:py-14 lg:py-[72px]">
         {/* Brand info */}
         <div className="flex flex-col gap-6">
-          <Image
-            src="/images/brand/kelley-lockup.svg"
-            alt={nap.name}
-            width={200}
-            height={36}
-            unoptimized
-            className="object-contain brightness-0 invert"
-          />
+          {/* Alien keeps its brand color; wordmark goes white on the dark footer. */}
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/images/brand/kelley-alien.svg"
+              alt=""
+              width={15}
+              height={36}
+              unoptimized
+              className="h-9 w-auto object-contain"
+            />
+            <Image
+              src="/images/brand/kelley-wordmark.svg"
+              alt={nap.name}
+              width={198}
+              height={16}
+              unoptimized
+              className="h-4 w-auto object-contain brightness-0 invert"
+            />
+          </div>
           <p className="max-w-[248px] text-sm text-neutral-400">
             Reliable used vehicles · Simple, friendly vehicle shopping.
           </p>

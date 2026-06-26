@@ -7,7 +7,7 @@ import { isMediaDoc } from "@/types/cms";
 export default async function Hero() {
   const hero = await getHeroContent();
 
-  const watermark = hero.watermark || "KELLEY";
+  const watermark = hero.watermark || "Buy Here Pay Here";
   const subheadline =
     hero.subheadline ||
     "Choose from quality pre-owned vehicles you can trust, transparently priced, because buying a car should feel exciting.";
@@ -34,8 +34,8 @@ export default async function Hero() {
       <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/30 to-transparent" />
 
       {/* Watermark text */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <h1 className="font-[family-name:var(--font-bebas)] text-[120px] md:text-[250px] lg:text-[400px] leading-none tracking-[4px] bg-gradient-to-b from-white/80 to-white/10 bg-clip-text text-transparent select-none uppercase">
+      <div className="absolute inset-0 flex items-center justify-center px-6">
+        <h1 className="font-[family-name:var(--font-bebas)] text-4xl sm:text-6xl md:text-7xl lg:text-8xl leading-none tracking-[3px] bg-gradient-to-b from-white/80 to-white/10 bg-clip-text text-transparent select-none uppercase text-center max-w-[1100px]">
           {watermark}
         </h1>
       </div>
