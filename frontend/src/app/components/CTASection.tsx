@@ -14,11 +14,11 @@ export default function CTASection() {
         </p>
 
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight tracking-tight text-white">
-          Find Your Next Car — No Financing Needed
+          Find Your Next Car with Buy Here, Pay Here
         </h2>
         <p className="mt-4 text-base md:text-lg text-neutral-400 leading-relaxed">
-          We keep it simple. Browse our lot, pick a car you love, pay cash, and
-          drive home the same day. No applications. No credit checks. No hassle.
+          We keep it simple. Browse our lot, pick a car you love, and get
+          approved in minutes with no credit check approval.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -48,7 +48,7 @@ export default function CTASection() {
             <svg className="size-4 text-primary" fill="none" viewBox="0 0 16 16">
               <path d="M3 8l3 3 7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Cash only
+            Buy here, pay here
           </span>
           <span className="flex items-center gap-2">
             <svg className="size-4 text-primary" fill="none" viewBox="0 0 16 16">

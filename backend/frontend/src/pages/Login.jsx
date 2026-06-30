@@ -13,7 +13,8 @@ import {
 } from '@mui/material'
 
 import { useAuth } from '../contexts/AuthContext'
-import bellasLogo from '../assets/bellas-logo.svg'
+import kelleyAlien from '../assets/kelley-alien.svg'
+import kelleyWordmark from '../assets/kelley-wordmark.svg'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -52,12 +53,31 @@ export default function Login() {
         <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
           <Stack spacing={3} component="form" onSubmit={handleSubmit}>
             <Box sx={{ textAlign: 'center' }}>
-              <Box
-                component="img"
-                src={bellasLogo}
-                alt="Bellas XV"
-                sx={{ width: '100%', maxWidth: 280, height: 'auto', mb: 1 }}
-              />
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                justifyContent="center"
+                sx={{ mb: 1.5 }}
+              >
+                <Box
+                  component="img"
+                  src={kelleyAlien}
+                  alt=""
+                  sx={{ height: 44, width: 'auto' }}
+                />
+                <Box
+                  component="img"
+                  src={kelleyWordmark}
+                  alt="Kelley Autoplex"
+                  sx={{
+                    height: 20,
+                    width: 'auto',
+                    // wordmark ships with black fill; invert to white for the dark shell
+                    filter: 'brightness(0) invert(1)',
+                  }}
+                />
+              </Stack>
               <Typography variant="body2" color="text.secondary">
                 Sign in to continue
               </Typography>

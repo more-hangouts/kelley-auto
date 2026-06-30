@@ -6,7 +6,7 @@ import Footer from "../components/Footer";
 export const metadata = {
   title: "About Us | Kelley Autoplex",
   description:
-    "Simple, friendly vehicle shopping. Reliable used vehicles, financing options available.",
+    "Simple, friendly vehicle shopping. Reliable used vehicles with buy here, pay here options available.",
 };
 
 export default function AboutPage() {
@@ -22,7 +22,7 @@ export default function AboutPage() {
           Reliable used vehicles — simple, friendly vehicle shopping
         </h1>
         <p className="mt-4 max-w-xl text-base md:text-lg text-neutral-500">
-          At Kelley Autoplex, buying a used car shouldn&apos;t be stressful. Browse current inventory, ask about a vehicle, or schedule a visit — financing options available. Inventory changes often, so contact us to confirm availability.
+          At Kelley Autoplex, buying a used car shouldn&apos;t be stressful. Browse current inventory, ask about a vehicle, or schedule a visit — buy here, pay here options available. Inventory changes often, so contact us to confirm availability.
         </p>
       </section>
 
@@ -37,13 +37,13 @@ export default function AboutPage() {
             },
             {
               d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-              title: "Cash Only — No Financing",
-              body: "We keep it simple. No loans, no interest, no credit checks. Pay cash, get keys. It's the straightforward way to buy a car.",
+              title: "Buy Here, Pay Here",
+              body: "We keep it simple. Get approved in minutes with no credit check approval, then schedule a viewing that works for you.",
             },
             {
               d: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
-              title: "Appointment Only",
-              body: "No crowded lots. When you come in, you get our full attention. We schedule viewings one at a time so you can take your time and ask all the questions you need.",
+              title: "Walk-Ins Welcome",
+              body: "No crowded lots and no appointment needed. When you come in, you get our full attention, so you can take your time and ask all the questions you need.",
             },
           ].map(({ d, title, body }) => (
             <div key={title} className="flex flex-col gap-4">
@@ -83,7 +83,7 @@ export default function AboutPage() {
             {
               step: "03",
               title: "Come see it in person",
-              body: "Inspect the car, ask questions, take it for a drive. If it's the right fit — pay cash and drive home.",
+              body: "Inspect the car, ask questions, take it for a drive. If it's the right fit, we can help you move forward at the lot.",
             },
           ].map(({ step, title, body }) => (
             <div key={step} className="flex flex-col gap-3">

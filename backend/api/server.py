@@ -108,18 +108,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Auth + admin surface uses cookies/credentials. The public booking widget
-# does not, so its origin list can be wider without weakening dashboard CORS.
-_all_origins = sorted(set(CORS_ORIGINS) | set(BOOKING_WIDGET_ALLOWED_ORIGINS))
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_all_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # E3: baseline security headers. Uses `setdefault` semantics inside the
 # middleware so nginx-supplied values (admin/sales hosts already emit
 # HSTS, nosniff, X-Frame-Options, Referrer-Policy) win in production;
@@ -131,10 +119,22 @@ app.add_middleware(SecurityHeadersMiddleware)
 # D3: double-submit CSRF for cookie-authenticated requests. Skips safe
 # methods, skips the login/PIN/password-reset bootstrap routes, and
 # skips entirely when no session cookie is present (header-bearer
-# callers like smokes and curl continue to work unchanged). Added LAST
-# so it runs first on inbound — a CSRF reject never reaches the route
-# handler or its DB session.
+# callers like smokes and curl continue to work unchanged). Keep CORS
+# outside this middleware so CSRF rejects still carry browser-readable
+# CORS headers.
 app.add_middleware(CSRFMiddleware)
+
+# Auth + admin surface uses cookies/credentials. The public booking widget
+# does not, so its origin list can be wider without weakening dashboard CORS.
+_all_origins = sorted(set(CORS_ORIGINS) | set(BOOKING_WIDGET_ALLOWED_ORIGINS))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_all_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(admin_me_router.router, prefix="/api/admin/me", tags=["admin-me"])

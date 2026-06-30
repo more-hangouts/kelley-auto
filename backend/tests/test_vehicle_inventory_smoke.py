@@ -189,7 +189,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(veh["color"] == "White", "color<-exterior_color", veh)
         _assert(veh["designer"] == "Toyota", "designer<-make", veh)
         _assert(veh["style_number"] == "Camry", "style_number<-model", veh)
-        _assert(veh["public_code"].startswith("BVX-"), "public_code minted", veh)
+        _assert(veh["public_code"].startswith("KAP-"), "public_code minted", veh)
         veh_id = veh["id"]
         print("create vehicle ok")
 
@@ -443,7 +443,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
         # values: the internal_sku/stock string must not appear in any value
         flat = " ".join(str(v) for v in dto.values())
         _assert(_STOCK_PREFIX not in flat, "stock value leaked into DTO", flat)
-        _assert(dto["listingCode"].startswith("BVX-"), "listingCode present", dto)
+        _assert(dto["listingCode"].startswith("KAP-"), "listingCode present", dto)
         _assert(dto["make"] == "Toyota", "DTO make", dto)
         print("public DTO clean ok")
 

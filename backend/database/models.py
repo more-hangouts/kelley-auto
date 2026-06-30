@@ -1137,13 +1137,13 @@ class CatalogItem(Base):
     Two identifier semantics:
       - `internal_sku`: real designer SKU staff types and searches by.
         Never returned from public/customer-facing endpoints.
-      - `public_code`: opaque Bellas-only code (BVX-NNNNN) minted by
+      - `public_code`: opaque customer-facing code (KAP-NNNNN) minted by
         services/catalog_service.py under a row-level lock on
         numbering_state. Once assigned, never rewritten by service code;
         Phase 7 will add a DB trigger as belt-and-suspenders.
 
     The category whitelist, image_urls array shape, and public_code
-    format (^BVX-[0-9]{5}$) are enforced by CHECK constraints in
+    format (^KAP-[0-9]{5}$) are enforced by CHECK constraints in
     migration 041; if you change those rules, change the migration.
     """
 

@@ -724,7 +724,7 @@ def check_router_round_trip(seed, headers) -> None:
     assert body["size_label"] == "12"
     assert body["status"] == "needed"
     assert body["catalog"]["internal_sku"].startswith(_PREFIX)
-    assert body["catalog"]["public_code"].startswith("BVX-")
+    assert body["catalog"]["public_code"].startswith("KAP-")
     assert body["internal_notes"] == "router test"
     sid = int(body["id"])
 

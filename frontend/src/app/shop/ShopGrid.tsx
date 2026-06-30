@@ -4,6 +4,11 @@ import { useState } from "react";
 import VehicleCard from "../components/VehicleCard";
 import type { PayloadVehicle } from "@/types/vehicle";
 
+// Price filtering + sort are hidden for now (not relevant to current
+// inventory). Flip to `true` to bring the filter bar back — all the logic
+// below is intact, only the bar's render is gated.
+const SHOW_FILTER_BAR = false;
+
 type PriceFilter = "all" | "under5k" | "5kto10k" | "10kto15k" | "over15k";
 
 const FILTERS: { id: PriceFilter; label: string }[] = [
@@ -41,7 +46,8 @@ export default function ShopGrid({
 
   return (
     <section className="px-5 md:px-10 lg:px-20 py-6 md:py-10">
-      {/* Filter bar */}
+      {/* Filter bar — hidden via SHOW_FILTER_BAR; kept for future use. */}
+      {SHOW_FILTER_BAR && (
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto overflow-x-auto">
           <button className="flex-shrink-0 flex items-center gap-2 rounded-lg border border-neutral-50 bg-white px-4 py-3 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-25">
@@ -82,6 +88,7 @@ export default function ShopGrid({
           </select>
         </div>
       </div>
+      )}
 
       {/* Vehicle grid */}
       {filtered.length > 0 ? (

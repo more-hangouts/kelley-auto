@@ -370,7 +370,7 @@ def check_admin_patch_immutability(ids: dict[str, int], headers) -> None:
     resp = client.patch(
         f"/api/catalog/{cid}",
         headers=headers,
-        json={"public_code": "BVX-99999"},
+        json={"public_code": "KAP-99999"},
     )
     assert resp.status_code == 422, resp.text
 
@@ -379,8 +379,8 @@ def check_admin_patch_immutability(ids: dict[str, int], headers) -> None:
     try:
         row = db.get(CatalogItem, cid)
         assert row.internal_sku == _PREFIX + "SAMPLE-IVORY"
-        assert row.public_code.startswith("BVX-")
-        assert row.public_code != "BVX-99999"
+        assert row.public_code.startswith("KAP-")
+        assert row.public_code != "KAP-99999"
     finally:
         db.close()
 

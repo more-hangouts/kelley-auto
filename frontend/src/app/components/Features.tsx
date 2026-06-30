@@ -1,7 +1,7 @@
 const features = [
   {
-    title: "CASH ONLY",
-    description: "No financing, no credit checks",
+    title: "BUY HERE PAY HERE",
+    description: "Get approved in minutes",
     icon: (
       <svg className="size-8 md:size-10 text-neutral-400" fill="none" viewBox="0 0 40 40">
         <rect x="5" y="12" width="30" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />

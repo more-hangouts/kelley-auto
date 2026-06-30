@@ -295,7 +295,7 @@ def _resolve_business_header(db: Session) -> _BusinessHeader:
         view: BusinessProfileView = get_profile(db)
     except BusinessProfileError:
         return _BusinessHeader(
-            legal_name="Bella's XV",
+            legal_name="Kelley Autoplex",
             address_lines=[],
             phone=None,
             email=None,

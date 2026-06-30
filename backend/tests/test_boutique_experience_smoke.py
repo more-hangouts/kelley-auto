@@ -224,7 +224,7 @@ profile_payload = {
     "sizing": {
         "estimated_size_low": 8, "estimated_size_high": 10,
         "size_by_bust": 8, "size_by_waist": 8, "size_by_hips": 10,
-        "chart_source": "Bella's XV reference formalwear chart",
+        "chart_source": "Kelley Autoplex reference formalwear chart",
         "off_chart": False,
     },
     "preferences": {
@@ -348,7 +348,7 @@ try:
     assert bep["waist_inches"] == 28.0
     assert bep["estimated_size_low"] == 8
     assert bep["estimated_size_high"] == 10
-    assert bep["chart_source"] == "Bella's XV reference formalwear chart"
+    assert bep["chart_source"] == "Kelley Autoplex reference formalwear chart"
     assert bep["off_chart"] is False
     assert bep["style"] == "ball_gown"
     assert bep["back"] == "corset"

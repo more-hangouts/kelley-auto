@@ -1,16 +1,16 @@
-Bellas XV Booking Widget — embed code
+Kelley Autoplex Booking Widget — embed code
 
 Drop this anywhere on a page. The widget mounts into the div with id
-"bellas-booking-widget" and handles theme, calendar, three-step booking,
+"kelley-booking-widget" and handles theme, calendar, three-step booking,
 attribution capture, and abandon telemetry on its own.
 
-  <div id="bellas-booking-widget"></div>
-  <script src="https://api.shopbellasxv.com/widgets/bellas-booking-widget.js" defer></script>
+  <div id="kelley-booking-widget"></div>
+  <script src="https://api.kelleyautoplex.com/widgets/kelley-booking-widget.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      window.BellasBookingWidget.init({
-        containerId: 'bellas-booking-widget',
-        apiBaseUrl: 'https://api.shopbellasxv.com'
+      window.KelleyBookingWidget.init({
+        containerId: 'kelley-booking-widget',
+        apiBaseUrl: 'https://api.kelleyautoplex.com'
       });
     });
   </script>
@@ -18,15 +18,15 @@ attribution capture, and abandon telemetry on its own.
 Configuration options
 ---------------------
 containerId  (string)  ID of the empty div the widget mounts into.
-                       Default: "bellas-booking-widget".
+                       Default: "kelley-booking-widget".
 apiBaseUrl   (string)  Origin where /api/booking/* lives.
                        Default: "" (same origin as the page).
 
 Local development
 -----------------
-The widget is served at /widgets/bellas-booking-widget.js by the FastAPI
+The widget is served at /widgets/kelley-booking-widget.js by the FastAPI
 dev server, so the same script tag works locally if you point the host
-page at http://localhost:8000 instead of shopbellasxv.com.
+page at http://localhost:8000 instead of kelleyautoplex.com.
 
 Production
 ----------

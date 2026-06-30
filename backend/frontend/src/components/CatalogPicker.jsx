@@ -29,7 +29,7 @@ const GROUP_TABS = [
 // The picker is the staff entry point for attaching a catalog row to
 // an invoice/quote line. It shows the real internal_sku as the
 // primary identifier so staff search and reorder using the vendor's
-// actual SKU; the public BVX-NNNNN code lives as small secondary
+// actual SKU; the public KAP-NNNNN code lives as small secondary
 // text so staff can still answer "what code is on this customer's
 // invoice?"
 //
@@ -174,7 +174,7 @@ export default function CatalogPicker({ value, onChange, disabled }) {
           <TextField
             {...params}
             label="Catalog item"
-            placeholder="Type SKU, BVX code, designer, color..."
+            placeholder="Type SKU, KAP code, designer, color..."
             InputProps={{
               ...params.InputProps,
               endAdornment: (

@@ -150,15 +150,15 @@ export default async function CarDetailPage({
               </div>
             )}
 
-            {/* Cash-only notice */}
+            {/* Buy here pay here notice */}
             <div className="flex items-start gap-3 rounded-xl bg-primary/5 px-4 py-3">
               <svg className="mt-0.5 size-4 flex-shrink-0 text-primary" fill="none" viewBox="0 0 20 20">
                 <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4" />
                 <path d="M10 9v5M10 7h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
               <p className="text-xs text-neutral-600 leading-relaxed">
-                <span className="font-semibold text-primary">Cash only</span> — No financing or online
-                payments. All transactions completed in person at the lot.
+                <span className="font-semibold text-primary">Buy here, pay here</span> available.
+                Get approved in minutes with no credit check approval.
               </p>
             </div>
 

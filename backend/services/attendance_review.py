@@ -395,7 +395,7 @@ def list_punches(
     rows: Sequence[StaffPunch] = db.execute(stmt).scalars().all()
 
     # Single batched location-name lookup so the response is N+1-free
-    # even with many distinct locations (Bellas has one today; a
+    # even with many distinct locations (Kelley has one today; a
     # second-store rollout shouldn't degrade this query).
     location_ids = {p.location_id for p in rows if p.location_id is not None}
     location_map: dict[int, str] = {}

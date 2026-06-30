@@ -138,7 +138,7 @@ def _client_ip(request: Request) -> str | None:
 def _real_client_ip(request: Request) -> str | None:
     """Resolve the real public client IP for the trusted-network check.
 
-    We sit behind nginx (`proxy_pass` from `api.shopbellasxv.com`), so
+    We sit behind nginx (`proxy_pass` from `api.kelleyautoplex.com`), so
     `request.client.host` is always 127.0.0.1 in production. nginx
     forwards the original client address in `X-Forwarded-For`; the
     left-most entry is the client we care about. Falls back to

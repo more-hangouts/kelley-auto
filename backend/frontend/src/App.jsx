@@ -55,7 +55,7 @@ function LegacyStaffScheduleRedirect() {
 export default function App() {
   // The sales surface is its own React app — its own auth context,
   // its own routes, its own token storage key. Mounted on hostname
-  // match so `admin.shopbellasxv.com` and `sales.shopbellasxv.com`
+  // match so `admin.kelleyautoplex.com` and `sales.kelleyautoplex.com`
   // get the right tree without sharing routers or providers.
   if (isSalesSubdomain()) {
     return <SalesApp />

@@ -40,7 +40,7 @@ export default async function ShopPage() {
           </h1>
           <p className="mt-2 md:mt-3 text-base md:text-lg text-neutral-100">
             {available.length > 0
-              ? `${available.length} vehicle${available.length === 1 ? "" : "s"} available \u00b7 Cash only`
+              ? `${available.length} vehicle${available.length === 1 ? "" : "s"} available \u00b7 Buy here, pay here`
               : "Check back soon — new inventory added regularly."}
           </p>
         </div>

@@ -51,6 +51,10 @@ export function displayYear(vehicle: PayloadVehicle): string {
 
 export function displayColor(vehicle: PayloadVehicle): string {
   if (!vehicle.exteriorColor) return "";
+  // Imported inventory without a known color carries the placeholder
+  // "Unknown" (color is a required field on the catalog row). Treat it as
+  // absent so the UI hides the chip/spec row instead of showing "Unknown".
+  if (vehicle.exteriorColor === "Unknown") return "";
   if (vehicle.exteriorColor === "Other") return vehicle.exteriorColorCustom ?? "Other";
   return vehicle.exteriorColor;
 }

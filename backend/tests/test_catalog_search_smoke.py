@@ -219,7 +219,7 @@ def check_prefix_then_substring(ids: dict[str, int]) -> None:
 
 
 def check_public_code_exact_match(ids: dict[str, int]) -> None:
-    """Pasting a BVX code (the secondary identifier on staff surfaces)
+    """Pasting a KAP code (the secondary identifier on staff surfaces)
     must resolve to the matching row at rank 0."""
     db = SessionLocal()
     try:

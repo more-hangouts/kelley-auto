@@ -5,6 +5,59 @@ import { submitLead } from "@/lib/publicApi";
 
 // — time slot helpers —
 const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
+const US_STATES = [
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "District of Columbia",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+];
 
 function getSlots(): number[] {
   const h = new Date().getHours();
@@ -122,7 +175,7 @@ export default function InquiryForm({
   telHref?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(0); // 0=name, 1=email, 2=phone, 3=time
+  const [step, setStep] = useState(0); // 0=name, 1=email, 2=phone, 3=approval, 4=time
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +184,10 @@ export default function InquiryForm({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [hasDriversLicense, setHasDriversLicense] = useState(false);
+  const [driversLicenseState, setDriversLicenseState] = useState("");
   const [slot, setSlot] = useState<number | null>(null);
 
   function close() {
@@ -143,11 +200,21 @@ export default function InquiryForm({
     setLoading(true);
     setError(null);
     const preferredTime = `${fmtSlot(slot)} on ${getTomorrow()}`;
+    const message = [
+      "Buy here, pay here appointment request.",
+      "Customer wants to get approved in minutes.",
+      "No credit check approval requested.",
+      `Address: ${address.trim()}`,
+      `Date of birth: ${dateOfBirth}`,
+      `Driver's license: ${hasDriversLicense ? "Yes" : "No"}`,
+      `Driver's license state: ${driversLicenseState.trim().toUpperCase()}`,
+    ].join("\n");
     const result = await submitLead({
       name: `${firstName} ${lastName}`.trim(),
       email,
       phone,
       vehicleId,
+      message,
       preferredTime,
       sourcePage:
         typeof window !== "undefined" ? window.location.pathname : undefined,
@@ -183,6 +250,21 @@ export default function InquiryForm({
   const nameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
   const emailValid = email.includes("@") && email.includes(".");
   const phoneValid = phone.trim().length > 0;
+  const approvalValid =
+    address.trim().length > 0 &&
+    dateOfBirth.trim().length > 0 &&
+    hasDriversLicense &&
+    US_STATES.some(
+      (state) =>
+        state.toLowerCase() === driversLicenseState.trim().toLowerCase()
+    );
+  const approvalSummary = [
+    address.trim(),
+    dateOfBirth,
+    driversLicenseState.trim().toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div>
@@ -252,6 +334,12 @@ export default function InquiryForm({
             )}
             {step > 2 && (
               <ConfirmedRow label={phone} onEdit={() => setStep(2)} />
+            )}
+            {step > 3 && (
+              <ConfirmedRow
+                label={approvalSummary || "Approval details"}
+                onEdit={() => setStep(3)}
+              />
             )}
 
             {step > 0 && <div className="border-t border-neutral-50 my-2" />}
@@ -338,6 +426,63 @@ export default function InquiryForm({
               )}
 
               {step === 3 && (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-500">
+                      Get approved in minutes
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-0.5">
+                      No credit check approval.
+                    </p>
+                  </div>
+                  <input
+                    autoFocus
+                    placeholder="Address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className={inputClass}
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    aria-label="DOB or date of birth"
+                    placeholder="DOB / Date of birth (mm/dd/yyyy)"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className={inputClass}
+                  />
+                  <label className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-25 px-4 py-3 text-sm text-neutral-600">
+                    <input
+                      type="checkbox"
+                      checked={hasDriversLicense}
+                      onChange={(e) => setHasDriversLicense(e.target.checked)}
+                      className="mt-0.5 size-4 accent-primary"
+                    />
+                    <span>Yes, I have a driver&apos;s license</span>
+                  </label>
+                  <input
+                    list="drivers-license-states"
+                    placeholder="Driver's license state"
+                    value={driversLicenseState}
+                    onChange={(e) => setDriversLicenseState(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && approvalValid) setStep(4);
+                    }}
+                    className={inputClass}
+                  />
+                  <datalist id="drivers-license-states">
+                    {US_STATES.map((state) => (
+                      <option key={state} value={state} />
+                    ))}
+                  </datalist>
+                  <ContinueBtn
+                    disabled={!approvalValid}
+                    onClick={() => setStep(4)}
+                  />
+                </div>
+              )}
+
+              {step === 4 && (
                 <div className="flex flex-col gap-3">
                   <div>
                     <p className="text-sm font-medium text-neutral-500">

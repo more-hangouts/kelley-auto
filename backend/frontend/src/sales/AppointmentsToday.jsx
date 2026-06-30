@@ -17,7 +17,7 @@ import {
 
 import { salesListAppointmentsToday } from '../services/api'
 
-const MINE_TOGGLE_KEY = 'bellas_xv_sales_today_mine'
+const MINE_TOGGLE_KEY = 'kelley_sales_today_mine'
 
 const STATUS_COLORS = {
   confirmed: 'primary',

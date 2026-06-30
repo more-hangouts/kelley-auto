@@ -1,5 +1,5 @@
 // Customer-facing labels for the Boutique Experience pill values, mirrored
-// from widgets/bellas-fit-prep-tool.js so staff see the same words the
+// from widgets/kelley-fit-prep-tool.js so staff see the same words the
 // customer picked rather than the raw enum codes.
 export const STYLE_LABELS = {
   ball_gown: 'Ball gown',

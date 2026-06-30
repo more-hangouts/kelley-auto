@@ -125,11 +125,11 @@ def _send_email(
     subject = f"Still working? Clock out by {cutoff_str}"
     text = (
         f"Hi {stylist_name},\n\n"
-        f"You're still on the clock at Bellas. Your shift is set to "
+        f"You're still on the clock at Kelley Autoplex. Your shift is set to "
         f"auto-close at {cutoff_str} today. If you're still working, "
         "tap the clock chip in the sales portal and confirm. If you're "
         "done, please clock out so the system records the right hours.\n\n"
-        "— Bellas XV"
+        "— Kelley Autoplex"
     )
     transport.send(
         EmailMessagePayload(

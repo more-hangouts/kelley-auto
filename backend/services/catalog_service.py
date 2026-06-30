@@ -7,7 +7,7 @@ identifier semantics:
     staff types into search/admin/reorder views. Never returned from
     public/customer-facing endpoints.
 
-  - `public_code`: opaque Bellas-only code (`BVX-NNNNN`) minted here
+  - `public_code`: opaque customer-facing code (`KAP-NNNNN`) minted here
     under a `SELECT ... FOR UPDATE` row lock on the `numbering_state`
     singleton, the same row that already serializes invoice/quote/payment
     numbering. Vendor identity is intentionally not encoded; one global
@@ -175,7 +175,7 @@ def staff_sku(item: CatalogItem) -> str:
 
 
 def customer_sku(item: CatalogItem) -> str:
-    """Public BVX code for customer surfaces. Safe to render anywhere
+    """Public KAP code for customer surfaces. Safe to render anywhere
     customer-facing."""
     return item.public_code
 
@@ -399,7 +399,7 @@ class CustomerLineView:
     re-deriving from the row.
 
     Fields:
-        public_code: BVX-NNNNN for catalog-backed lines; ``None`` for
+        public_code: KAP-NNNNN for catalog-backed lines; ``None`` for
             non-catalog and legacy lines so the renderer hides the
             SKU column on those rows.
         display_text: customer-safe one-liner. For catalog-backed
@@ -505,7 +505,7 @@ def customer_line_description(
 def _assign_catalog_public_code(db: Session) -> str:
     """Allocate the next public code under a row-level lock on
     `numbering_state.catalog_public_code_seq`. Format is
-    `BVX-{seq:05d}`.
+    `KAP-{seq:05d}`.
 
     No year reset: catalog public codes are stable identifiers and
     remain valid for the lifetime of the catalog row, even past year
@@ -530,7 +530,7 @@ def _assign_catalog_public_code(db: Session) -> str:
         ),
         {"s": new_seq},
     )
-    return f"BVX-{new_seq:05d}"
+    return f"KAP-{new_seq:05d}"
 
 
 # ---------------------------------------------------------------------------
@@ -1303,8 +1303,8 @@ def get_by_internal_sku(db: Session, internal_sku: str) -> CatalogItem | None:
 
 
 def get_by_public_code(db: Session, public_code: str) -> CatalogItem | None:
-    """Lookup by public BVX code. Useful when staff need to answer
-    "what dress is on invoice line BVX-00042?"
+    """Lookup by public KAP code. Useful when staff need to answer
+    "what dress is on invoice line KAP-00042?"
     """
     return (
         db.query(CatalogItem)

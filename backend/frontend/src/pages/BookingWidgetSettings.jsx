@@ -46,13 +46,13 @@ import SettingsPageHeader from '../components/SettingsPageHeader'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-const EMBED_SNIPPET = `<div id="bellas-booking-widget"></div>
-<script src="https://api.shopbellasxv.com/widgets/bellas-booking-widget.js" defer></script>
+const EMBED_SNIPPET = `<div id="kelley-booking-widget"></div>
+<script src="https://api.kelleyautoplex.com/widgets/kelley-booking-widget.js" defer></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    window.BellasBookingWidget.init({
-      containerId: 'bellas-booking-widget',
-      apiBaseUrl: 'https://api.shopbellasxv.com'
+    window.KelleyBookingWidget.init({
+      containerId: 'kelley-booking-widget',
+      apiBaseUrl: 'https://api.kelleyautoplex.com'
     });
   });
 </script>`
@@ -868,7 +868,7 @@ function EmbedCode() {
         </Tooltip>
       </Box>
       <Typography variant="caption" color="text.secondary">
-        The widget asset is canonical at <code>https://api.shopbellasxv.com/widgets/bellas-booking-widget.js</code>.
+        The widget asset is canonical at <code>https://api.kelleyautoplex.com/widgets/kelley-booking-widget.js</code>.
         It picks up theme + copy + flow changes you save above without redeploying the widget JS.
       </Typography>
     </Stack>

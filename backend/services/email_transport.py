@@ -37,11 +37,11 @@ from config.settings import (
 log = logging.getLogger(__name__)
 
 # CID + on-disk path for the wordmark attached to every HTML email so the
-# header `<img src="cid:bellas-logo">` in services/notification_templates.py
-# :_wrap_html resolves. Generated from marketing/assets/wordmark.svg.
-EMAIL_LOGO_CID = "bellas-logo"
+# header `<img src="cid:kelley-logo">` in services/notification_templates.py
+# :_wrap_html resolves. Sourced from the Kelley brand wordmark (logo-dark.png).
+EMAIL_LOGO_CID = "kelley-logo"
 EMAIL_LOGO_PATH = (
-    Path(__file__).resolve().parent.parent / "assets" / "email" / "bellas-wordmark.png"
+    Path(__file__).resolve().parent.parent / "assets" / "email" / "kelley-wordmark.png"
 )
 
 
@@ -139,7 +139,7 @@ class _RedirectingEmailTransport:
 
 
 def _attach_logo_to_html_part(em: EmailMessage) -> None:
-    """Attach the wordmark to the HTML body so cid:bellas-logo resolves.
+    """Attach the wordmark to the HTML body so cid:kelley-logo resolves.
 
     Called after ``em.add_alternative(html, subtype='html')``. The Python
     email API restructures the html part into ``multipart/related`` so the
