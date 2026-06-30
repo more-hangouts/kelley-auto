@@ -97,7 +97,7 @@ export default function PopularCars({ vehicles }: { vehicles: PayloadVehicle[] }
       {/* CTA */}
       <div className="mt-8 md:mt-10 flex justify-center">
         <Link
-          href="/shop"
+          href="/cars-for-sale"
           className="rounded-lg bg-primary px-7 py-3 text-base font-medium text-white shadow-sm hover:bg-primary-dark transition-colors"
         >
           View All Inventory

@@ -23,13 +23,13 @@ export default function CTASection() {
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/shop"
+            href="/cars-for-sale"
             className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white hover:bg-primary-dark transition-colors"
           >
             Browse Inventory
           </Link>
           <Link
-            href="/contact"
+            href="/contact-us"
             className="w-full sm:w-auto rounded-xl border border-neutral-600 px-8 py-3.5 text-base font-semibold text-neutral-100 hover:border-neutral-400 transition-colors"
           >
             Contact Us

@@ -12,7 +12,7 @@ export default async function Hero() {
     hero.subheadline ||
     "Choose from quality pre-owned vehicles you can trust, transparently priced, because buying a car should feel exciting.";
   const ctaLabel = hero.ctaLabel || "Shop Now";
-  const ctaHref = hero.ctaHref || "/shop";
+  const ctaHref = hero.ctaHref || "/cars-for-sale";
   const headline = hero.headline || "Find the perfect car that fits your journey";
   const bgSrc = isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.webp";
   const showCarImage = hero.showCarImage !== false;

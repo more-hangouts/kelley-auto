@@ -10,6 +10,9 @@ export const metadata = {
   title: "Contact Us | Kelley Autoplex",
   description:
     "Browse current inventory, ask about a vehicle, or schedule a visit. Contact us to confirm availability.",
+  alternates: {
+    canonical: "/contact-us",
+  },
 };
 
 export const revalidate = 60;

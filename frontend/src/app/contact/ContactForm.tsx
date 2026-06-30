@@ -70,7 +70,7 @@ export default function ContactForm() {
       message: form.message,
       preferredTime,
       sourcePage:
-        typeof window !== "undefined" ? window.location.pathname : "/contact",
+        typeof window !== "undefined" ? window.location.pathname : "/contact-us",
     });
     if (result.ok) {
       setSent(true);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { PayloadVehicle } from "@/types/vehicle";
+import { slugFromMake } from "@/lib/inventory-seo";
 
 // Manufacturer badges we ship locally (public/images/brands/<slug>.png).
 // Shown for the makes we carry — standard nominative use. Any make without a
@@ -39,7 +40,7 @@ export default function Brands({ vehicles }: { vehicles: PayloadVehicle[] }) {
           Shop By Brand
         </h2>
         <Link
-          href="/shop"
+          href="/cars-for-sale"
           className="text-base md:text-xl text-neutral-600 hover:text-primary transition-colors"
         >
           See All
@@ -55,7 +56,7 @@ export default function Brands({ vehicles }: { vehicles: PayloadVehicle[] }) {
           return (
             <Link
               key={brand}
-              href={`/shop?brand=${encodeURIComponent(brand)}`}
+              href={`/${slugFromMake(brand)}`}
               className="flex flex-col items-center gap-2 md:gap-4 group"
             >
               {/* Brand badge (or the initial as a fallback) */}

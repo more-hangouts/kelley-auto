@@ -98,6 +98,7 @@ function adaptVehicle(v: PublicVehicle): PayloadVehicle {
   ) as string[];
   return {
     id: String(v.id),
+    listingCode: v.listingCode,
     title: v.title || [v.year, v.make, v.model].filter(Boolean).join(" "),
     vin: v.vin,
     make: v.make ?? "",
@@ -112,6 +113,8 @@ function adaptVehicle(v: PublicVehicle): PayloadVehicle {
     interiorColorCustom: null,
     transmission: mapTransmission(v.transmission),
     fuelType: mapFuel(v.fuelType),
+    bodyType: v.bodyType,
+    trim: v.trim,
     description: toLexical(descParts.join(" · ")),
     status: mapStatus(v.status),
     photos: toMedia(v.photos ?? []),
@@ -123,26 +126,36 @@ function adaptVehicle(v: PublicVehicle): PayloadVehicle {
 const _API_PAGE = 60; // FastAPI public list caps at 60/page
 
 export const getVehicles = cache(
-  async (opts: { limit?: number } = {}): Promise<PayloadListResponse<PayloadVehicle>> => {
+  async (opts: { limit?: number; bodyType?: string; bodyTypes?: string[]; make?: string } = {}): Promise<PayloadListResponse<PayloadVehicle>> => {
     const target = opts.limit ?? 100;
+    const bodyTypes = opts.bodyTypes ?? (opts.bodyType ? [opts.bodyType] : [undefined]);
     const docs: PayloadVehicle[] = [];
     let total = 0;
-    let page = 1;
-    // Fixed page size keeps the backend's offset math correct; accumulate
-    // pages until we have `target` rows or the list is exhausted.
-    while (docs.length < target) {
-      const res = await apiGetInventory({
-        limit: _API_PAGE,
-        page,
-        sort: "newest",
-      });
-      total = res.total;
-      docs.push(...res.items.map(adaptVehicle));
-      if (res.items.length < _API_PAGE || docs.length >= total) break;
-      page += 1;
+    const seen = new Set<string>();
+    for (const bodyType of bodyTypes) {
+      let page = 1;
+      // Fixed page size keeps the backend's offset math correct; accumulate
+      // pages until we have `target` rows or the list is exhausted.
+      while (docs.length < target) {
+        const res = await apiGetInventory({
+          make: opts.make,
+          bodyType,
+          limit: _API_PAGE,
+          page,
+          sort: "newest",
+        });
+        total += res.total;
+        for (const vehicle of res.items.map(adaptVehicle)) {
+          if (seen.has(vehicle.id)) continue;
+          seen.add(vehicle.id);
+          docs.push(vehicle);
+        }
+        if (res.items.length < _API_PAGE || docs.length >= total) break;
+        page += 1;
+      }
     }
     const limited = docs.slice(0, target);
-    const totalDocs = total || limited.length;
+    const totalDocs = Math.max(total, limited.length);
     return {
       docs: limited,
       totalDocs,

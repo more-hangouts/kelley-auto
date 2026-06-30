@@ -105,13 +105,13 @@ export default function AboutPage() {
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           <Link
-            href="/shop"
+            href="/cars-for-sale"
             className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
           >
             Browse Inventory
           </Link>
           <Link
-            href="/contact"
+            href="/contact-us"
             className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
           >
             Contact Us

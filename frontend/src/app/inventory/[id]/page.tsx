@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import TopBanner from "@/app/components/TopBanner";
 import NavbarWrapper from "@/app/components/NavbarWrapper";
 import Features from "@/app/components/Features";
@@ -11,6 +12,50 @@ import InquiryForm from "./InquiryForm";
 import type { PayloadVehicle } from "@/types/vehicle";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const vehicle = await getVehicle(id);
+
+  if (!vehicle) {
+    return {
+      title: "Vehicle Not Found | Kelley Autoplex",
+    };
+  }
+
+  const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
+  const price = vehicle.cashPrice
+    ? `$${vehicle.cashPrice.toLocaleString()}`
+    : "Call for price";
+  const description = [
+    `${title} for sale at Kelley Autoplex.`,
+    price,
+    vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} miles.` : null,
+    "Contact us to confirm availability.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const canonicalId = vehicle.listingCode || vehicle.id;
+  const images = (vehicle.photos ?? []).map((p) => p.url).filter(Boolean);
+
+  return {
+    title: `${title} For Sale | Kelley Autoplex`,
+    description,
+    alternates: {
+      canonical: `/inventory/${canonicalId}`,
+    },
+    openGraph: {
+      title: `${title} For Sale | Kelley Autoplex`,
+      description,
+      images,
+      type: "website",
+    },
+  };
+}
 
 export default async function CarDetailPage({
   params,
@@ -43,7 +88,7 @@ export default async function CarDetailPage({
           Home
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/shop" className="hover:text-neutral-600 transition-colors">
+        <Link href="/cars-for-sale" className="hover:text-neutral-600 transition-colors">
           Inventory
         </Link>
         <span className="mx-2">/</span>
@@ -169,7 +214,7 @@ export default async function CarDetailPage({
               <div className="rounded-2xl border border-neutral-100 bg-neutral-25 p-6 text-center">
                 <p className="font-medium text-neutral-500">This vehicle has been sold.</p>
                 <Link
-                  href="/shop"
+                  href="/cars-for-sale"
                   className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
                 >
                   View available cars →

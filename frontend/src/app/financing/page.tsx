@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import TopBanner from "../components/TopBanner";
 import NavbarWrapper from "../components/NavbarWrapper";
 import Footer from "../components/Footer";
@@ -24,6 +25,15 @@ const steps = [
       "Complete your paperwork, pick up your vehicle, and hit the road with confidence.",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Get Approved Today! Auto Loans in San Antonio, TX | Kelley Autoplex",
+  description:
+    "Apply for auto financing with Kelley Autoplex in San Antonio, TX. Explore loan options, trade-ins, and lender recommendations.",
+  alternates: {
+    canonical: "/loan-application",
+  },
+};
 
 const bankSteps = [
   "Contact your bank or credit union about an auto loan",
@@ -108,7 +118,7 @@ export default async function FinancingPage() {
   const nap = await resolveNap();
   // Where the "Apply"/"Call" CTAs point: the phone if we have one, else the
   // contact page. Never a hardcoded number.
-  const callHref = nap.telHref || "/contact";
+  const callHref = nap.telHref || "/contact-us";
   return (
     <div className="min-h-screen">
       <TopBanner />
@@ -656,7 +666,7 @@ export default async function FinancingPage() {
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/shop"
+                  href="/cars-for-sale"
                   className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-center text-base font-semibold text-white hover:bg-primary-dark transition-colors"
                 >
                   Browse inventory

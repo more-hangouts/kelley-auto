@@ -10,10 +10,11 @@ export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
   const color = displayColor(vehicle);
   const sold = isSold(vehicle);
   const description = lexicalToText(vehicle.description);
+  const detailPath = `/inventory/${vehicle.listingCode || vehicle.id}`;
 
   return (
     <Link
-      href={`/inventory/${vehicle.id}`}
+      href={detailPath}
       className="group flex flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-50 hover:shadow-lg transition-shadow"
     >
       {/* Image */}

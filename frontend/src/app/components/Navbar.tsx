@@ -55,16 +55,16 @@ export default function Navbar({
         <Link href="/" className="hover:opacity-80 transition-opacity">
           Home
         </Link>
-        <Link href="/shop" className="hover:opacity-80 transition-opacity">
+        <Link href="/cars-for-sale" className="hover:opacity-80 transition-opacity">
           Inventory
         </Link>
         <Link href="/about" className="hover:opacity-80 transition-opacity">
           About Us
         </Link>
-        <Link href="/financing" className="hover:opacity-80 transition-opacity">
+        <Link href="/loan-application" className="hover:opacity-80 transition-opacity">
           Financing
         </Link>
-        <Link href="/contact" className="hover:opacity-80 transition-opacity">
+        <Link href="/contact-us" className="hover:opacity-80 transition-opacity">
           Contact Us
         </Link>
       </div>
@@ -96,7 +96,7 @@ export default function Navbar({
           );
         })()}
         <Link
-          href="/shop"
+          href="/cars-for-sale"
           className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark transition-colors"
         >
           View Inventory
@@ -138,7 +138,7 @@ export default function Navbar({
               Home
             </Link>
             <Link
-              href="/shop"
+              href="/cars-for-sale"
               className="py-3 text-base text-neutral-700 hover:text-primary"
               onClick={() => setMenuOpen(false)}
             >
@@ -152,14 +152,14 @@ export default function Navbar({
               About Us
             </Link>
             <Link
-              href="/financing"
+              href="/loan-application"
               className="py-3 text-base text-neutral-700 hover:text-primary"
               onClick={() => setMenuOpen(false)}
             >
               Financing
             </Link>
             <Link
-              href="/contact"
+              href="/contact-us"
               className="py-3 text-base text-neutral-700 hover:text-primary"
               onClick={() => setMenuOpen(false)}
             >
@@ -180,7 +180,7 @@ export default function Navbar({
               </span>
             )}
             <Link
-              href="/shop"
+              href="/cars-for-sale"
               className="mt-1 flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-base font-semibold text-white"
               onClick={() => setMenuOpen(false)}
             >

@@ -40,7 +40,7 @@ export default async function TopBanner() {
         </p>
         <span className="hidden md:inline text-neutral-400">|</span>
         <Link
-          href="/shop"
+          href="/cars-for-sale"
           className="hidden md:inline underline text-xs md:text-sm hover:text-primary transition-colors"
         >
           View Inventory
