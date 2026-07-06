@@ -11,7 +11,7 @@ export default async function Hero() {
   const subheadline =
     hero.subheadline ||
     "Choose from quality pre-owned vehicles you can trust. Get approved in minutes with buy here, pay here options.";
-  const ctaHref = hero.ctaHref || "/cars-for-sale";
+  const ctaHref = "/loan-application#application";
   const headline = hero.headline || "Find the perfect car that fits your journey";
   const bgSrc = isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.webp";
   const showCarImage = hero.showCarImage !== false;
