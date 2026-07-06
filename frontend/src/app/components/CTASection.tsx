@@ -26,7 +26,7 @@ export default function CTASection() {
             href="/cars-for-sale"
             className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white hover:bg-primary-dark transition-colors"
           >
-            Browse Inventory
+            Get Approved · No Credit Check
           </Link>
           <Link
             href="/contact-us"
