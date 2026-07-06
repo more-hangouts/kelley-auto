@@ -93,8 +93,8 @@ export default function EventDetailLayout() {
   })
 
   const { data: workflow } = useQuery({
-    queryKey: ['events', 'workflow', event?.event_type || 'quinceanera'],
-    queryFn: () => getEventWorkflow(event?.event_type || 'quinceanera'),
+    queryKey: ['events', 'workflow', event?.event_type || 'vehicle_sale'],
+    queryFn: () => getEventWorkflow(event?.event_type || 'vehicle_sale'),
     enabled: !!event,
     staleTime: 5 * 60_000,
   })
@@ -152,12 +152,12 @@ export default function EventDetailLayout() {
     <Box sx={{ maxWidth: 1180, mx: 'auto' }}>
       <Button
         component={RouterLink}
-        to="/pipeline"
+        to="/sales"
         startIcon={<ArrowBackIcon />}
         size="small"
         sx={{ mb: 2 }}
       >
-        Back to Pipeline
+        Back to Deals
       </Button>
 
       <Stack
@@ -168,7 +168,8 @@ export default function EventDetailLayout() {
       >
         <Box>
           <Typography variant="overline" color="text.secondary">
-            Event #{event.id} · Quinceañera
+            Deal #{event.id}
+            {event.event_type === 'vehicle_sale' ? ' · Vehicle' : ''}
           </Typography>
           <Typography variant="h4" sx={{ fontWeight: 600 }}>
             {event.event_name}

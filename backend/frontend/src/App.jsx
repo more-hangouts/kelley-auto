@@ -78,14 +78,16 @@ export default function App() {
                 }
               >
                 <Route index element={<Dashboard />} />
-                <Route path="pipeline" element={<Pipeline />} />
+                {/* Deals is the single vehicle-sale board. The old quinceañera
+                    pipeline was retired — keep the URL working for bookmarks. */}
+                <Route path="pipeline" element={<Navigate to="/sales" replace />} />
                 <Route
                   path="sales"
                   element={
                     <Pipeline
                       eventType="vehicle_sale"
-                      title="Vehicle Deals"
-                      subtitleNoun="Vehicle sale deals"
+                      title="Deals"
+                      subtitleNoun="Vehicle deals"
                     />
                   }
                 />

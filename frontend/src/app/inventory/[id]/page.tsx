@@ -6,6 +6,7 @@ import NavbarWrapper from "@/app/components/NavbarWrapper";
 import Features from "@/app/components/Features";
 import Footer from "@/app/components/Footer";
 import { getVehicle, displayYear, displayColor, isSold, lexicalToText } from "@/lib/api";
+import { downPaymentHeadline, formatDownPayment } from "@/lib/pricing";
 import { resolveNap } from "@/lib/nap";
 import ImageGallery from "./ImageGallery";
 import InquiryForm from "./InquiryForm";
@@ -28,12 +29,9 @@ export async function generateMetadata({
   }
 
   const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
-  const price = vehicle.cashPrice
-    ? `$${vehicle.cashPrice.toLocaleString()}`
-    : "Call for price";
   const description = [
     `${title} for sale at Kelley Autoplex.`,
-    price,
+    `${downPaymentHeadline()} — no credit check.`,
     vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} miles.` : null,
     "Contact us to confirm availability.",
   ]
@@ -123,15 +121,16 @@ export default async function CarDetailPage({
               {title}
             </h1>
 
-            {/* Price */}
+            {/* Down payment */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                Cash Price
+                Down Payment
               </p>
               <p className="mt-1 text-4xl font-bold text-primary">
-                {vehicle.cashPrice
-                  ? `$${vehicle.cashPrice.toLocaleString()}`
-                  : "Call for price"}
+                As low as {formatDownPayment()}
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-500">
+                Buy here, pay here · no credit check
               </p>
             </div>
 

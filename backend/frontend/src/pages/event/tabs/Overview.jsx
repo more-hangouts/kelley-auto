@@ -662,7 +662,7 @@ function describeParticipantArchiveError(err) {
   const detail = err?.response?.data?.detail
   const code = detail?.code
   if (code === 'archive_blocked') {
-    return 'This participant cannot be archived — they back an active financial record or are the sole quinceañera.'
+    return 'This participant cannot be archived — they back an active financial record or are the sole primary buyer.'
   }
   if (code === 'participant_not_found') {
     return 'This participant no longer exists. Reload and try again.'

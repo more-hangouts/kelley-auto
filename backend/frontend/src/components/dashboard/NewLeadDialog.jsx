@@ -79,7 +79,7 @@ function defaultEventName(celebrantFirst, celebrantLast) {
   if (!base) return ''
   const last = (celebrantLast || '').trim()
   const owner = last ? `${base} ${last}` : base
-  return `${owner}'s Quince`
+  return `${owner}'s Deal`
 }
 
 function describeError(err) {
@@ -95,7 +95,7 @@ function describeError(err) {
     return 'Enter a first/last name or display name for the contact.'
   }
   if (status === 422 && detail === 'celebrant_first_name_required') {
-    return 'Celebrant first name is required.'
+    return 'Buyer first name is required.'
   }
   if (status === 422 && detail === 'invalid_party_size_bucket') {
     return 'Pick a party size.'
@@ -420,7 +420,7 @@ function DetailsStep({ value, onChange, contactDisplayName }) {
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField
           fullWidth
-          label="Celebrant first name"
+          label="Buyer first name"
           value={value.celebrant_first_name}
           onChange={(e) => patch({ celebrant_first_name: e.target.value })}
           size="small"
@@ -428,7 +428,7 @@ function DetailsStep({ value, onChange, contactDisplayName }) {
         />
         <TextField
           fullWidth
-          label="Celebrant last name"
+          label="Buyer last name"
           value={value.celebrant_last_name}
           onChange={(e) => patch({ celebrant_last_name: e.target.value })}
           size="small"

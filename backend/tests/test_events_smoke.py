@@ -230,8 +230,12 @@ try:
     print("validator requires event_name on walk-in ok")
 
     # ----- promote lead -----
+    # event_type is passed explicitly: this module exercises the quinceañera
+    # workflow specifically, and the API default is now "vehicle_sale".
     resp = client.post(
-        "/api/events", headers=auth, json={"from_appointment_id": appt_id}
+        "/api/events",
+        headers=auth,
+        json={"from_appointment_id": appt_id, "event_type": "quinceanera"},
     )
     assert resp.status_code == 201, resp.text
     event = resp.json()
@@ -305,7 +309,12 @@ try:
         db.close()
 
     resp = client.post(
-        "/api/events", headers=auth, json={"from_appointment_id": shared_phone_appt_id}
+        "/api/events",
+        headers=auth,
+        json={
+            "from_appointment_id": shared_phone_appt_id,
+            "event_type": "quinceanera",
+        },
     )
     assert resp.status_code == 201, resp.text
     shared_phone_event = resp.json()
@@ -408,7 +417,9 @@ try:
     print("repeat-status is no-op ok")
 
     # ----- board reads it in consulted column -----
-    resp = client.get("/api/events/board", headers=auth)
+    resp = client.get(
+        "/api/events/board", headers=auth, params={"event_type": "quinceanera"}
+    )
     assert resp.status_code == 200, resp.text
     board = resp.json()
     assert board["event_type"] == "quinceanera"
@@ -434,7 +445,10 @@ try:
     assert resp.status_code == 201, resp.text
     walkin = resp.json()
     assert walkin["event_name"] == "Walk-in test event"
-    assert walkin["status"] == "lead"
+    # No event_type passed → API default is now "vehicle_sale", whose first
+    # column is "new_lead".
+    assert walkin["event_type"] == "vehicle_sale"
+    assert walkin["status"] == "new_lead"
     assert walkin["event_date"] == "2026-10-01"
     print(f"walk-in create ok (event id={walkin['id']})")
 

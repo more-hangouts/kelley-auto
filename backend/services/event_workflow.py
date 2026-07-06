@@ -164,6 +164,19 @@ def initial_status(event_type: str) -> str:
     return min(all_statuses(event_type), key=lambda s: s.sort_order).code
 
 
+def cancellation_status(event_type: str) -> str:
+    """Status an event moves to when its booking/appointment is cancelled.
+
+    The quinceañera workflow has an explicit ``cancelled`` column; the
+    vehicle-sale workflow has none, so a scrapped deal lands in its terminal
+    ``lost`` column instead. Keeps the cancel-mirror valid for every workflow.
+    """
+    codes = {s.code for s in all_statuses(event_type)}
+    if "cancelled" in codes:
+        return "cancelled"
+    return "lost"
+
+
 def status_codes(event_type: str) -> set[str]:
     return {s.code for s in all_statuses(event_type)}
 

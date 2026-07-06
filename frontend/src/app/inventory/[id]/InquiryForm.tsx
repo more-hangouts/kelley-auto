@@ -274,7 +274,7 @@ export default function InquiryForm({
             onClick={() => setOpen(true)}
             className="flex-1 rounded-xl bg-gradient-to-b from-[#f9896a] to-primary py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-95"
           >
-            Schedule a Viewing
+            Get Approved · No Credit Check
           </button>
           <a
             href={telHref ?? undefined}
@@ -298,7 +298,7 @@ export default function InquiryForm({
           <div className="flex items-center justify-between bg-neutral-25 px-4 py-3 border-b border-neutral-100">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-neutral-700">
-                Schedule a viewing
+                Get approved — no credit check
               </p>
               <p className="text-xs text-neutral-400 mt-0.5 truncate">
                 {vehicleTitle}
@@ -517,7 +517,7 @@ export default function InquiryForm({
                     onClick={submit}
                     className="w-full rounded-xl bg-gradient-to-b from-[#f9896a] to-primary py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-40"
                   >
-                    {loading ? "Sending…" : "Request Appointment"}
+                    {loading ? "Sending..." : "Get Approved · No Credit Check"}
                   </button>
                 </div>
               )}

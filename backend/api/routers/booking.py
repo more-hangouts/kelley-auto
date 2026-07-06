@@ -26,11 +26,13 @@ from database.models import (
     AppointmentEnrichmentResponse,
     AppointmentSessionEvent,
     AppointmentVisitor,
+    Event,
 )
 from services import (
     booking_service,
     contact_service,
     event_service,
+    event_workflow,
     notification_service,
 )
 from services.event_service import EventServiceError
@@ -363,7 +365,7 @@ def create_appointment(
     # POST /events from_appointment_id escape hatch if needed.
     try:
         event_service.promote_appointment_to_event(
-            db, appointment_id=appt.id, event_type="quinceanera"
+            db, appointment_id=appt.id, event_type="vehicle_sale"
         )
         db.commit()
     except EventServiceError:
@@ -874,10 +876,18 @@ def post_cancel(
                 if reason
                 else "Customer cancelled via token"
             )
+            # Each workflow names its own cancel column — quinceañera uses
+            # 'cancelled', vehicle sales fall back to terminal 'lost'.
+            ev = db.get(Event, appt.crm_event_id)
+            cancel_status = (
+                event_workflow.cancellation_status(ev.event_type)
+                if ev is not None
+                else "cancelled"
+            )
             event_service.change_event_status(
                 db,
                 event_id=appt.crm_event_id,
-                new_status="cancelled",
+                new_status=cancel_status,
                 notes=note,
             )
             db.commit()

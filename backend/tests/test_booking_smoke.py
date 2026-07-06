@@ -273,14 +273,15 @@ try:
             .count()
         )
         assert same_phone == 1, same_phone
-        # Auto-promotion: every booking should land on the pipeline as a lead.
+        # Auto-promotion: every booking should land on the Deals board as a
+        # new vehicle-sale lead (the dealership's only workflow).
         assert (
             appt_row.crm_event_id is not None
         ), "booking did not auto-promote to a CRM event"
         ev = db.get(Event, appt_row.crm_event_id)
         assert ev is not None
-        assert ev.status == "lead", ev.status
-        assert ev.event_type == "quinceanera"
+        assert ev.status == "new_lead", ev.status
+        assert ev.event_type == "vehicle_sale"
         assert ev.primary_contact_id == contact_row.id
         booking_event_id_for_assertions = ev.id
     finally:
@@ -332,7 +333,9 @@ try:
     try:
         ev = db.get(Event, booking_event_id_for_assertions)
         assert ev is not None
-        assert ev.status == "cancelled", ev.status
+        # vehicle_sale has no 'cancelled' column, so a cancelled booking
+        # mirrors onto the event's terminal 'lost' status.
+        assert ev.status == "lost", ev.status
     finally:
         db.close()
     print("cancel via signed token ok (mirrored to event)")

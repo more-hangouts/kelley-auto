@@ -56,8 +56,8 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
   }, [card])
 
   const { data: workflow } = useQuery({
-    queryKey: ['events', 'workflow', card?.event_type || 'quinceanera'],
-    queryFn: () => getEventWorkflow(card?.event_type || 'quinceanera'),
+    queryKey: ['events', 'workflow', card?.event_type || 'vehicle_sale'],
+    queryFn: () => getEventWorkflow(card?.event_type || 'vehicle_sale'),
     enabled: !!card,
     staleTime: 5 * 60_000,
   })

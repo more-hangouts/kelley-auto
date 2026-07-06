@@ -418,7 +418,7 @@ export default function AppointmentDetail() {
           value={fullName(a.parent_first_name, a.parent_last_name)}
         />
         <Field
-          label="Celebrant"
+          label="Buyer"
           value={fullName(a.celebrant_first_name, a.celebrant_last_name)}
         />
         <Field label="Party size" value={a.party_size_bucket?.replace('_', ' ')} />

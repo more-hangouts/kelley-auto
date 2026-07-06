@@ -48,7 +48,7 @@ class EventCreate(BaseModel):
 
     from_appointment_id: int | None = None
     primary_contact_id: int | None = None
-    event_type: Literal["quinceanera", "vehicle_sale"] = "quinceanera"
+    event_type: Literal["quinceanera", "vehicle_sale"] = "vehicle_sale"
 
     event_name: str | None = Field(default=None, max_length=200)
     event_date: date | None = None
@@ -395,7 +395,7 @@ def patch_status(
 def get_board(
     db: Annotated[Session, Depends(get_db)],
     _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
-    event_type: str = Query(default="quinceanera"),
+    event_type: str = Query(default="vehicle_sale"),
 ) -> BoardResponse:
     try:
         columns = event_service.get_board_data(db, event_type=event_type)

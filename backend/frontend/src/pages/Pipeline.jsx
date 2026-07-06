@@ -424,9 +424,9 @@ function DroppableColumn({ column, onCardClick }) {
 }
 
 export default function Pipeline({
-  eventType = 'quinceanera',
-  title = 'Pipeline',
-  subtitleNoun = 'Quinceañera events',
+  eventType = 'vehicle_sale',
+  title = 'Deals',
+  subtitleNoun = 'Vehicle deals',
 }) {
   const queryClient = useQueryClient()
   const queryKey = ['events', 'board', eventType]

@@ -42,7 +42,7 @@ const INITIAL_FORM = {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'quinceanera', label: 'Quinceañera' },
+  { value: 'quinceanera', label: 'Buyer' },
   { value: 'dama', label: 'Court — dama' },
   { value: 'chambelan', label: 'Court — chambelán' },
   { value: 'parent', label: 'Parent' },
@@ -151,14 +151,14 @@ export default function AddParticipantDialog({ eventId, open, onClose, onAdded }
         {activeStep === 1 && (
           <Stack spacing={2}>
             <TextField
-              label="Celebrant first name"
+              label="Buyer first name"
               value={form.celebrant_first_name}
               onChange={setField('celebrant_first_name')}
               autoFocus
               required
             />
             <TextField
-              label="Celebrant last name"
+              label="Buyer last name"
               value={form.celebrant_last_name}
               onChange={setField('celebrant_last_name')}
             />

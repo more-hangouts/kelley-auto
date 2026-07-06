@@ -511,7 +511,7 @@ export default function AdminCatalog() {
   const headerNote = useMemo(() => {
     switch (tab) {
       case 'dress':
-        return 'Gowns by Quince / Bridal / Formal.'
+        return 'Gowns — bridal and formal.'
       case 'accessory':
         return 'Accessories like veils, jewelry, headpieces.'
       case 'addon':

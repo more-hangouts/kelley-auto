@@ -108,7 +108,7 @@ export async function listAppointments(params) {
   return data
 }
 
-export async function getEventBoard(eventType = 'quinceanera') {
+export async function getEventBoard(eventType = 'vehicle_sale') {
   const { data } = await api.get('/events/board', { params: { event_type: eventType } })
   return data
 }
@@ -142,7 +142,7 @@ export async function addSalesEventParticipant(eventId, body) {
   return data
 }
 
-export async function getEventWorkflow(eventType = 'quinceanera') {
+export async function getEventWorkflow(eventType = 'vehicle_sale') {
   const { data } = await api.get(`/events/workflow/${eventType}`)
   return data
 }
@@ -751,7 +751,7 @@ export async function getAgendaToday() {
   return data
 }
 
-export async function getPipelineCounts(eventType = 'quinceanera') {
+export async function getPipelineCounts(eventType = 'vehicle_sale') {
   const { data } = await api.get('/dashboard/pipeline-counts', {
     params: { event_type: eventType },
   })
