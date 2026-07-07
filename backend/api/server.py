@@ -31,6 +31,7 @@ from api.routers import auth as auth_router
 from api.routers import booking as booking_router
 from api.routers import business_profile as business_profile_router
 from api.routers import catalog as catalog_router
+from api.routers import vin_decode as vin_decode_router
 from api.routers import contacts as contacts_router
 from api.routers import dashboard as dashboard_router
 from api.routers import event_documents as event_documents_routers
@@ -257,6 +258,11 @@ app.include_router(
     catalog_router.router,
     prefix="/api/catalog",
     tags=["catalog"],
+)
+app.include_router(
+    vin_decode_router.router,
+    prefix="/api/admin/vin",
+    tags=["vin"],
 )
 app.include_router(
     public_site_router.router,

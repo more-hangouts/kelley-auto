@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import sys
 import uuid
+from io import BytesIO
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -39,7 +40,7 @@ from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem, User  # noqa: E402
-import base64  # noqa: E402
+from PIL import Image  # noqa: E402
 
 from services import document_storage  # noqa: E402
 from services.catalog_service import public_vehicle_dto  # noqa: E402
@@ -194,10 +195,9 @@ def main() -> int:  # noqa: C901 - linear smoke script
         print("create vehicle ok")
 
         # --- 1b. Photo upload (local storage) ------------------------
-        _png = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4"
-            "2mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-        )
+        _png_buf = BytesIO()
+        Image.new("RGB", (640, 480), (245, 245, 245)).save(_png_buf, format="PNG")
+        _png = _png_buf.getvalue()
         resp = client.post(
             f"/api/catalog/{veh_id}/photos",
             headers=admin,
@@ -240,12 +240,17 @@ def main() -> int:  # noqa: C901 - linear smoke script
             files={"file": ("notes.txt", b"not an image", "text/plain")},
         )
         _assert(resp.status_code == 415, "non-image photo rejected", resp.text)
-        # reorder/clear via PATCH image_urls still works; clear + delete file
+        # reorder/clear via PATCH image_urls still works and deletes the
+        # Kelley-owned stored file so photo removals do not leak disk space.
         resp = client.patch(
             f"/api/catalog/{veh_id}", headers=admin, json={"image_urls": []}
         )
         _assert(resp.status_code == 200, "clear image_urls", resp.text)
-        document_storage.delete_object(_key)
+        _assert(
+            not document_storage.object_exists(_key),
+            "clearing image_urls deletes uploaded vehicle photo",
+            _key,
+        )
         print("photo upload + public serve ok")
 
         # --- 2. Patch the vehicle ------------------------------------
