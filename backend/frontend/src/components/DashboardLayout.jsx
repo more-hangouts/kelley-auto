@@ -18,6 +18,7 @@ import {
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline'
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -47,6 +48,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashboardOutlinedIcon, end: true },
   { to: '/sales', label: 'Deals', icon: SellOutlinedIcon },
   { to: '/calendar', label: 'Appointments', icon: CalendarMonthOutlinedIcon },
+  { to: '/contacts', label: 'Contacts', icon: PeopleOutlineIcon },
   { to: '/inventory', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
   { to: '/settings', label: 'Settings', icon: SettingsOutlinedIcon },
 ]

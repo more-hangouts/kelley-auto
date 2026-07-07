@@ -22,6 +22,7 @@ import AttendanceReview from './pages/AttendanceReview'
 import BookingWidgetSettings from './pages/BookingWidgetSettings'
 import BusinessProfile from './pages/BusinessProfile'
 import ContactDetail from './pages/ContactDetail'
+import Contacts from './pages/Contacts'
 import Dashboard from './pages/Dashboard'
 import EventDetailLayout from './pages/event/EventDetailLayout'
 import Activity from './pages/event/tabs/Activity'
@@ -101,6 +102,7 @@ export default function App() {
                   <Route path="activity" element={<Activity />} />
                 </Route>
                 <Route path="calendar" element={<AppointmentsCalendar />} />
+                <Route path="contacts" element={<Contacts />} />
                 <Route path="contacts/:contactId" element={<ContactDetail />} />
                 <Route path="invoices" element={<InvoicesGlobal />} />
                 <Route path="inventory" element={<AdminVehicles />} />

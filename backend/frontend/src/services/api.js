@@ -152,6 +152,13 @@ export async function getEventWorkflow(eventType = 'vehicle_sale') {
   return data
 }
 
+// Contacts rolodex list. Params: { query, tag, sort, limit, offset }.
+// Returns { items, total, limit, offset, tags: [{tag, count}] }.
+export async function listContacts(params = {}) {
+  const { data } = await api.get('/contacts', { params })
+  return data
+}
+
 export async function getContact(contactId) {
   const { data } = await api.get(`/contacts/${contactId}`)
   return data
@@ -886,6 +893,25 @@ export async function uploadVehiclePhoto(catalogItemId, file) {
   const form = new FormData()
   form.append('file', file)
   const { data } = await api.post(`/catalog/${catalogItemId}/photos`, form)
+  return data
+}
+
+// Decode a VIN via NHTSA vPIC. Returns { vin (normalized), check_digit_ok,
+// decoded: {year, make, model, trim, body_type, fuel_type, transmission,
+// drivetrain}, error, existing_vehicle_id }. A 422 means the VIN is
+// structurally invalid (bad length / I,O,Q); the caller shows detail.message.
+export async function decodeVin(vin) {
+  const { data } = await api.get(`/admin/vin/decode/${encodeURIComponent(vin)}`)
+  return data
+}
+
+// OCR a photo of a VIN sticker/plate. Returns { found, best, candidates }.
+// `best` (when found) has the same shape as decodeVin's result, so the
+// caller reuses the same prefill path. Only checksum-valid reads come back.
+export async function scanVin(file) {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post('/admin/vin/scan', form)
   return data
 }
 

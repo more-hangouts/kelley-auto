@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, text as sql_text
+from sqlalchemy import func, or_, text as sql_text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -365,6 +365,123 @@ def get_contact_context(
         "appointment_count": int(appointment_count),
         "alternate_celebrants": alternates,
     }
+
+
+# ---------------------------------------------------------------------------
+# Browse / list (rolodex tab)
+# ---------------------------------------------------------------------------
+
+
+_LIST_SORTS = {"name", "recent", "created"}
+_MAX_PAGE_SIZE = 100
+
+
+def list_contacts(
+    db: Session,
+    *,
+    query: str | None = None,
+    tag: str | None = None,
+    sort: str = "name",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Paginated, filterable browse of live contacts for the Contacts tab.
+
+    `query` matches (case-insensitively) against display_name, email, the
+    raw phone, and the E.164 phone. `tag` filters to contacts carrying that
+    tag (JSONB `@>`). `sort` is one of name / recent / created. Returns a
+    dict with `items`, `total` (pre-pagination count) and echoed paging.
+
+    Each item carries a live `event_count` (deals/events where the contact
+    is primary celebrant), computed in one grouped query over the page —
+    never per-row, so the endpoint stays flat regardless of page size.
+    """
+
+    if sort not in _LIST_SORTS:
+        sort = "name"
+    limit = max(1, min(int(limit), _MAX_PAGE_SIZE))
+    offset = max(0, int(offset))
+
+    base = db.query(Contact).filter(Contact.deleted_at.is_(None))
+
+    if query and query.strip():
+        like = f"%{query.strip()}%"
+        base = base.filter(
+            or_(
+                Contact.display_name.ilike(like),
+                Contact.email.ilike(like),
+                Contact.phone.ilike(like),
+                Contact.phone_e164.ilike(like),
+            )
+        )
+    if tag and tag.strip():
+        base = base.filter(Contact.tags.contains([tag.strip()]))
+
+    total = base.with_entities(func.count(Contact.id)).scalar() or 0
+
+    if sort == "recent":
+        ordered = base.order_by(Contact.updated_at.desc(), Contact.id.desc())
+    elif sort == "created":
+        ordered = base.order_by(Contact.created_at.desc(), Contact.id.desc())
+    else:  # name
+        ordered = base.order_by(
+            func.lower(Contact.display_name).asc(), Contact.id.asc()
+        )
+
+    contacts = ordered.limit(limit).offset(offset).all()
+
+    ids = [c.id for c in contacts]
+    counts: dict[int, int] = {}
+    if ids:
+        rows = (
+            db.query(Event.primary_contact_id, func.count(Event.id))
+            .filter(Event.primary_contact_id.in_(ids))
+            .filter(Event.deleted_at.is_(None))
+            .group_by(Event.primary_contact_id)
+            .all()
+        )
+        counts = {int(cid): int(n) for cid, n in rows}
+
+    items = [
+        {
+            "id": c.id,
+            "display_name": c.display_name,
+            "first_name": c.first_name,
+            "last_name": c.last_name,
+            "email": c.email,
+            "phone": c.phone,
+            "phone_e164": c.phone_e164,
+            "tags": list(c.tags or []),
+            "event_count": counts.get(c.id, 0),
+            "created_at": c.created_at,
+            "updated_at": c.updated_at,
+        }
+        for c in contacts
+    ]
+
+    return {
+        "items": items,
+        "total": int(total),
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+def list_contact_tags(db: Session, *, top: int = 40) -> list[dict[str, Any]]:
+    """Distinct tags across live contacts with per-tag counts, most-common
+    first. Powers the filter chips on the Contacts tab. Uses a single
+    `jsonb_array_elements_text` unnest so it stays cheap at any table size."""
+
+    rows = db.execute(
+        sql_text(
+            "SELECT tag, COUNT(*) AS n FROM ("
+            "  SELECT jsonb_array_elements_text(tags) AS tag "
+            "  FROM contacts WHERE deleted_at IS NULL"
+            ") t GROUP BY tag ORDER BY n DESC, tag ASC LIMIT :top"
+        ),
+        {"top": max(1, int(top))},
+    ).all()
+    return [{"tag": r[0], "count": int(r[1])} for r in rows]
 
 
 # ---------------------------------------------------------------------------
