@@ -32,6 +32,7 @@ Update this file in the same commit as any route, service, or UI change that add
 | Lead owner reassignment | `PATCH /api/admin/events/{event_id}/owner` + `GET /api/admin/events/{event_id}/cascade-preview` | `PATCH /api/sales/leads/{event_id}/assignment` + `GET /api/sales/leads/{event_id}/cascade-preview` | partial (sales + admin built, browser verification pending) |
 | Assignable staff picker | none | `GET /api/sales/staff/assignable` | sales-only |
 | Clock-in / kiosk lock | none | `POST /api/sales/auth/kiosk-lock` + clock-in endpoints | sales-only |
+| Sales activity monitoring | pending | pending | planned |
 | Staff password management | `POST /api/admin/me/change-password`; `POST /api/admin/staff/{id}/send-password-reset` | none (sales uses PIN auth) | partial (backend + first-pass UI built; browser/build verification pending) |
 
 Anything marked **partial** or **sales-only** is fair game for the Phase B–E work in the alignment doc. Anything marked **complete** should not be rebuilt without a reason added here.
@@ -228,10 +229,22 @@ Design direction:
 - **Sales route:** `POST /api/sales/auth/kiosk-lock` (clears this device's sales session and CSRF cookies only; does not bump `users.token_version`). Plus clock-in endpoints under `/api/sales/auth/...` and `/api/sales/attendance/...`.
 - **Admin UI:** admin can view attendance via [frontend/src/pages/AttendanceReview.jsx](../frontend/src/pages/AttendanceReview.jsx).
 - **Sales UI:** [frontend/src/sales/ClockScreen.jsx](../frontend/src/sales/ClockScreen.jsx), [frontend/src/sales/PinLogin.jsx](../frontend/src/sales/PinLogin.jsx), idle/lock handling in `SalesAuthContext`.
-- **Auth / gate:** PIN login + sales scope. Kiosk lock is intentionally device-scoped, not user-scoped, so other devices stay signed in.
-- **Audit:** clock-in/out writes its own attendance rows.
+- **Auth / gate:** PIN login + sales scope. Kiosk lock is intentionally device-scoped, not user-scoped, so other devices stay signed in. Product pivot as of 2026-07-07: for commission-only reps, clock-in is an active-app/accountability session and should not require GPS/geofence proximity.
+- **Audit:** clock-in/out writes its own attendance rows. In commission mode, label/report these as app sessions, not approved payroll hours.
 - **Notification:** none on lock.
 - **Status:** sales-only by definition; admin does not need parity here.
+
+### Sales activity monitoring
+
+- **Shared service:** planned `services/sales_activity.py` or equivalent. Should record read activity without importing FastAPI.
+- **Admin route:** planned, likely `GET /api/admin/sales-activity` with date/user filters and per-rep counts.
+- **Sales route:** no direct public write route required if events are recorded server-side inside existing sales endpoints.
+- **Admin UI:** planned "Sales activity" panel or page showing active app session, last seen time, lead views, appointment views, contact views, and searches by rep.
+- **Sales UI:** no extra UI required beyond normal lead/search/contact/appointment usage; clock screen copy should say "active in app" in commission mode.
+- **Auth / gate:** sales read endpoints use `require_sales_scope`; sales mutations still use `require_floor_access("sales")` so writes are tied to an active app session. Admin activity reads use `require_admin_scope`.
+- **Audit:** planned activity types: `sales.lead_viewed`, `sales.appointment_viewed`, `sales.contact_viewed`, `sales.search_performed`.
+- **Notification:** none.
+- **Status:** planned. Product input 2026-07-07: owner wants to monitor whether reps are looking at leads and contacts; do not use GPS as the clock-in blocker.
 
 ### Staff password management
 

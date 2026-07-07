@@ -4,7 +4,7 @@ Turn the sales portal home into a stylist-centric dashboard with shared-tablet "
 
 ## Goal
 
-After a stylist enters their PIN, they land on a dashboard that shows clock status, today's appointments, a global lead search box, and a primary "Add walk-in" action. The tablet on the floor is shared, so any rep can tap "Lock / Switch", a coworker enters their PIN, and the session swaps without bumping anyone else's JWT family. Sales staff can search the whole CRM by name/phone/event without ever seeing invoice totals, balances, or payment data.
+After a stylist enters their PIN, they land on a dashboard that shows clock status, today's appointments, a global lead search box, and a primary "Add walk-in" action. The tablet on the floor is shared, so any rep can tap "Lock / Switch", a coworker enters their PIN, and the session swaps without bumping anyone else's JWT family. Sales staff can search the whole CRM by name/phone/event without ever seeing invoice totals, balances, or payment data. For the current commission-only model, clock-in is an active-app/accountability signal, not proof that the rep is physically inside the store.
 
 ## Working environment
 
@@ -15,6 +15,8 @@ Build, lint, and smoke locally; verify in a browser against `admin.shopbellasxv.
 - **Kiosk lock is cookie-only, not a token bump.** `POST /api/sales/auth/kiosk-lock` clears the sales session/CSRF cookies for this device without incrementing `users.token_version`. The stronger `POST /api/sales/auth/logout` keeps its current "bump token_version, invalidate everywhere" behavior for the explicit sign-out case. Reason: bumping `token_version` on a shared-tablet quick lock would silently log the stylist out of every other device they touched today — see [api/routers/sales_auth.py:210](../api/routers/sales_auth.py#L210).
 - **Quick Switch is PIN re-entry, not a session merge.** Lock clears the cookie, the PIN picker reappears, the next stylist enters their PIN, a fresh sales cookie is issued, React state refreshes via `/sales/auth/me`. No "switch user" endpoint that trades tokens.
 - **Idle lock is 2-minute warn / 5-minute auto-lock.** Activity = pointer, key, touch. Numbers live in one constant so the owner can tune them later without a code hunt.
+- **Clock-in is required for accountability, not GPS.** Reps are 100% commission for now. They should be able to clock in from wherever they are working, and the owner uses that state to know who is actively using the app. GPS/geofence and selfie controls should be owner-toggleable/off by default for this commission mode.
+- **Sales read activity is a first-class signal.** Opening a lead/event, appointment, contact, or search result should write a small activity record so admin can see whether reps are reviewing their pipeline. Do not log every keystroke or duplicate refresh; throttle noisy reads into useful "viewed" events.
 - **No new `leads.assigned_to` column.** Leads are not a table; they are `events` with `status='lead'`. Use `appointments.assigned_user_id` ([database/models.py:129](../database/models.py#L129)) for the stylist on a specific appointment and `events.owner_user_id` ([database/models.py:357](../database/models.py#L357)) for the CRM lead/event owner. `events.owner_user_id` already has an index from migration 015.
 - **Walk-in macro defaults `assigned_user_id` and `owner_user_id` to the punched-in stylist.** `actor_user_id` stays the current user for audit so "created by" and "assigned to" are not conflated. Caller may override `assigned_user_id` from a sales-scoped staff picker.
 - **Sales global search is a separate router, not a flag on the admin search.** Sales results never include invoice totals, balances, paid-to-date, quote totals, discounts, payment data, document storage keys, raw payloads, marketing attribution, or tokens. Stripping in middleware is fragile; a parallel `/api/sales/search/leads` endpoint with its own response shape is the safer cut. Admin global search at [api/routers/search.py:52](../api/routers/search.py#L52) stays admin-only.
@@ -38,6 +40,7 @@ Build, lint, and smoke locally; verify in a browser against `admin.shopbellasxv.
 - [x] Phase 7: Indexes / backfill migration if production data needs it
 - [x] Phase 8: Smoke suite (kiosk lock, sales search RBAC, walk-in assignment, punched-out gating)
 - [ ] Phase 9: UI completion + admin/sales parity hardening (sales-side walk-in dialog, assignment pickers, admin parity audit, service rename)
+- [ ] Phase 14: Commission-mode clock-in + sales activity monitoring
 
 The Phase 1-8 tick marks describe backend + route completeness. The user-facing sales workflow is not finished until Phase 9 ships. See [SALES_ADMIN_SURFACE_ALIGNMENT.md](SALES_ADMIN_SURFACE_ALIGNMENT.md) and [SALES_ADMIN_CAPABILITY_MAP.md](SALES_ADMIN_CAPABILITY_MAP.md) for the doctrine and the per-capability source-of-truth.
 
@@ -484,6 +487,60 @@ Product input captured 2026-05-18: the sales clock screen should feel like a sin
 - [ ] Browser verify mobile/tablet layout still fits without text overlap.
 - [ ] Browser verify disabled copy changes to `Waiting for location…` while GPS is pending.
 - [ ] Browser verify selfie-required, selfie-optional, GPS-denied, and trusted-network states still render correctly.
+
+---
+
+## Phase 14: Commission-mode clock-in + sales activity monitoring
+
+Product input captured 2026-07-07: sales reps do not need to be within GPS range to clock in. They are 100% commission for now, so the clock feature exists to show who is actively using the app and to help the owner monitor whether reps are looking at leads and contacts.
+
+### 14.1 Product rules
+
+- [ ] Clock-in no longer requires GPS/geofence in commission mode. Existing geofence/location settings can remain in the system for a future hourly-payroll mode, but they must not block a rep from using the app today.
+- [ ] Selfie should default to disabled for commission mode unless the owner explicitly turns it on.
+- [ ] The "clocked in" chip means "active in sales app", not "physically present on site" and not "payroll hours approved."
+- [ ] Read-only lead/contact access can stay available after PIN login, but mutations that affect customer records should still require an active sales session so the owner can connect writes to a working rep.
+- [ ] Admin reporting should separate `active app session` from `payroll attendance` language.
+
+### 14.2 Activity events to capture
+
+- [ ] `sales.lead_viewed`: rep opens a CRM event/lead surface from sales search, today's appointments, or assignment flows.
+- [ ] `sales.appointment_viewed`: rep opens appointment detail.
+- [ ] `sales.contact_viewed`: rep opens a contact detail or contact summary drawer when that surface exists.
+- [ ] `sales.search_performed`: rep searches leads/contacts. Store normalized query length and result count; avoid storing raw phone/email search text unless there is a clear owner need.
+- [ ] Throttle duplicate view events by `(user_id, subject_kind, subject_id, activity_type)` for a short window such as 5 minutes, so refreshes do not spam the timeline.
+
+### 14.3 Backend shape
+
+- [ ] Add a small service such as `services/sales_activity.py` that records read activity without importing FastAPI.
+- [ ] Prefer a dedicated table if admin needs reporting by user/day/activity type (`sales_activity_events`) instead of overloading event-scoped `activity_log`, because contact/search views may not have a CRM event id.
+- [ ] Columns: `id`, `actor_user_id`, `activity_type`, `subject_kind`, `subject_id`, `route`, `source`, `metadata`, `created_at`.
+- [ ] Indexes: `(actor_user_id, created_at DESC)`, `(activity_type, created_at DESC)`, and `(subject_kind, subject_id, created_at DESC)`.
+- [ ] Wire recording at the backend endpoint boundary for reliable server-side audit: sales appointment detail, sales search, future sales contact detail, and any sales lead/event detail endpoint.
+- [ ] Keep payload sales-safe: no note bodies, no invoice totals, no balances, no document keys, no portal tokens.
+
+### 14.4 Admin visibility
+
+- [ ] Add an admin "Sales activity" view or panel showing: rep, active session state, last seen time, leads viewed today, appointments viewed today, contacts viewed today, searches today.
+- [ ] Include per-rep drilldown for recent activity with links back to the admin lead/contact/appointment surfaces.
+- [ ] Add filters for today, yesterday, current week, and custom date range.
+- [ ] Keep attendance reports separate; do not mix commission-mode app activity into payroll hour totals.
+
+### 14.5 Frontend adjustments
+
+- [ ] Remove GPS-blocked copy from the sales clock screen when commission mode is active.
+- [ ] Primary clock action should be fast: PIN login -> clock in -> dashboard, with no browser location permission prompt.
+- [ ] If GPS remains enabled by owner setting later, show it as an optional verification signal, not as the default blocker.
+- [ ] Update labels from payroll phrasing where needed: "Active in app", "Started session", "Ended session", "Last active."
+
+### 14.6 Smoke coverage
+
+- [ ] Sales user can clock in with no coordinates when commission mode is active.
+- [ ] Sales user opening appointment detail records one `sales.appointment_viewed` event.
+- [ ] Re-opening the same appointment within the throttle window does not create a duplicate event.
+- [ ] Sales search records `sales.search_performed` without leaking raw sensitive search text.
+- [ ] Admin activity endpoint rejects sales tokens and returns per-rep counts for admin tokens.
+- [ ] Existing punched-out mutation-gate smoke remains explicit: no active session means no customer-record mutations.
 
 ---
 
