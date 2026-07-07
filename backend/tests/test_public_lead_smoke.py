@@ -52,6 +52,7 @@ _TAG = uuid.uuid4().hex[:8].upper()
 _STOCK_PREFIX = f"LEADSTK-{_TAG}-"
 _DRESS_SKU = f"LEADDRESS-{_TAG}"
 _EMAIL_PREFIX = f"lead-{_TAG.lower()}-"
+_PHONE_PREFIX = f"903{int(_TAG[:7], 16) % 10_000_000:07d}"
 _ACK = {"ok": True, "message": "Thanks, we received your request."}
 
 
@@ -62,6 +63,10 @@ def _assert(cond: bool, label: str, detail: object = "") -> None:
 
 def _email(who: str) -> str:
     return f"{_EMAIL_PREFIX}{who}@example.com"
+
+
+def _phone(offset: int) -> str:
+    return f"903{(int(_PHONE_PREFIX[3:]) + offset) % 10_000_000:07d}"
 
 
 def _make_admin() -> tuple[int, str]:
@@ -145,6 +150,21 @@ def _lead_activity_count(event_id: int) -> int:
                 {"eid": event_id},
             ).scalar()
         )
+    finally:
+        db.close()
+
+
+def _application_state_for(event_id: int) -> str | None:
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            sql_text(
+                "SELECT driver_license_state FROM lead_applications "
+                "WHERE event_id = :eid"
+            ),
+            {"eid": event_id},
+        ).first()
+        return row[0] if row else None
     finally:
         db.close()
 
@@ -318,6 +338,34 @@ def main() -> int:  # noqa: C901 - linear smoke script
         )
         _new_count = len(_notify_calls)
         print("create + link by listingCode ok")
+
+        # --- full state names normalize before max-length validation -----
+        state_email = _email("state")
+        r = client.post(
+            "/api/public/leads",
+            json={
+                "name": "State Name",
+                "email": state_email,
+                "phone": _phone(1),
+                "listing_code": codes["avail"],
+                "date_of_birth": "09/29/1985",
+                "driver_license_state": "TEXAS",
+                "has_driver_license": True,
+                "address_street": "123 Main St",
+                "address_city": "Tyler",
+                "address_state": "Texas",
+                "address_zip": "75701",
+            },
+        )
+        _assert(r.status_code == 200, "full state names accepted", r.text)
+        state_deals = _deals_for(_contact_id_by_email(state_email))
+        _assert(len(state_deals) == 1, "state lead created one deal", state_deals)
+        _assert(
+            _application_state_for(state_deals[0][0]) == "TX",
+            "driver license state normalized",
+            _application_state_for(state_deals[0][0]),
+        )
+        print("full state names normalize for BHPH application fields ok")
 
         # --- duplicate submit appends, no second deal --------------------
         r = client.post(

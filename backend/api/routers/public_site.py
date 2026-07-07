@@ -51,6 +51,69 @@ router = APIRouter()
 # means smokes don't trip this unless they set X-Forwarded-For explicitly.
 _lead_ip_limit = rate_limit(bucket="public_lead_ip", limit=10, window=600)
 
+_STATE_NAME_TO_CODE = {
+    "ALABAMA": "AL",
+    "ALASKA": "AK",
+    "ARIZONA": "AZ",
+    "ARKANSAS": "AR",
+    "CALIFORNIA": "CA",
+    "COLORADO": "CO",
+    "CONNECTICUT": "CT",
+    "DELAWARE": "DE",
+    "FLORIDA": "FL",
+    "GEORGIA": "GA",
+    "HAWAII": "HI",
+    "IDAHO": "ID",
+    "ILLINOIS": "IL",
+    "INDIANA": "IN",
+    "IOWA": "IA",
+    "KANSAS": "KS",
+    "KENTUCKY": "KY",
+    "LOUISIANA": "LA",
+    "MAINE": "ME",
+    "MARYLAND": "MD",
+    "MASSACHUSETTS": "MA",
+    "MICHIGAN": "MI",
+    "MINNESOTA": "MN",
+    "MISSISSIPPI": "MS",
+    "MISSOURI": "MO",
+    "MONTANA": "MT",
+    "NEBRASKA": "NE",
+    "NEVADA": "NV",
+    "NEW HAMPSHIRE": "NH",
+    "NEW JERSEY": "NJ",
+    "NEW MEXICO": "NM",
+    "NEW YORK": "NY",
+    "NORTH CAROLINA": "NC",
+    "NORTH DAKOTA": "ND",
+    "OHIO": "OH",
+    "OKLAHOMA": "OK",
+    "OREGON": "OR",
+    "PENNSYLVANIA": "PA",
+    "RHODE ISLAND": "RI",
+    "SOUTH CAROLINA": "SC",
+    "SOUTH DAKOTA": "SD",
+    "TENNESSEE": "TN",
+    "TEXAS": "TX",
+    "UTAH": "UT",
+    "VERMONT": "VT",
+    "VIRGINIA": "VA",
+    "WASHINGTON": "WA",
+    "WEST VIRGINIA": "WV",
+    "WISCONSIN": "WI",
+    "WYOMING": "WY",
+    "DISTRICT OF COLUMBIA": "DC",
+}
+
+
+def _normalize_state_code(raw: Any) -> Any:
+    if not isinstance(raw, str):
+        return raw
+    cleaned = raw.strip().upper()
+    if not cleaned:
+        return raw
+    return _STATE_NAME_TO_CODE.get(cleaned, cleaned)
+
 
 class InventoryListResponse(BaseModel):
     # `items` is a list of public_vehicle_dto dicts. We deliberately do NOT
@@ -181,6 +244,17 @@ class PublicLeadRequest(BaseModel):
     fbc: str | None = Field(default=None, max_length=255)
     landing_page: str | None = Field(default=None, max_length=1000)
     referrer: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_state_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            normalized = dict(data)
+            for key in ("driver_license_state", "address_state"):
+                if key in normalized:
+                    normalized[key] = _normalize_state_code(normalized[key])
+            return normalized
+        return data
 
     @model_validator(mode="after")
     def _require_contact_channel(self) -> "PublicLeadRequest":
