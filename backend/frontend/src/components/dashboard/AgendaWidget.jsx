@@ -117,9 +117,11 @@ export default function AgendaWidget() {
                   <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
                     {a.display_name}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {a.party_size_bucket}
-                  </Typography>
+                  {a.party_size_bucket !== 'solo' && (
+                    <Typography variant="caption" color="text.secondary">
+                      {a.party_size_bucket}
+                    </Typography>
+                  )}
                 </Box>
                 <Chip
                   label={STATUS_LABEL[a.status] || a.status}

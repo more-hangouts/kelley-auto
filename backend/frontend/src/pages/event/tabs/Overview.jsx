@@ -323,7 +323,9 @@ function BookingDetail({ appointment: a, eventId, participants }) {
         }}
       />
 
-      <KV label="Party size" value={PARTY_LABEL[a.party_size_bucket] || a.party_size_bucket} />
+      {a.party_size_bucket !== 'solo' && (
+        <KV label="Party size" value={PARTY_LABEL[a.party_size_bucket] || a.party_size_bucket} />
+      )}
       <KV label="Phone" value={a.phone_e164 || a.phone} />
       <KV label="Email" value={a.email} />
       {a.customer_note && <KV label="Customer note" value={a.customer_note} />}

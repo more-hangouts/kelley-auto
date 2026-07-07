@@ -22,7 +22,9 @@ from __future__ import annotations
 import os
 import sys
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT))
@@ -42,6 +44,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text as sql_text  # noqa: E402
 
 from api.server import app  # noqa: E402
+from config.settings import APP_TIMEZONE  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import User  # noqa: E402
@@ -154,6 +157,18 @@ def _lead_activity_count(event_id: int) -> int:
         db.close()
 
 
+def _event_notes(event_id: int) -> str | None:
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            sql_text("SELECT notes FROM events WHERE id = :eid"),
+            {"eid": event_id},
+        ).first()
+        return row[0] if row else None
+    finally:
+        db.close()
+
+
 def _application_state_for(event_id: int) -> str | None:
     db = SessionLocal()
     try:
@@ -167,6 +182,27 @@ def _application_state_for(event_id: int) -> str | None:
         return row[0] if row else None
     finally:
         db.close()
+
+
+def _appointment_for_event(event_id: int) -> tuple[str, int, str] | None:
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            sql_text(
+                "SELECT status, slot_duration_minutes, internal_notes "
+                "FROM appointments WHERE crm_event_id = :eid "
+                "ORDER BY id DESC LIMIT 1"
+            ),
+            {"eid": event_id},
+        ).first()
+        return (row[0], int(row[1]), row[2]) if row else None
+    finally:
+        db.close()
+
+
+def _tomorrow_slot() -> tuple[str, int]:
+    tomorrow = datetime.now(ZoneInfo(APP_TIMEZONE)).date() + timedelta(days=1)
+    return tomorrow.isoformat(), 14
 
 
 def _vehicle(suffix, *, status, price_cents=1_800_000):
@@ -198,6 +234,22 @@ def _cleanup(user_id: int, baseline_seq: int) -> None:
             ).all()
         ]
         if ids:
+            event_ids = [
+                int(r[0])
+                for r in db.execute(
+                    sql_text(
+                        "SELECT id FROM events WHERE primary_contact_id = ANY(:ids)"
+                    ),
+                    {"ids": ids},
+                ).all()
+            ]
+            if event_ids:
+                db.execute(
+                    sql_text(
+                        "DELETE FROM appointments WHERE crm_event_id = ANY(:event_ids)"
+                    ),
+                    {"event_ids": event_ids},
+                )
             db.execute(
                 sql_text("DELETE FROM events WHERE primary_contact_id = ANY(:ids)"),
                 {"ids": ids},
@@ -317,6 +369,9 @@ def main() -> int:  # noqa: C901 - linear smoke script
                 "email": a_email,
                 "listing_code": codes["avail"],
                 "message": "Is this still available?",
+                "preferred_time": "2:00 PM tomorrow",
+                "preferred_date": _tomorrow_slot()[0],
+                "preferred_hour": _tomorrow_slot()[1],
                 "source_page": "/inventory/" + codes["avail"],
                 "utm_source": "google",
                 "utm_campaign": "summer",
@@ -331,6 +386,17 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(deals[0][1] == "new_lead", "deal in new_lead", deals)
         _assert(deals[0][2] == ids["avail"], "deal linked to vehicle", deals)
         _assert(_lead_activity_count(deals[0][0]) == 1, "one lead activity")
+        _assert(
+            _event_notes(deals[0][0]) == "Is this still available?",
+            "notes keep only customer message",
+            _event_notes(deals[0][0]),
+        )
+        _assert(
+            _appointment_for_event(deals[0][0])
+            == ("pending", 30, "Requested via storefront — call to confirm."),
+            "preferred slot creates pending appointment",
+            _appointment_for_event(deals[0][0]),
+        )
         _assert(
             any(c["subject"].startswith("New vehicle lead") for c in _notify_calls),
             "new lead triggers 'New vehicle lead' notification",

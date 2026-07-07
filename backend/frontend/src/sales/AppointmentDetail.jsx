@@ -421,7 +421,9 @@ export default function AppointmentDetail() {
           label="Buyer"
           value={fullName(a.celebrant_first_name, a.celebrant_last_name)}
         />
-        <Field label="Party size" value={a.party_size_bucket?.replace('_', ' ')} />
+        {a.party_size_bucket !== 'solo' && (
+          <Field label="Party size" value={a.party_size_bucket?.replace('_', ' ')} />
+        )}
         <Field label="Phone" value={a.phone} />
         <Field label="Email" value={a.email} />
         {data.participants.length > 0 && (
