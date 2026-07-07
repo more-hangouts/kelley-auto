@@ -405,6 +405,9 @@ export default function AdminVehicles() {
   const [actionError, setActionError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  // Create-mode photos: held locally (blob previews) until the vehicle is
+  // saved, then uploaded in order. Each item is {id, file, preview}.
+  const [stagedPhotos, setStagedPhotos] = useState([])
   const [decoding, setDecoding] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [decodeFeedback, setDecodeFeedback] = useState(null) // {severity, message}
@@ -497,11 +500,21 @@ export default function AdminVehicles() {
     }
   }
 
+  // Revoke any staged blob previews and clear them. Called whenever the
+  // dialog opens fresh or closes so object URLs never leak.
+  function clearStagedPhotos() {
+    setStagedPhotos((prev) => {
+      prev.forEach((s) => s.preview && URL.revokeObjectURL(s.preview))
+      return []
+    })
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(DEFAULT_FORM)
     setActionError(null)
     setDecodeFeedback(null)
+    clearStagedPhotos()
     setDialogOpen(true)
   }
 
@@ -510,7 +523,13 @@ export default function AdminVehicles() {
     setForm(formFromRow(row))
     setActionError(null)
     setDecodeFeedback(null)
+    clearStagedPhotos()
     setDialogOpen(true)
+  }
+
+  function closeDialog() {
+    clearStagedPhotos()
+    setDialogOpen(false)
   }
 
   // vPIC-backed decode: normalize + validate + prefill EMPTY fields only
@@ -640,9 +659,32 @@ export default function AdminVehicles() {
       if (editing) {
         await updateVehicle(editing.id, body)
       } else {
-        await createVehicle(body)
+        const created = await createVehicle(body)
+        // Upload staged photos in order so the first stays the cover. A
+        // per-file failure is non-fatal: the vehicle already exists, so we
+        // surface which photos didn't upload and let staff retry via edit.
+        if (stagedPhotos.length && created?.id) {
+          const failed = []
+          for (const sp of stagedPhotos) {
+            try {
+              await uploadVehiclePhoto(created.id, sp.file)
+            } catch {
+              failed.push(sp.file.name)
+            }
+          }
+          if (failed.length) {
+            setActionError(
+              `Vehicle saved, but ${failed.length} photo${failed.length === 1 ? '' : 's'} ` +
+                `didn’t upload (${failed.join(', ')}). Open the vehicle to add them again.`,
+            )
+            clearStagedPhotos()
+            setSaving(false)
+            refresh()
+            return
+          }
+        }
       }
-      setDialogOpen(false)
+      closeDialog()
       refresh()
     } catch (err) {
       setActionError(extractApiError(err))
@@ -957,7 +999,7 @@ export default function AdminVehicles() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
         <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 0.5 }}>
@@ -1180,12 +1222,15 @@ export default function AdminVehicles() {
               Media
             </Typography>
             <VehiclePhotoManager
+              mode={editing ? 'edit' : 'create'}
               urls={form.image_urls}
               onChange={(image_urls) => setForm({ ...form, image_urls })}
+              staged={stagedPhotos}
+              onStagedChange={setStagedPhotos}
               onUpload={handlePhotoUpload}
               uploading={uploadingPhoto}
-              canUpload={!!editing}
               maxMb={VEHICLE_PHOTO_MAX_MB}
+              onError={(msg) => setActionError(msg)}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
@@ -1204,7 +1249,7 @@ export default function AdminVehicles() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} disabled={saving}>
+          <Button onClick={closeDialog} disabled={saving}>
             Cancel
           </Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>

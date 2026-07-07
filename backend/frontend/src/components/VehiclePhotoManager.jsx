@@ -24,17 +24,22 @@ import { CSS } from '@dnd-kit/utilities'
 
 import { mediaSrc } from '../utils/mediaUrl'
 
-// Visual photo manager for the vehicle editor. Replaces the old raw
-// "Photo URLs" text list: a grid of real thumbnails you drag to reorder,
-// with the first photo used as the public cover. Uploaded photos and
-// pasted external URLs live in the same ordered list (`image_urls`); the
-// first entry is what the storefront shows as the card image.
+// Visual photo manager for the vehicle editor. A grid of real thumbnails
+// you drag to reorder; the first photo is the public cover.
+//
+// Two modes share one UI:
+//  - EDIT: `urls` are already uploaded (`image_urls`). Adding a file
+//    uploads it immediately via `onUpload`.
+//  - CREATE: no vehicle id exists yet, so selected files are STAGED
+//    (`staged` = [{id, file, preview}]) and uploaded after the vehicle is
+//    created. Order/cover chosen here is the order they upload in.
 
 const TILE = 116
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
+function PhotoTile({ id, src, isCover, onMakeCover, onRemove, broken, onBroken }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: url })
+    useSortable({ id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -43,7 +48,6 @@ function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
     zIndex: isDragging ? 1 : 'auto',
   }
 
-  // Stop pointer-down on the buttons from starting a drag.
   const stop = (e) => e.stopPropagation()
 
   return (
@@ -81,10 +85,10 @@ function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
       ) : (
         <Box
           component="img"
-          src={mediaSrc(url)}
+          src={src}
           alt=""
           draggable={false}
-          onError={() => onBroken(url)}
+          onError={onBroken}
           sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       )}
@@ -102,15 +106,9 @@ function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
         direction="row"
         spacing={0.5}
         className="photo-actions"
-        sx={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          opacity: 0,
-          transition: 'opacity 120ms',
-        }}
+        sx={{ position: 'absolute', top: 2, right: 2, opacity: 0, transition: 'opacity 120ms' }}
       >
-        {!isCover && (
+        {!isCover ? (
           <Tooltip title="Make cover photo">
             <IconButton
               size="small"
@@ -121,8 +119,7 @@ function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
               <StarOutlineIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
-        )}
-        {isCover && (
+        ) : (
           <Box sx={{ bgcolor: 'rgba(0,0,0,0.55)', borderRadius: '50%', p: 0.4, display: 'flex' }}>
             <StarIcon sx={{ fontSize: 16, color: (t) => t.palette.primary.main }} />
           </Box>
@@ -143,45 +140,99 @@ function PhotoTile({ url, isCover, onMakeCover, onRemove, broken, onBroken }) {
 }
 
 export default function VehiclePhotoManager({
-  urls,
+  mode = 'edit',
+  urls = [],
   onChange,
+  staged = [],
+  onStagedChange,
   onUpload,
   uploading = false,
-  canUpload = true,
   maxMb = 10,
+  onError,
 }) {
   const [broken, setBroken] = useState(() => new Set())
   const [urlOpen, setUrlOpen] = useState(false)
   const [urlDraft, setUrlDraft] = useState('')
 
+  const isCreate = mode === 'create'
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   )
 
-  const markBroken = (u) =>
-    setBroken((prev) => {
-      if (prev.has(u)) return prev
-      const next = new Set(prev)
-      next.add(u)
-      return next
-    })
+  // Normalize both modes to a common tile model: {key, src}. In create
+  // mode the key is the staged id and src is the local blob preview; in
+  // edit mode the key is the URL and src is the resolved media URL.
+  const tiles = isCreate
+    ? staged.map((s) => ({ key: s.id, src: s.preview }))
+    : urls.map((u) => ({ key: u, src: mediaSrc(u) }))
 
-  function handleDragEnd(event) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const from = urls.indexOf(active.id)
-    const to = urls.indexOf(over.id)
-    if (from === -1 || to === -1) return
-    onChange(arrayMove(urls, from, to))
+  const markBroken = (key) =>
+    setBroken((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
+
+  function reorder(fromKey, toKey) {
+    if (isCreate) {
+      const from = staged.findIndex((s) => s.id === fromKey)
+      const to = staged.findIndex((s) => s.id === toKey)
+      if (from !== -1 && to !== -1) onStagedChange(arrayMove(staged, from, to))
+    } else {
+      const from = urls.indexOf(fromKey)
+      const to = urls.indexOf(toKey)
+      if (from !== -1 && to !== -1) onChange(arrayMove(urls, from, to))
+    }
   }
 
-  const makeCover = (u) => onChange([u, ...urls.filter((x) => x !== u)])
-  const remove = (u) => onChange(urls.filter((x) => x !== u))
+  function makeCover(key) {
+    if (isCreate) {
+      onStagedChange([staged.find((s) => s.id === key), ...staged.filter((s) => s.id !== key)])
+    } else {
+      onChange([key, ...urls.filter((u) => u !== key)])
+    }
+  }
+
+  function remove(key) {
+    if (isCreate) {
+      const gone = staged.find((s) => s.id === key)
+      if (gone?.preview) URL.revokeObjectURL(gone.preview)
+      onStagedChange(staged.filter((s) => s.id !== key))
+    } else {
+      onChange(urls.filter((u) => u !== key))
+    }
+  }
+
+  // Create mode: hold selected files locally with blob previews.
+  function handleStageFiles(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    const accepted = []
+    for (const file of files) {
+      if (!ALLOWED_TYPES.has(file.type)) {
+        onError?.(`${file.name}: only JPG, PNG, or WebP.`)
+        continue
+      }
+      if (file.size > maxMb * 1024 * 1024) {
+        onError?.(`${file.name}: larger than ${maxMb} MB.`)
+        continue
+      }
+      accepted.push({
+        id: `staged-${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })
+    }
+    if (accepted.length) {
+      // de-dupe by id so re-selecting the same file doesn't double it
+      const existing = new Set(staged.map((s) => s.id))
+      const fresh = accepted.filter((a) => !existing.has(a.id))
+      fresh.forEach((a) => {
+        if (existing.has(a.id)) URL.revokeObjectURL(a.preview)
+      })
+      onStagedChange([...staged, ...fresh])
+    }
+  }
 
   function addUrl() {
     const v = urlDraft.trim()
-    if (!v) return
-    if (!/^https?:\/\//i.test(v)) return
+    if (!v || !/^https?:\/\//i.test(v)) return
     if (!urls.includes(v)) onChange([...urls, v])
     setUrlDraft('')
     setUrlOpen(false)
@@ -192,94 +243,96 @@ export default function VehiclePhotoManager({
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         <Typography variant="subtitle2">Photos</Typography>
         <Stack direction="row" spacing={1}>
+          {!isCreate && (
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<LinkOutlinedIcon />}
+              onClick={() => setUrlOpen((o) => !o)}
+            >
+              Add by URL
+            </Button>
+          )}
           <Button
+            component="label"
             size="small"
-            variant="text"
-            startIcon={<LinkOutlinedIcon />}
-            onClick={() => setUrlOpen((o) => !o)}
+            variant="outlined"
+            startIcon={<PhotoCameraOutlinedIcon />}
+            disabled={uploading}
           >
-            Add by URL
+            {uploading ? 'Uploading…' : isCreate ? 'Add photos' : 'Upload'}
+            <input
+              hidden
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={isCreate ? handleStageFiles : onUpload}
+            />
           </Button>
-          <Tooltip title={canUpload ? '' : 'Save the vehicle first, then upload photos'} disableInteractive>
-            <span>
-              <Button
-                component="label"
-                size="small"
-                variant="outlined"
-                startIcon={<PhotoCameraOutlinedIcon />}
-                disabled={!canUpload || uploading}
-              >
-                {uploading ? 'Uploading…' : 'Upload'}
-                <input
-                  hidden
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  multiple
-                  onChange={onUpload}
-                />
-              </Button>
-            </span>
-          </Tooltip>
         </Stack>
       </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
         Drag to reorder. The first photo (★ Cover) is what shows on the website.
         JPG, PNG, or WebP, max {maxMb} MB — uploads are auto-resized and stripped of metadata.
+        {isCreate && ' Photos upload when you save the vehicle.'}
       </Typography>
 
-      <Collapse in={urlOpen}>
-        <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="https://…/photo.jpg"
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                addUrl()
-              }
-            }}
-          />
-          <Button variant="outlined" onClick={addUrl} disabled={!urlDraft.trim()}>
-            Add
-          </Button>
-        </Stack>
-      </Collapse>
+      {!isCreate && (
+        <Collapse in={urlOpen}>
+          <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="https://…/photo.jpg"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addUrl()
+                }
+              }}
+            />
+            <Button variant="outlined" onClick={addUrl} disabled={!urlDraft.trim()}>
+              Add
+            </Button>
+          </Stack>
+        </Collapse>
+      )}
 
-      {urls.length === 0 ? (
+      {tiles.length === 0 ? (
         <Stack
           alignItems="center"
           justifyContent="center"
           spacing={1}
-          sx={{
-            py: 4,
-            borderRadius: 1.5,
-            border: '1px dashed',
-            borderColor: 'divider',
-            color: 'text.secondary',
-          }}
+          sx={{ py: 4, borderRadius: 1.5, border: '1px dashed', borderColor: 'divider', color: 'text.secondary' }}
         >
           <AddPhotoAlternateOutlinedIcon />
           <Typography variant="body2">
-            {canUpload ? 'No photos yet — upload to add some.' : 'Save the vehicle, then reopen it to add photos.'}
+            {isCreate ? 'Add photos — they’ll upload when you save.' : 'No photos yet — upload to add some.'}
           </Typography>
         </Stack>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={urls} strategy={rectSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={({ active, over }) => {
+            if (over && active.id !== over.id) reorder(active.id, over.id)
+          }}
+        >
+          <SortableContext items={tiles.map((t) => t.key)} strategy={rectSortingStrategy}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {urls.map((u, idx) => (
+              {tiles.map((t, idx) => (
                 <PhotoTile
-                  key={u}
-                  url={u}
+                  key={t.key}
+                  id={t.key}
+                  src={t.src}
                   isCover={idx === 0}
-                  broken={broken.has(u)}
-                  onBroken={markBroken}
-                  onMakeCover={() => makeCover(u)}
-                  onRemove={() => remove(u)}
+                  broken={broken.has(t.key)}
+                  onBroken={() => markBroken(t.key)}
+                  onMakeCover={() => makeCover(t.key)}
+                  onRemove={() => remove(t.key)}
                 />
               ))}
             </Box>
