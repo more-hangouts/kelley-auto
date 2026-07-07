@@ -1,6 +1,9 @@
-import { Box, Chip, Paper, Stack, Typography } from '@mui/material'
+import { Box, Chip, Collapse, Link, Paper, Stack, Typography } from '@mui/material'
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import dayjs from 'dayjs'
 
 import { getEventJourney } from '../../../services/api'
@@ -14,11 +17,10 @@ const EVENT_LABELS = {
   lead_submitted: 'Submitted lead',
 }
 
-function vehicleLabel(v) {
-  const ymm = [v.vehicle_year, v.vehicle_make, v.vehicle_model]
-    .filter(Boolean)
-    .join(' ')
-  return ymm || v.listing_code || `Vehicle #${v.vehicle_catalog_item_id ?? '?'}`
+// A path step's detail: the car itself when the step is on a vehicle,
+// otherwise the page path. Never the raw KAP stock code.
+function stepDetail(p) {
+  return p.vehicle_label || p.path || ''
 }
 
 function SourceChips({ source }) {
@@ -47,6 +49,7 @@ function SourceChips({ source }) {
  * event_type, and the API returns has_attribution=false for anything else.
  */
 export default function LeadJourneyPanel({ eventId }) {
+  const [showPath, setShowPath] = useState(false)
   const { data, isLoading, isError } = useQuery({
     queryKey: ['event', eventId, 'journey'],
     queryFn: () => getEventJourney(eventId),
@@ -140,14 +143,16 @@ export default function LeadJourneyPanel({ eventId }) {
           </Typography>
           <Stack spacing={0.25} mt={0.5}>
             {vehicles_viewed.map((v, i) => (
-              <Typography key={`${v.listing_code}-${i}`} variant="body2">
-                • {vehicleLabel(v)}
-                {v.listing_code ? (
-                  <Typography component="span" variant="caption" color="text.secondary">
-                    {'  '}
-                    {v.listing_code}
-                  </Typography>
-                ) : null}
+              <Typography key={i} variant="body2">
+                {/* `label` is the current shape; fall back to the older
+                    year/make/model fields so the panel reads correctly even
+                    before the backend serving labels is restarted. */}
+                •{' '}
+                {v.label ||
+                  [v.vehicle_year, v.vehicle_make, v.vehicle_model]
+                    .filter(Boolean)
+                    .join(' ') ||
+                  'Vehicle'}
               </Typography>
             ))}
           </Stack>
@@ -156,40 +161,62 @@ export default function LeadJourneyPanel({ eventId }) {
 
       {path?.length > 0 && (
         <Box mt={1.5}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-            Path to conversion
-          </Typography>
-          <Stack spacing={0.25} mt={0.5}>
-            {path.map((p, i) => (
-              <Stack
-                key={i}
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: 'baseline' }}
-              >
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ minWidth: 130 }}
+          {/* Secondary detail — the source, vehicles, and timing above are the
+              at-a-glance signal, so the step-by-step path is collapsed. */}
+          <Link
+            component="button"
+            type="button"
+            underline="none"
+            onClick={() => setShowPath((v) => !v)}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.25,
+              fontSize: 12,
+              fontWeight: 500,
+              color: 'text.secondary',
+            }}
+          >
+            {showPath ? (
+              <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+            ) : (
+              <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
+            )}
+            Path to conversion ({path.length} steps)
+          </Link>
+          <Collapse in={showPath} unmountOnExit>
+            <Stack spacing={0.25} mt={0.75}>
+              {path.map((p, i) => (
+                <Stack
+                  key={i}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'baseline' }}
                 >
-                  {p.occurred_at ? dayjs(p.occurred_at).format('MMM D, h:mm A') : '—'}
-                </Typography>
-                <Typography variant="body2" sx={{ flex: 1 }}>
-                  {EVENT_LABELS[p.event_name] || p.event_name}
-                  {p.path ? (
-                    <Typography
-                      component="span"
-                      variant="caption"
-                      color="text.secondary"
-                    >
-                      {'  '}
-                      {p.path}
-                    </Typography>
-                  ) : null}
-                </Typography>
-              </Stack>
-            ))}
-          </Stack>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ minWidth: 130 }}
+                  >
+                    {p.occurred_at ? dayjs(p.occurred_at).format('MMM D, h:mm A') : '—'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ flex: 1 }}>
+                    {EVENT_LABELS[p.event_name] || p.event_name}
+                    {stepDetail(p) ? (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        {'  '}
+                        {stepDetail(p)}
+                      </Typography>
+                    ) : null}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </Collapse>
         </Box>
       )}
 

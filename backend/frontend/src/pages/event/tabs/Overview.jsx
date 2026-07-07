@@ -82,6 +82,42 @@ function KV({ label, value }) {
   )
 }
 
+// Notes come in as newline-joined lines (e.g. the auto-composed lead intake),
+// which collapse into a run-on when rendered as one string. Split them back
+// out: a single line stays inline, multiple lines become a tidy bullet list.
+function NotesBlock({ notes }) {
+  const lines = (notes || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  return (
+    <Stack direction="row" spacing={2} sx={{ py: 0.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ minWidth: 130, fontWeight: 500 }}
+      >
+        Notes
+      </Typography>
+      <Box sx={{ flex: 1 }}>
+        {lines.length === 0 ? (
+          <Typography variant="body2">—</Typography>
+        ) : lines.length === 1 ? (
+          <Typography variant="body2">{lines[0]}</Typography>
+        ) : (
+          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {lines.map((l, i) => (
+              <Typography key={i} component="li" variant="body2" sx={{ mb: 0.25 }}>
+                {l}
+              </Typography>
+            ))}
+          </Box>
+        )}
+      </Box>
+    </Stack>
+  )
+}
+
 const PARTY_LABEL = {
   solo: 'Just me',
   '2_3': '2-3',
@@ -703,15 +739,28 @@ export default function Overview() {
 
   return (
     <Box>
-      <Section title="Event">
-        <KV label="Event date" value={event.event_date ? formatDateTime(event.event_date) : '—'} />
-        <KV label="Court size" value={event.court_size ?? '—'} />
-        <KV label="Theme" value={event.quince_theme} />
-        <KV
-          label="Theme colors"
-          value={(event.quince_theme_colors || []).join(', ') || '—'}
-        />
-        <KV label="Budget range" value={event.budget_range} />
+      <Section title={event.event_type === 'vehicle_sale' ? 'Deal' : 'Event'}>
+        {/* Quinceañera-era fields are noise on a vehicle deal (always empty),
+            so they only render for non-vehicle events. Event date shows on a
+            vehicle deal only when it's actually set. */}
+        {event.event_type !== 'vehicle_sale' && (
+          <>
+            <KV
+              label="Event date"
+              value={event.event_date ? formatDateTime(event.event_date) : '—'}
+            />
+            <KV label="Court size" value={event.court_size ?? '—'} />
+            <KV label="Theme" value={event.quince_theme} />
+            <KV
+              label="Theme colors"
+              value={(event.quince_theme_colors || []).join(', ') || '—'}
+            />
+            <KV label="Budget range" value={event.budget_range} />
+          </>
+        )}
+        {event.event_type === 'vehicle_sale' && event.event_date && (
+          <KV label="Event date" value={formatDateTime(event.event_date)} />
+        )}
         <Stack direction="row" spacing={2} sx={{ py: 0.5, alignItems: 'center' }}>
           <Typography
             variant="caption"
@@ -731,7 +780,7 @@ export default function Overview() {
             Change
           </Button>
         </Stack>
-        <KV label="Notes" value={event.notes} />
+        <NotesBlock notes={event.notes} />
       </Section>
 
       <Section title="Primary contact">

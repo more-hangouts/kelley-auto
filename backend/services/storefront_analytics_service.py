@@ -20,11 +20,12 @@ raw IP — only a hashed IP and pseudonymous ad cookies (``_fbp``/``_fbc``).
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -329,6 +330,74 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt is not None else None
 
 
+# Public listing codes appearing in a URL path, e.g. "/inventory/KAP-00024".
+_PUBLIC_CODE_RE = re.compile(r"[A-Z]{2,5}-\d{3,6}")
+
+
+def _catalog_label(row) -> str | None:
+    return (
+        " ".join(str(x) for x in (row.year, row.make, row.model) if x).strip() or None
+    )
+
+
+def _resolve_vehicle_labels(
+    db: Session, events: list[StorefrontEvent]
+) -> tuple[dict[int, str], dict[str, str]]:
+    """Build id→"YEAR MAKE MODEL" and code→label maps for every vehicle
+    referenced anywhere in the journey (by catalog id, listing_code, or a code
+    embedded in a page path), in one query. Lets the panel show the car itself
+    instead of a KAP stock number."""
+    ids = {e.vehicle_catalog_item_id for e in events if e.vehicle_catalog_item_id}
+    codes: set[str] = set()
+    for e in events:
+        if e.listing_code:
+            codes.add(e.listing_code.upper())
+        if e.path:
+            codes.update(_PUBLIC_CODE_RE.findall(e.path.upper()))
+
+    by_id: dict[int, str] = {}
+    by_code: dict[str, str] = {}
+    if not ids and not codes:
+        return by_id, by_code
+
+    conds = []
+    if ids:
+        conds.append(CatalogItem.id.in_(ids))
+    if codes:
+        conds.append(CatalogItem.public_code.in_(codes))
+    rows = db.execute(
+        select(
+            CatalogItem.id,
+            CatalogItem.public_code,
+            CatalogItem.year,
+            CatalogItem.make,
+            CatalogItem.model,
+        ).where(or_(*conds))
+    ).all()
+    for r in rows:
+        label = _catalog_label(r)
+        if not label:
+            continue
+        by_id[r.id] = label
+        if r.public_code:
+            by_code[r.public_code.upper()] = label
+    return by_id, by_code
+
+
+def _event_vehicle_label(
+    e: StorefrontEvent, by_id: dict[int, str], by_code: dict[str, str]
+) -> str | None:
+    if e.vehicle_catalog_item_id and e.vehicle_catalog_item_id in by_id:
+        return by_id[e.vehicle_catalog_item_id]
+    if e.listing_code and e.listing_code.upper() in by_code:
+        return by_code[e.listing_code.upper()]
+    if e.path:
+        for code in _PUBLIC_CODE_RE.findall(e.path.upper()):
+            if code in by_code:
+                return by_code[code]
+    return None
+
+
 def get_lead_journey(db: Session, *, crm_event_id: int) -> dict[str, Any]:
     """Read-only browsing journey for a deal, for the admin Lead Journey panel.
 
@@ -371,27 +440,48 @@ def get_lead_journey(db: Session, *, crm_event_id: int) -> dict[str, Any]:
             ).scalars()
         )
 
+    by_id, by_code = _resolve_vehicle_labels(db, events)
+
     path = [
         {
             "event_name": e.event_name,
             "path": e.path,
             "listing_code": e.listing_code,
+            # The car itself, when this step is on/about a vehicle — so the UI
+            # can show "2018 Nissan Altima" instead of "/inventory/KAP-00026".
+            "vehicle_label": _event_vehicle_label(e, by_id, by_code),
             "occurred_at": _iso(e.occurred_at),
         }
         for e in events
     ]
-    vehicles_viewed = [
-        {
-            "listing_code": e.listing_code,
-            "vehicle_catalog_item_id": e.vehicle_catalog_item_id,
-            "vehicle_year": (e.event_metadata or {}).get("vehicle_year"),
-            "vehicle_make": (e.event_metadata or {}).get("vehicle_make"),
-            "vehicle_model": (e.event_metadata or {}).get("vehicle_model"),
-            "occurred_at": _iso(e.occurred_at),
-        }
-        for e in events
-        if e.event_name == "vehicle_view"
-    ]
+
+    # Unique vehicles viewed, first-seen order. Prefer the year/make/model the
+    # beacon captured; fall back to the catalog lookup.
+    vehicles_viewed: list[dict[str, Any]] = []
+    seen_vehicles: set[str] = set()
+    for e in events:
+        if e.event_name != "vehicle_view":
+            continue
+        key = str(e.vehicle_catalog_item_id or e.listing_code or e.id)
+        if key in seen_vehicles:
+            continue
+        seen_vehicles.add(key)
+        meta = e.event_metadata or {}
+        label = (
+            " ".join(
+                str(meta[k])
+                for k in ("vehicle_year", "vehicle_make", "vehicle_model")
+                if meta.get(k)
+            ).strip()
+            or _event_vehicle_label(e, by_id, by_code)
+        )
+        vehicles_viewed.append(
+            {
+                "label": label,
+                "vehicle_catalog_item_id": e.vehicle_catalog_item_id,
+                "occurred_at": _iso(e.occurred_at),
+            }
+        )
 
     # Time from the first recorded touch to the lead_submitted conversion.
     converted_at = None
