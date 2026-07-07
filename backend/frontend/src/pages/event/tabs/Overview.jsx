@@ -24,6 +24,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
+import LeadJourneyPanel from './LeadJourneyPanel'
 import AddParticipantDialog from '../../../components/AddParticipantDialog'
 import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
 import ContactEditDialog from '../../../components/ContactEditDialog'
@@ -761,6 +762,10 @@ export default function Overview() {
           </Typography>
         )}
       </Section>
+
+      {event.event_type === 'vehicle_sale' && (
+        <LeadJourneyPanel eventId={event.id} />
+      )}
 
       <ContactEditDialog
         open={editContactOpen}

@@ -10,6 +10,7 @@ import { downPaymentHeadline, formatDownPayment } from "@/lib/pricing";
 import { resolveNap } from "@/lib/nap";
 import ImageGallery from "./ImageGallery";
 import InquiryForm from "./InquiryForm";
+import VehicleViewTracker from "./VehicleViewTracker";
 import type { PayloadVehicle } from "@/types/vehicle";
 
 export const revalidate = 60;
@@ -77,6 +78,16 @@ export default async function CarDetailPage({
 
   return (
     <div className="min-h-screen">
+      <VehicleViewTracker
+        vehicleId={vehicle.id}
+        listingCode={vehicle.listingCode}
+        year={vehicle.year}
+        make={vehicle.make}
+        model={vehicle.model}
+        priceCents={
+          typeof vehicle.cashPrice === "number" ? vehicle.cashPrice * 100 : null
+        }
+      />
       <TopBanner />
       <NavbarWrapper />
 

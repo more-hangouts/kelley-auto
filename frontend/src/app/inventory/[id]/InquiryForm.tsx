@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { submitLead } from "@/lib/publicApi";
+import { getTrackingContext, track } from "@/lib/analytics";
+
+const FORM_TYPE = "vehicle_inquiry";
 
 // — time slot helpers —
 const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
@@ -190,6 +193,29 @@ export default function InquiryForm({
   const [driversLicenseState, setDriversLicenseState] = useState("");
   const [slot, setSlot] = useState<number | null>(null);
 
+  // Analytics: opened when the customer expands the form; started once they
+  // advance past the first step. Both fire at most once per mount.
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (open && !openedRef.current) {
+      openedRef.current = true;
+      track("lead_form_opened", {
+        vehicle: { vehicleId },
+        metadata: { form_type: FORM_TYPE },
+      });
+    }
+  }, [open, vehicleId]);
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (step > 0 && !startedRef.current) {
+      startedRef.current = true;
+      track("lead_form_started", {
+        vehicle: { vehicleId },
+        metadata: { form_type: FORM_TYPE },
+      });
+    }
+  }, [step, vehicleId]);
+
   function close() {
     setOpen(false);
     setStep(0);
@@ -200,14 +226,13 @@ export default function InquiryForm({
     setLoading(true);
     setError(null);
     const preferredTime = `${fmtSlot(slot)} on ${getTomorrow()}`;
+    // Sales-context only — the PII (address, DOB, license) is sent as discrete
+    // structured fields below and is encrypted at rest server-side. It must
+    // never be folded into `message`, which lands in the deal notes.
     const message = [
       "Buy here, pay here appointment request.",
       "Customer wants to get approved in minutes.",
       "No credit check approval requested.",
-      `Address: ${address.trim()}`,
-      `Date of birth: ${dateOfBirth}`,
-      `Driver's license: ${hasDriversLicense ? "Yes" : "No"}`,
-      `Driver's license state: ${driversLicenseState.trim().toUpperCase()}`,
     ].join("\n");
     const result = await submitLead({
       name: `${firstName} ${lastName}`.trim(),
@@ -218,6 +243,13 @@ export default function InquiryForm({
       preferredTime,
       sourcePage:
         typeof window !== "undefined" ? window.location.pathname : undefined,
+      addressStreet: address.trim() || undefined,
+      dateOfBirth: dateOfBirth.trim() || undefined,
+      hasDriverLicense: hasDriversLicense,
+      driverLicenseState:
+        driversLicenseState.trim().toUpperCase() || undefined,
+      // Attribution: ties this lead to the visitor's browsing journey.
+      tracking: getTrackingContext(),
     });
     if (result.ok) setSent(true);
     else setError(result.message || "Something went wrong. Please call us.");

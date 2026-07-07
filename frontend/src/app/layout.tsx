@@ -4,6 +4,7 @@ import "./globals.css";
 import { getSiteSettings } from "@/lib/api";
 import { SITE_URL } from "@/lib/site";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import PageViewTracker from "./components/PageViewTracker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -61,6 +62,7 @@ export default async function RootLayout({
     >
       <body className={`${inter.variable} ${bebasNeue.variable} antialiased`}>
         {children}
+        <PageViewTracker />
         <GoogleAnalytics />
       </body>
     </html>

@@ -17,7 +17,11 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from database.auth import require_admin_scope, require_any_scope
+from database.auth import (
+    require_admin_scope,
+    require_any_scope,
+    require_lead_application_pii,
+)
 from database.connection import get_db
 from database.models import (
     Appointment,
@@ -30,7 +34,13 @@ from database.models import (
     Quote,
     User,
 )
-from services import activity_log, booking_service, event_service
+from services import (
+    activity_log,
+    booking_service,
+    event_service,
+    lead_application_service,
+    storefront_analytics_service,
+)
 from services.event_service import EventOverrides, EventServiceError
 from services.event_workflow import all_statuses
 
@@ -450,6 +460,60 @@ def get_board(
             for col in columns
         ],
     )
+
+
+class ApplicationDetailResponse(BaseModel):
+    """Decrypted BHPH application PII. Returned ONLY by the permission-gated,
+    audited endpoint below — never embedded in the normal event payload."""
+
+    event_id: int
+    contact_id: int
+    date_of_birth: str | None = None
+    driver_license_number: str | None = None
+    ssn: str | None = None
+    address: dict | None = None
+    driver_license_state: str | None = None
+    has_driver_license: bool | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@router.get("/{event_id}/application", response_model=ApplicationDetailResponse)
+def get_event_application(
+    event_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_lead_application_pii)],
+) -> ApplicationDetailResponse:
+    """Decrypted BHPH application PII for a deal. Gated on admin scope AND the
+    ``lead_applications:read_sensitive`` permission; every successful read is
+    audit-logged (``application.pii_viewed``) with the viewing user's id."""
+    event = db.get(Event, event_id)
+    if event is None or event.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="event_not_found")
+
+    data = lead_application_service.get_application_decrypted(
+        db, event_id=event_id, actor_user_id=user.id
+    )
+    if data is None:
+        raise HTTPException(status_code=404, detail="application_not_found")
+    db.commit()  # persist the pii_viewed audit row
+    return ApplicationDetailResponse(**data)
+
+
+@router.get("/{event_id}/journey")
+def get_event_journey(
+    event_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+) -> dict:
+    """Read-only first-party browsing journey for a deal (source/UTM, session,
+    vehicles viewed, path to conversion). Same audience as the deal itself
+    (admin or sales). Carries NO encrypted BHPH application fields — only
+    first-party behavioral analytics."""
+    event = db.get(Event, event_id)
+    if event is None or event.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="event_not_found")
+    return storefront_analytics_service.get_lead_journey(db, crm_event_id=event_id)
 
 
 @router.get("/{event_id}", response_model=EventDetailResponse)

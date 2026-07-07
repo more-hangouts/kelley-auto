@@ -30,14 +30,18 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
 from api.redis_rate_limit import enforce_or_raise, rate_limit
+from config import settings
 from database.connection import get_db
+from services import booking_service
 from services import business_profile_service
 from services import document_storage
 from services import public_inventory_service as inventory
 from services import public_lead_service
+from services import storefront_analytics_service
 from services.business_profile_service import BusinessProfileError
 from services.public_inventory_service import InventoryFilters
 from services.public_lead_service import LeadInput, PublicLeadError
+from services.storefront_analytics_service import TrackingContext
 
 log = logging.getLogger(__name__)
 
@@ -148,12 +152,35 @@ class PublicLeadRequest(BaseModel):
     utm_campaign: str | None = Field(default=None, max_length=120)
     utm_term: str | None = Field(default=None, max_length=120)
     utm_content: str | None = Field(default=None, max_length=120)
+    # Structured BHPH application fields (optional). Sensitive values are
+    # encrypted at rest in lead_applications and NEVER written to events.notes
+    # or the activity_log payload. Sending these as discrete fields (rather
+    # than concatenated into `message`) is what keeps PII out of the deal
+    # record.
+    date_of_birth: str | None = Field(default=None, max_length=40)
+    driver_license_number: str | None = Field(default=None, max_length=40)
+    driver_license_state: str | None = Field(default=None, max_length=2)
+    has_driver_license: bool | None = None
+    address_street: str | None = Field(default=None, max_length=200)
+    address_city: str | None = Field(default=None, max_length=120)
+    address_state: str | None = Field(default=None, max_length=2)
+    address_zip: str | None = Field(default=None, max_length=12)
     # Honeypot — must stay empty. A bot that fills it gets a normal-looking
     # acknowledgement and no record is written.
     company_website: str | None = Field(default=None, max_length=200)
     # Turnstile token: accepted for forward-compat with the contract, not
     # verified until a TURNSTILE_SECRET is wired up.
     turnstile_token: str | None = Field(default=None, max_length=4000)
+    # First-party analytics identity + Meta attribution cookies. All optional
+    # — a lead without them still creates a deal, just with no journey. These
+    # are pseudonymous ids/cookies, NOT application PII.
+    ka_vid: str | None = Field(default=None, max_length=64)
+    ka_sid: str | None = Field(default=None, max_length=64)
+    event_id: str | None = Field(default=None, max_length=64)
+    fbp: str | None = Field(default=None, max_length=255)
+    fbc: str | None = Field(default=None, max_length=255)
+    landing_page: str | None = Field(default=None, max_length=1000)
+    referrer: str | None = Field(default=None, max_length=1000)
 
     @model_validator(mode="after")
     def _require_contact_channel(self) -> "PublicLeadRequest":
@@ -179,6 +206,34 @@ class PublicLeadRequest(BaseModel):
             "content": self.utm_content,
         }
         return {k: v for k, v in pairs.items() if v}
+
+    def tracking(self) -> TrackingContext:
+        """Assemble the analytics/attribution context off the lead payload."""
+        return TrackingContext(
+            visitor_key=(self.ka_vid or None),
+            session_key=(self.ka_sid or None),
+            event_id=(self.event_id or None),
+            landing_page=(self.landing_page or None),
+            source_page=(self.source_page or None),
+            referrer=(self.referrer or None),
+            utm=self.utm(),
+            fbp=(self.fbp or None),
+            fbc=(self.fbc or None),
+            listing_code=(self.listing_code or None),
+            vehicle_id=self.vehicle_id,
+        )
+
+    def address(self) -> dict[str, str] | None:
+        """Assemble the home-address parts into a dict, or None if all blank.
+        Stored encrypted in the application table, never in notes."""
+        parts = {
+            "street": self.address_street,
+            "city": self.address_city,
+            "state": self.address_state,
+            "zip": self.address_zip,
+        }
+        cleaned = {k: v.strip() for k, v in parts.items() if v and v.strip()}
+        return cleaned or None
 
 
 class PublicLeadResponse(BaseModel):
@@ -232,15 +287,112 @@ def submit_lead(
         preferred_time=payload.preferred_time,
         source_page=payload.source_page,
         utm=payload.utm(),
+        date_of_birth=payload.date_of_birth,
+        driver_license_number=payload.driver_license_number,
+        driver_license_state=payload.driver_license_state,
+        has_driver_license=payload.has_driver_license,
+        address=payload.address(),
     )
     try:
-        public_lead_service.submit_public_lead(db, lead)
+        public_lead_service.submit_public_lead(db, lead, tracking=payload.tracking())
     except PublicLeadError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=exc.code) from exc
 
     db.commit()
     return _LEAD_ACK
+
+
+# Per-IP cap on analytics beacons. Higher than leads — a real session fires
+# many events — but still bounded so a single client can't flood the table.
+_track_ip_limit = rate_limit(bucket="storefront_track_ip", limit=120, window=60)
+
+
+class TrackEventRequest(BaseModel):
+    # A public beacon endpoint must be maximally forgiving: ignore unknown keys
+    # and never 422 a real visitor over a malformed field.
+    model_config = ConfigDict(extra="ignore")
+
+    ka_vid: str | None = Field(default=None, max_length=64)
+    ka_sid: str | None = Field(default=None, max_length=64)
+    event_name: str = Field(max_length=50)
+    event_id: str | None = Field(default=None, max_length=64)
+    path: str | None = Field(default=None, max_length=1000)
+    referrer: str | None = Field(default=None, max_length=1000)
+    landing_page: str | None = Field(default=None, max_length=1000)
+    utm_source: str | None = Field(default=None, max_length=120)
+    utm_medium: str | None = Field(default=None, max_length=120)
+    utm_campaign: str | None = Field(default=None, max_length=120)
+    utm_term: str | None = Field(default=None, max_length=120)
+    utm_content: str | None = Field(default=None, max_length=120)
+    listing_code: str | None = Field(default=None, max_length=40)
+    vehicle_id: int | None = None
+    metadata: dict[str, Any] | None = None
+
+    def utm(self) -> dict[str, str]:
+        pairs = {
+            "source": self.utm_source,
+            "medium": self.utm_medium,
+            "campaign": self.utm_campaign,
+            "term": self.utm_term,
+            "content": self.utm_content,
+        }
+        return {k: v for k, v in pairs.items() if v}
+
+
+class TrackAck(BaseModel):
+    ok: bool
+
+
+_TRACK_ACK = TrackAck(ok=True)
+
+
+def _client_ip(request: Request) -> str | None:
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
+@router.post(
+    "/track",
+    response_model=TrackAck,
+    dependencies=[Depends(_track_ip_limit)],
+)
+def track_event(
+    payload: TrackEventRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrackAck:
+    """First-party analytics beacon. Records one storefront event against the
+    visitor/session. Always returns a plain ack — analytics never errors a
+    shopper, and delivery is disabled entirely when the kill switch is off."""
+    if not settings.STOREFRONT_ANALYTICS_ENABLED:
+        return _TRACK_ACK
+
+    ip_hash = booking_service.hash_ip(_client_ip(request))
+    try:
+        storefront_analytics_service.record_event(
+            db,
+            visitor_key=payload.ka_vid,
+            session_key=payload.ka_sid,
+            event_name=payload.event_name,
+            event_id=payload.event_id,
+            path=payload.path,
+            referrer=payload.referrer,
+            utm=payload.utm(),
+            listing_code=payload.listing_code,
+            vehicle_id=payload.vehicle_id,
+            metadata=payload.metadata,
+            landing_page=payload.landing_page,
+            user_agent=request.headers.get("user-agent"),
+            ip_hash=ip_hash,
+        )
+        db.commit()
+    except Exception:  # analytics is best-effort; never fail the beacon
+        db.rollback()
+        log.exception("storefront track failed event_name=%s", payload.event_name)
+    return _TRACK_ACK
 
 
 @router.get("/business-profile")

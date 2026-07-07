@@ -125,6 +125,11 @@ export async function getEvent(eventId) {
   return data
 }
 
+export async function getEventJourney(eventId) {
+  const { data } = await api.get(`/events/${eventId}/journey`)
+  return data
+}
+
 export async function addEventParticipant(eventId, body) {
   // Canonical home for the add-participant flow (Phase 6). Both admin
   // and sales tokens hit the same path; the deprecated alias under

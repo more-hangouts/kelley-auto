@@ -62,6 +62,17 @@ ATTRIBUTION_COOKIE_DOMAIN = os.getenv("ATTRIBUTION_COOKIE_DOMAIN") or None
 META_PIXEL_ID = os.getenv("META_PIXEL_ID") or None
 META_CAPI_TOKEN = os.getenv("META_CAPI_TOKEN") or None
 META_CAPI_TEST_EVENT_CODE = os.getenv("META_CAPI_TEST_EVENT_CODE") or None
+# Master kill switch for ALL outbound Meta Conversions API delivery. Stays OFF
+# until Pixel ID, access token, test event code, and consent language are in
+# place. The storefront analytics tables and the outbound queue exist
+# regardless — this only gates whether anything is actually sent to Meta.
+META_CAPI_ENABLED = os.getenv("META_CAPI_ENABLED", "false").lower() == "true"
+META_CAPI_API_VERSION = os.getenv("META_CAPI_API_VERSION", "v21.0")
+# Storefront first-party analytics ingestion (POST /api/public/track). Kill
+# switch for behavioral tracking, independent of any ad destination.
+STOREFRONT_ANALYTICS_ENABLED = (
+    os.getenv("STOREFRONT_ANALYTICS_ENABLED", "true").lower() == "true"
+)
 GOOGLE_ADS_CONVERSION_ID = os.getenv("GOOGLE_ADS_CONVERSION_ID") or None
 GOOGLE_ADS_CONVERSION_LABEL = os.getenv("GOOGLE_ADS_CONVERSION_LABEL") or None
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None
@@ -77,6 +88,18 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD") or None
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL") or None
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kelley Autoplex")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
+# Outbound email via the Gmail API using OAuth2 (an "installed app" client
+# plus a long-lived refresh token minted by a one-time consent as the
+# sending mailbox). When all three OAuth values are present, the Gmail API
+# transport takes precedence over SMTP. GMAIL_API_SENDER is the mailbox that
+# granted consent — it is both the authenticated user and the From address,
+# so consent must be granted as this address. Falls back to SMTP_FROM_EMAIL.
+GMAIL_OAUTH_CLIENT_ID = os.getenv("GMAIL_OAUTH_CLIENT_ID") or None
+GMAIL_OAUTH_CLIENT_SECRET = os.getenv("GMAIL_OAUTH_CLIENT_SECRET") or None
+GMAIL_OAUTH_REFRESH_TOKEN = os.getenv("GMAIL_OAUTH_REFRESH_TOKEN") or None
+GMAIL_API_SENDER = os.getenv("GMAIL_API_SENDER") or SMTP_FROM_EMAIL
+
 BOOKING_INTERNAL_NOTIFICATION_EMAILS = _csv("BOOKING_INTERNAL_NOTIFICATION_EMAILS")
 # Staff recipients for public storefront lead alerts (comma-separated). When
 # unset, the service falls back to business_profile.email, then to every
@@ -123,6 +146,14 @@ RATE_LIMIT_FAIL_OPEN = os.getenv("RATE_LIMIT_FAIL_OPEN", "true").lower() == "tru
 # letting traffic rewrite rows, then dropping the trailing old key.
 # Generate with:  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 INTEGRATION_TOKEN_KEYS = _csv("INTEGRATION_TOKEN_KEYS", "")
+
+# Encryption keys for at-rest BHPH lead-application PII (DOB, driver's
+# license #, SSN, home address). Same Fernet/MultiFernet rotation scheme as
+# INTEGRATION_TOKEN_KEYS — comma-separated, NEWEST FIRST — but a SEPARATE key
+# so the two blast radii don't overlap. This key MUST be backed up securely:
+# losing every key here makes existing encrypted applications unrecoverable.
+# Generate with:  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+LEAD_PII_KEYS = _csv("LEAD_PII_KEYS", "")
 
 # Webhook event retention (Phase C2 of SECURITY_REMEDIATION_PLAN.md).
 # The daily worker prunes `webhook_events` rows older than this. 90 days

@@ -15,6 +15,7 @@ without any per-template plumbing.
 
 from __future__ import annotations
 
+import base64
 import logging
 import smtplib
 from dataclasses import dataclass, replace
@@ -25,6 +26,10 @@ from typing import Protocol
 
 from config.settings import (
     EMAIL_DEV_REDIRECT,
+    GMAIL_API_SENDER,
+    GMAIL_OAUTH_CLIENT_ID,
+    GMAIL_OAUTH_CLIENT_SECRET,
+    GMAIL_OAUTH_REFRESH_TOKEN,
     SMTP_FROM_EMAIL,
     SMTP_FROM_NAME,
     SMTP_HOST,
@@ -58,6 +63,26 @@ class EmailTransport(Protocol):
     def send(self, msg: EmailMessagePayload) -> None: ...
 
 
+def _build_email_message(msg: EmailMessagePayload, *, from_email: str) -> EmailMessage:
+    """Render a payload into a MIME message shared by every real transport.
+
+    Keeps the From display-name, text/HTML alternative structure, and the
+    inline logo attachment identical whether we dispatch over SMTP or the
+    Gmail API — so only the wire protocol differs between transports.
+    """
+    em = EmailMessage()
+    em["From"] = f"{SMTP_FROM_NAME} <{from_email}>" if SMTP_FROM_NAME else from_email
+    em["To"] = msg.to
+    em["Subject"] = msg.subject
+    if msg.reply_to:
+        em["Reply-To"] = msg.reply_to
+    em.set_content(msg.text)
+    if msg.html:
+        em.add_alternative(msg.html, subtype="html")
+        _attach_logo_to_html_part(em)
+    return em
+
+
 class NullEmailTransport:
     """Logs the message instead of sending. The dev default."""
 
@@ -78,17 +103,7 @@ class SmtpEmailTransport:
             raise RuntimeError("SmtpEmailTransport requires SMTP_FROM_EMAIL")
 
     def send(self, msg: EmailMessagePayload) -> None:
-        em = EmailMessage()
-        from_header = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>" if SMTP_FROM_NAME else SMTP_FROM_EMAIL
-        em["From"] = from_header
-        em["To"] = msg.to
-        em["Subject"] = msg.subject
-        if msg.reply_to:
-            em["Reply-To"] = msg.reply_to
-        em.set_content(msg.text)
-        if msg.html:
-            em.add_alternative(msg.html, subtype="html")
-            _attach_logo_to_html_part(em)
+        em = _build_email_message(msg, from_email=SMTP_FROM_EMAIL)
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
             smtp.ehlo()
@@ -98,6 +113,57 @@ class SmtpEmailTransport:
             if SMTP_USERNAME and SMTP_PASSWORD:
                 smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
             smtp.send_message(em)
+
+
+class GmailApiTransport:
+    """Sends via the Gmail REST API using an OAuth2 refresh token.
+
+    A one-time consent as GMAIL_API_SENDER mints a long-lived refresh token;
+    the ``Credentials`` object exchanges it for short-lived access tokens on
+    demand (auto-refreshing when they expire). Mail is sent *as* that
+    mailbox and lands in its Sent folder. Google libraries are imported
+    lazily inside ``__init__`` so the module still imports — and the other
+    transports still work — on a box where ``google-auth`` isn't installed
+    or the OAuth values are misconfigured.
+    """
+
+    _SCOPES = ("https://www.googleapis.com/auth/gmail.send",)
+    _TOKEN_URI = "https://oauth2.googleapis.com/token"
+    _SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+
+    def __init__(self) -> None:
+        if not (
+            GMAIL_OAUTH_CLIENT_ID
+            and GMAIL_OAUTH_CLIENT_SECRET
+            and GMAIL_OAUTH_REFRESH_TOKEN
+        ):
+            raise RuntimeError("GmailApiTransport requires the GMAIL_OAUTH_* values")
+        if not GMAIL_API_SENDER:
+            raise RuntimeError("GmailApiTransport requires GMAIL_API_SENDER")
+
+        from google.auth.transport.requests import AuthorizedSession
+        from google.oauth2.credentials import Credentials
+
+        creds = Credentials(
+            token=None,
+            refresh_token=GMAIL_OAUTH_REFRESH_TOKEN,
+            client_id=GMAIL_OAUTH_CLIENT_ID,
+            client_secret=GMAIL_OAUTH_CLIENT_SECRET,
+            token_uri=self._TOKEN_URI,
+            scopes=list(self._SCOPES),
+        )
+        self._session = AuthorizedSession(creds)
+
+    def send(self, msg: EmailMessagePayload) -> None:
+        em = _build_email_message(msg, from_email=GMAIL_API_SENDER)
+        raw = base64.urlsafe_b64encode(em.as_bytes()).decode("ascii")
+        resp = self._session.post(self._SEND_URL, json={"raw": raw}, timeout=20)
+        if resp.status_code >= 400:
+            # Surface the API's error body so an operator can tell an auth
+            # problem (delegation not authorized) from a bad recipient.
+            raise RuntimeError(
+                f"Gmail API send failed ({resp.status_code}): {resp.text[:500]}"
+            )
 
 
 class _RedirectingEmailTransport:
@@ -163,7 +229,7 @@ def _attach_logo_to_html_part(em: EmailMessage) -> None:
     )
 
 
-def send_rendered_safely(*, to: str, rendered, scope: str = "email") -> None:
+def send_rendered_safely(*, to: str, rendered, scope: str = "email") -> bool:
     """Best-effort dispatch for transactional staff/admin emails. Wraps
     the ``RenderedEmail`` → ``EmailMessagePayload`` adaptation and swallows
     SMTP failures so the caller's primary action (schedule publish, role
@@ -172,9 +238,13 @@ def send_rendered_safely(*, to: str, rendered, scope: str = "email") -> None:
     quickly. Mirrors the ``_send_email_safe`` pattern in
     ``services/time_off.py`` — that one stays for now to avoid touching
     working code; new call sites should prefer this shared helper.
+
+    Returns True when the transport accepted the message, False when it was
+    skipped (no recipient) or failed — so callers that care (e.g. lead
+    alerts) can record the outcome instead of assuming success.
     """
     if not to:
-        return
+        return False
     try:
         get_email_transport().send(
             EmailMessagePayload(
@@ -185,13 +255,43 @@ def send_rendered_safely(*, to: str, rendered, scope: str = "email") -> None:
                 reply_to=SMTP_FROM_EMAIL or None,
             )
         )
+        return True
     except Exception:  # noqa: BLE001
         log.exception("%s: email send failed for %s", scope, to)
+        return False
+
+
+def active_email_transport_kind() -> str:
+    """The transport ``get_email_transport`` will select, as a short label
+    (``"gmail_api"`` / ``"smtp"`` / ``"null"``) — the single source of truth
+    for both the selector below and the health/startup checks. Pure: reads
+    config only, constructs nothing.
+    """
+    if (
+        GMAIL_OAUTH_CLIENT_ID
+        and GMAIL_OAUTH_CLIENT_SECRET
+        and GMAIL_OAUTH_REFRESH_TOKEN
+        and GMAIL_API_SENDER
+    ):
+        return "gmail_api"
+    if SMTP_HOST and SMTP_FROM_EMAIL:
+        return "smtp"
+    return "null"
+
+
+def email_delivery_enabled() -> bool:
+    """False when the resolved transport only logs (NullEmailTransport), i.e.
+    no mail actually leaves the box. Callers use this to fail/warn loudly in
+    production instead of silently dropping mail."""
+    return active_email_transport_kind() != "null"
 
 
 def get_email_transport() -> EmailTransport:
+    kind = active_email_transport_kind()
     base: EmailTransport
-    if SMTP_HOST and SMTP_FROM_EMAIL:
+    if kind == "gmail_api":
+        base = GmailApiTransport()
+    elif kind == "smtp":
         base = SmtpEmailTransport()
     else:
         base = NullEmailTransport()

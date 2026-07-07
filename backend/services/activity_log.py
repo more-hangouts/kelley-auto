@@ -108,6 +108,18 @@ EVENT_WALK_IN_CREATED = "event.walk_in_created"
 # a freshly created vehicle_sale deal and an existing open deal (the dedup
 # append path), so the deal timeline shows every inbound touch.
 PUBLIC_LEAD_SUBMITTED = "lead.public_submitted"
+# Outcome of the staff email alert fired when a public lead lands. The
+# _failed variant is written (and logged at ERROR) when no recipient is
+# configured, delivery is disabled (NullEmailTransport), or every send
+# raised — so a missed alert leaves a visible audit row instead of hiding
+# behind the "sent" of the submission itself.
+LEAD_NOTIFICATION_SENT = "lead.notification_sent"
+LEAD_NOTIFICATION_FAILED = "lead.notification_failed"
+# Access to decrypted BHPH application PII (migration 089). Every view or
+# edit of the sensitive fields writes one of these so there is a permanent
+# who-looked-at-DOB/DL/address trail. actor_kind='staff' with the user id.
+APPLICATION_PII_VIEWED = "application.pii_viewed"
+APPLICATION_PII_UPDATED = "application.pii_updated"
 
 # Appointment lifecycle (Phase 3 of the sales portal). These activity
 # rows are still scoped by `event_id`; if the appointment has no
@@ -203,6 +215,10 @@ _KNOWN_TYPES = frozenset(
         EVENT_PARTICIPANT_ADDED,
         EVENT_WALK_IN_CREATED,
         PUBLIC_LEAD_SUBMITTED,
+        LEAD_NOTIFICATION_SENT,
+        LEAD_NOTIFICATION_FAILED,
+        APPLICATION_PII_VIEWED,
+        APPLICATION_PII_UPDATED,
         APPOINTMENT_ARRIVED,
         APPOINTMENT_NO_SHOW,
         APPOINTMENT_CANCELLED,

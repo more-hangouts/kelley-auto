@@ -62,11 +62,13 @@ from api.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
 from api.routers import walk_in_leads as walk_in_leads_router
 from config.settings import (
+    APP_ENV,
     APP_TIMEZONE,
     BOOKING_WIDGET_ALLOWED_ORIGINS,
     CORS_ORIGINS,
     validate_config,
 )
+from services import email_transport
 from api.redis_rate_limit import close_client as close_redis_client
 from database.connection import engine
 from workers.daily import run_loop as run_daily_loop
@@ -80,9 +82,31 @@ _WIDGETS_DIR = _REPO_ROOT / "widgets"
 _MARKETING_DIR = _REPO_ROOT / "marketing"
 
 
+def _warn_if_email_delivery_disabled() -> None:
+    """At boot, shout if outbound email will silently no-op. In production a
+    NullEmailTransport means every lead alert / transactional email is dropped
+    — exactly the silent failure that let a live lead sit un-notified. We log
+    it LOUD (CRITICAL in prod) so it can't hide; the /api/health payload also
+    surfaces it for uptime monitors."""
+    kind = email_transport.active_email_transport_kind()
+    if kind != "null":
+        log.info("email delivery active via %s transport", kind)
+        return
+    msg = (
+        "EMAIL DELIVERY DISABLED — resolved transport is NullEmailTransport; "
+        "no mail (lead alerts, booking, digests) will actually be sent. "
+        "Configure GMAIL_OAUTH_* or SMTP_* in the environment."
+    )
+    if APP_ENV == "production":
+        log.critical("%s [APP_ENV=production]", msg)
+    else:
+        log.warning(msg)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_config()
+    _warn_if_email_delivery_disabled()
     stop_event = asyncio.Event()
     notifications_task = asyncio.create_task(run_notifications_loop(stop_event))
     daily_task = asyncio.create_task(run_daily_loop(stop_event))
@@ -433,9 +457,19 @@ def health():
             content={"status": "error", "database": "schema_missing"},
         )
 
-    return {
+    email_kind = email_transport.active_email_transport_kind()
+    email_ok = email_kind != "null"
+    body = {
         "status": "ok",
         "database": "connected",
         "migrations_applied": count,
         "timezone": APP_TIMEZONE,
+        "email_transport": email_kind,
+        "email_delivery_enabled": email_ok,
     }
+    if not email_ok:
+        # Degrade visibly for monitors without failing the whole app: the DB
+        # is fine, so return 200 but flag the outage prominently.
+        body["status"] = "degraded"
+        body["warnings"] = ["email_delivery_disabled"]
+    return body

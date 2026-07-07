@@ -2135,12 +2135,18 @@ def render_public_lead_notification(
     vehicle,
     payload: dict,
     admin_url: str,
+    has_application: bool = False,
 ) -> RenderedEmail:
     """Staff alert when a customer submits a lead on the public storefront.
     ``is_new`` distinguishes a brand-new deal from a follow-up appended to an
     existing open deal. ``vehicle`` is the linked CatalogItem or None (a
     general inquiry). ``payload`` is the activity payload built by
-    public_lead_service (message/preferred/source_page/utm/listing code)."""
+    public_lead_service (message/preferred/source_page/utm/listing code).
+
+    ``has_application``: a BHPH application with sensitive PII (DOB, driver's
+    license, address) was attached. When True the email says so and links to
+    the CRM but includes NO PII — and the free-text message is suppressed,
+    since that is where the storefront historically concatenated PII."""
     name = (
         contact.display_name
         or " ".join(filter(None, [contact.first_name, contact.last_name])).strip()
@@ -2184,22 +2190,45 @@ def render_public_lead_notification(
         rows.append(("Source page", source_page))
     if utm_label:
         rows.append(("Campaign", utm_label))
+    if has_application:
+        rows.append(("BHPH application", "Submitted — view securely in the CRM"))
 
     lead_line = (
         "A customer submitted a new inquiry from the website."
         if is_new
         else "A customer sent a follow-up on an existing open deal."
     )
+    # Suppress the free-text message whenever an application is attached: that
+    # field is where the storefront concatenated DOB/DL/address, and this email
+    # must never carry that PII. The structured fields are already excluded by
+    # construction (they go straight to the encrypted table, not the payload).
+    show_message = bool(message) and not has_application
+    application_note = (
+        "A BHPH credit application (date of birth, driver's license, home "
+        "address) was submitted. Those details are stored securely — open the "
+        "deal in the CRM to view them.\n"
+        if has_application
+        else ""
+    )
     text = (
         f"{lead_line}\n\n"
         + "".join(f"  {label}: {value}\n" for label, value in rows)
-        + (f"  Message: {message}\n" if message else "")
+        + (f"  Message: {message}\n" if show_message else "")
+        + (f"\n{application_note}" if application_note else "")
         + f"\nOpen the deal in admin:\n    {admin_url}\n"
     )
     message_html = (
         f'<p style="margin-top:12px;"><strong>Message:</strong> '
         f"{escape(message)}</p>"
-        if message
+        if show_message
+        else ""
+    )
+    application_html = (
+        '<p style="margin-top:12px; padding:10px 14px; background:#eef6ff; '
+        'border-radius:4px;">🔒 A <strong>BHPH credit application</strong> '
+        "(date of birth, driver's license, home address) was submitted. Those "
+        "details are stored securely — open the deal in the CRM to view them.</p>"
+        if has_application
         else ""
     )
     html = _wrap_html(
@@ -2207,6 +2236,7 @@ def render_public_lead_notification(
         f'margin-top:0;">{escape(kind)} vehicle lead</h1>'
         f"<p>{escape(lead_line)}</p>"
         + _details_table(rows)
+        + application_html
         + message_html
         + '<p style="margin-top:22px;">'
         + _html_button("Open the deal", admin_url)

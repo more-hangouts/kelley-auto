@@ -386,6 +386,154 @@ class Event(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
 
 
+class LeadApplication(Base):
+    """Sensitive BHPH application PII for a vehicle-sale deal (migration 089).
+
+    1:1 with an ``events`` row. High-sensitivity fields are Fernet ciphertext
+    (BYTEA), read/written only through ``services/lead_application_service.py``
+    which decrypts inside the permission-gated, audited endpoint. This table is
+    deliberately NOT joined into the normal event serializers — application PII
+    must never be fetched, rendered, emailed, or exported with the deal by
+    accident.
+    """
+
+    __tablename__ = "lead_applications"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(
+        Integer,
+        ForeignKey("events.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    contact_id = Column(
+        Integer, ForeignKey("contacts.id", ondelete="RESTRICT"), nullable=False
+    )
+    # Fernet ciphertext (services/lead_pii_crypto.py):
+    date_of_birth_ciphertext = Column(LargeBinary)
+    driver_license_number_ciphertext = Column(LargeBinary)
+    ssn_ciphertext = Column(LargeBinary)
+    address_ciphertext = Column(LargeBinary)
+    # Low-sensitivity workflow fields, plaintext:
+    driver_license_state = Column(String(2))
+    has_driver_license = Column(Boolean)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontVisitor(Base):
+    """Anonymous storefront browser (migration 090). Keyed by the first-party
+    ``ka_vid`` cookie value. No raw PII — attribution is source/UTM only."""
+
+    __tablename__ = "storefront_visitors"
+
+    id = Column(Integer, primary_key=True)
+    visitor_key = Column(String(64), unique=True, nullable=False)
+    first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    first_touch_attribution = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    last_touch_attribution = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontSession(Base):
+    """A single storefront visit (migration 090). Keyed by the first-party
+    ``ka_sid`` cookie. IP is stored HASHED only, never raw."""
+
+    __tablename__ = "storefront_sessions"
+
+    id = Column(Integer, primary_key=True)
+    visitor_id = Column(
+        Integer, ForeignKey("storefront_visitors.id", ondelete="CASCADE"), nullable=False
+    )
+    session_key = Column(String(64), unique=True, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    landing_page = Column(Text)
+    initial_referrer = Column(Text)
+    initial_utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    user_agent = Column(Text)
+    ip_hash = Column(String(64))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontEvent(Base):
+    """Behavioral storefront event stream (migration 090): page_view,
+    vehicle_view, lead_form_opened/started, lead_submitted. ``event_id`` is the
+    CAPI dedup id (unique when present)."""
+
+    __tablename__ = "storefront_events"
+
+    id = Column(BigInteger, primary_key=True)
+    visitor_id = Column(Integer, ForeignKey("storefront_visitors.id", ondelete="SET NULL"))
+    session_id = Column(Integer, ForeignKey("storefront_sessions.id", ondelete="SET NULL"))
+    event_name = Column(String(50), nullable=False)
+    event_id = Column(String(64))  # CAPI dedup id; UNIQUE via partial index
+    path = Column(Text)
+    referrer = Column(Text)
+    utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    listing_code = Column(String(40))
+    vehicle_catalog_item_id = Column(
+        Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
+    )
+    # `metadata` is reserved on the declarative Base, so the attribute is
+    # `event_metadata` while the column stays `metadata`.
+    event_metadata = Column("metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    occurred_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class LeadAttribution(Base):
+    """Bridge from anonymous browsing to a CRM deal (migration 090). 1:1 with an
+    ``events`` row. Carries source/UTM/landing + the ``_fbp``/``_fbc`` Meta
+    cookies for later CAPI matching. NEVER carries BHPH application PII."""
+
+    __tablename__ = "lead_attribution"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(
+        Integer, ForeignKey("events.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    visitor_id = Column(Integer, ForeignKey("storefront_visitors.id", ondelete="SET NULL"))
+    session_id = Column(Integer, ForeignKey("storefront_sessions.id", ondelete="SET NULL"))
+    conversion_storefront_event_id = Column(
+        BigInteger, ForeignKey("storefront_events.id", ondelete="SET NULL")
+    )
+    landing_page = Column(Text)
+    source_page = Column(Text)
+    utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    referrer = Column(Text)
+    fbp = Column(String(255))
+    fbc = Column(String(255))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class AdConversionEvent(Base):
+    """Provider-neutral OUTBOUND ad-conversion queue (migration 090, Phase 3).
+
+    The table exists so the CAPI data model is ready, but nothing enqueues or
+    sends until ``META_CAPI_ENABLED`` is flipped and the sender is built.
+    ``user_data`` holds SERVER-HASHED identifiers only — never raw PII."""
+
+    __tablename__ = "ad_conversion_events"
+
+    id = Column(BigInteger, primary_key=True)
+    provider = Column(String(20), nullable=False, server_default=text("'meta'"))
+    event_name = Column(String(50), nullable=False)
+    event_id = Column(String(64))
+    event_time = Column(DateTime(timezone=True), nullable=False)
+    source_url = Column(Text)
+    action_source = Column(String(20), nullable=False, server_default=text("'website'"))
+    user_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    custom_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    status = Column(String(20), nullable=False, server_default=text("'pending'"))
+    attempt_count = Column(Integer, nullable=False, server_default=text("0"))
+    last_error = Column(Text)
+    lead_event_id = Column(Integer, ForeignKey("events.id", ondelete="SET NULL"))
+    sent_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
 class EventParticipant(Base):
     __tablename__ = "event_participants"
 

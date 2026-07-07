@@ -38,11 +38,16 @@ from services import (
     booking_service,
     contact_service,
     event_service,
+    lead_application_service,
     public_inventory_service,
+    storefront_analytics_service,
 )
+from services.storefront_analytics_service import TrackingContext
+from services import email_transport
 from services.email_transport import send_rendered_safely
 from services.event_service import EventOverrides
 from services.event_workflow import all_statuses
+from services.lead_application_service import ApplicationInput
 
 log = logging.getLogger(__name__)
 
@@ -76,34 +81,109 @@ def _notify_staff_of_lead(
     vehicle: Any,
     payload: dict[str, Any],
     deal_id: int,
+    has_application: bool = False,
 ) -> None:
-    """Best-effort staff email when a lead lands. Never raises: a broken
-    mailer (or no configured recipient) must not fail the customer's
-    submission. ``send_rendered_safely`` already swallows SMTP errors; the
-    outer try also covers recipient lookup / template rendering."""
+    """Staff email when a lead lands. Never raises — a broken mailer must not
+    fail the customer's submission — but the outcome is no longer silent: it
+    is recorded as a ``lead.notification_sent`` / ``lead.notification_failed``
+    audit row on the deal (visible in the admin timeline) and a failed alert
+    logs at ERROR. A new lead nobody was told about is an operational
+    incident, not a harmless best-effort miss."""
+    transport = email_transport.active_email_transport_kind()
+    recipients: list[str] = []
+    delivered: list[str] = []
+    reason: str | None = None
     try:
         recipients = _lead_notify_recipients(db)
         if not recipients:
-            log.info("public_lead.notify_skipped_no_recipient")
-            return
-        from config.settings import ADMIN_BASE_URL
-        from services import notification_templates
+            reason = "no_recipient_configured"
+        elif not email_transport.email_delivery_enabled():
+            # Transport only logs (NullEmailTransport) — mail never leaves.
+            reason = "delivery_disabled_null_transport"
+        else:
+            from config.settings import ADMIN_BASE_URL
+            from services import notification_templates
 
-        rendered = notification_templates.render_public_lead_notification(
-            is_new=is_new,
-            contact=contact,
-            vehicle=vehicle,
-            payload=payload,
-            admin_url=f"{ADMIN_BASE_URL}/events/{deal_id}",
-        )
-        for to in recipients:
-            send_rendered_safely(
-                to=to, rendered=rendered, scope="public_lead.received"
+            rendered = notification_templates.render_public_lead_notification(
+                is_new=is_new,
+                contact=contact,
+                vehicle=vehicle,
+                payload=payload,
+                admin_url=f"{ADMIN_BASE_URL}/events/{deal_id}",
+                has_application=has_application,
             )
-    except Exception:
+            for to in recipients:
+                if send_rendered_safely(
+                    to=to, rendered=rendered, scope="public_lead.received"
+                ):
+                    delivered.append(to)
+            if not delivered:
+                reason = "all_sends_failed"
+    except Exception as exc:  # noqa: BLE001
+        reason = f"exception:{type(exc).__name__}"
         log.exception(
             "public_lead.notify_failed (lead still recorded, deal_id=%s)",
             deal_id,
+        )
+
+    _record_notification_outcome(
+        db,
+        deal_id=deal_id,
+        transport=transport,
+        recipients=recipients,
+        delivered=delivered,
+        reason=reason,
+    )
+
+
+def _record_notification_outcome(
+    db: Session,
+    *,
+    deal_id: int,
+    transport: str,
+    recipients: list[str],
+    delivered: list[str],
+    reason: str | None,
+) -> None:
+    """Append a notification outcome row so a missed lead alert is visible in
+    the deal timeline and grep-able in logs, rather than hiding behind the
+    'sent' of the submission. Best-effort itself — an audit-write failure must
+    not bubble into the customer's request."""
+    ok = reason is None
+    payload = {
+        "transport": transport,
+        "recipients": recipients,
+        "delivered": delivered,
+        "reason": reason,
+    }
+    if not ok:
+        log.error(
+            "public_lead.notification_failed deal_id=%s transport=%s reason=%s "
+            "recipients=%s",
+            deal_id,
+            transport,
+            reason,
+            recipients,
+        )
+    try:
+        activity_log.log_activity(
+            db,
+            event_id=deal_id,
+            actor_kind="system",
+            actor_user_id=None,
+            activity_type=(
+                activity_log.LEAD_NOTIFICATION_SENT
+                if ok
+                else activity_log.LEAD_NOTIFICATION_FAILED
+            ),
+            subject_kind="event",
+            subject_id=deal_id,
+            payload=payload,
+        )
+        db.flush()
+    except Exception:  # noqa: BLE001
+        log.exception(
+            "public_lead.notification_outcome_unrecorded deal_id=%s", deal_id
         )
 
 
@@ -126,6 +206,26 @@ class LeadInput:
     preferred_time: str | None = None
     source_page: str | None = None
     utm: dict[str, str] = field(default_factory=dict)
+    # Structured BHPH application fields (optional). These NEVER go into
+    # events.notes or the activity_log payload — they are encrypted at rest in
+    # lead_applications via lead_application_service.
+    date_of_birth: str | None = None
+    driver_license_number: str | None = None
+    driver_license_state: str | None = None
+    has_driver_license: bool | None = None
+    address: dict[str, str] | None = None
+
+
+def _application_input_from_lead(lead: LeadInput) -> ApplicationInput:
+    """Map the BHPH fields off a LeadInput into an ApplicationInput. SSN is not
+    collected at intake (reserved for future underwriting)."""
+    return ApplicationInput(
+        date_of_birth=lead.date_of_birth,
+        driver_license_number=lead.driver_license_number,
+        driver_license_state=lead.driver_license_state,
+        has_driver_license=lead.has_driver_license,
+        address=lead.address,
+    )
 
 
 def _open_vehicle_sale_statuses() -> set[str]:
@@ -157,7 +257,9 @@ def _compose_notes(lead: LeadInput, *, ref_requested_but_unlinked: bool) -> str 
     return "\n".join(lines) or None
 
 
-def submit_public_lead(db: Session, lead: LeadInput) -> Event:
+def submit_public_lead(
+    db: Session, lead: LeadInput, *, tracking: TrackingContext | None = None
+) -> Event:
     """Create or reuse a ``vehicle_sale`` deal for this inquiry. Returns the
     Event (for the smoke / internal callers); the router discards it and
     returns a generic acknowledgement. Caller owns the commit.
@@ -238,6 +340,20 @@ def submit_public_lead(db: Session, lead: LeadInput) -> Event:
             payload=payload,
         )
         db.flush()
+        _app = _application_input_from_lead(lead)
+        _has_app = not _app.is_empty()
+        if _has_app:
+            lead_application_service.upsert_application(
+                db,
+                event_id=existing.id,
+                contact_id=contact.id,
+                data=_app,
+                actor_kind="system",
+            )
+        if tracking is not None:
+            storefront_analytics_service.attach_lead_attribution(
+                db, crm_event_id=existing.id, ctx=tracking
+            )
         _notify_staff_of_lead(
             db,
             is_new=False,
@@ -245,6 +361,7 @@ def submit_public_lead(db: Session, lead: LeadInput) -> Event:
             vehicle=vehicle,
             payload=payload,
             deal_id=existing.id,
+            has_application=_has_app,
         )
         return existing
 
@@ -279,6 +396,20 @@ def submit_public_lead(db: Session, lead: LeadInput) -> Event:
         payload=payload,
     )
     db.flush()
+    _app = _application_input_from_lead(lead)
+    _has_app = not _app.is_empty()
+    if _has_app:
+        lead_application_service.upsert_application(
+            db,
+            event_id=event.id,
+            contact_id=contact.id,
+            data=_app,
+            actor_kind="system",
+        )
+    if tracking is not None:
+        storefront_analytics_service.attach_lead_attribution(
+            db, crm_event_id=event.id, ctx=tracking
+        )
     _notify_staff_of_lead(
         db,
         is_new=True,
@@ -286,5 +417,6 @@ def submit_public_lead(db: Session, lead: LeadInput) -> Event:
         vehicle=vehicle,
         payload=payload,
         deal_id=event.id,
+        has_application=_has_app,
     )
     return event

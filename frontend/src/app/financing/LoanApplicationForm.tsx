@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { submitLead } from "@/lib/publicApi";
+import { getTrackingContext, track } from "@/lib/analytics";
+
+const FORM_TYPE = "loan_application";
 
 export type VehicleInterestOption = {
   id: string;
@@ -57,10 +60,24 @@ export default function LoanApplicationForm({
     return map;
   }, [vehicles]);
 
+  // Analytics: the customer opened the form, and (once) started filling it in.
+  useEffect(() => {
+    track("lead_form_opened", { metadata: { form_type: FORM_TYPE } });
+  }, []);
+  const startedRef = useRef(false);
+  function markStarted() {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    track("lead_form_started", { metadata: { form_type: FORM_TYPE } });
+  }
+
   function update(
     field: Exclude<keyof FormState, "hasDriversLicense">
   ): (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void {
-    return (e) => setForm((current) => ({ ...current, [field]: e.target.value }));
+    return (e) => {
+      markStarted();
+      setForm((current) => ({ ...current, [field]: e.target.value }));
+    };
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -72,18 +89,16 @@ export default function LoanApplicationForm({
     const listingCode =
       selectedVehicle?.listingCode ||
       listingCodeFromInterest(form.interestedVehicle);
+    // Sales-context only (incl. the customer's own free-text Notes). The PII
+    // — address, DOB, license — is sent as discrete structured fields below
+    // and encrypted at rest server-side; it must never enter `message`, which
+    // lands in the deal notes.
     const message = [
       "Standard approval form.",
       "Customer wants to get approved with no credit check.",
       form.interestedVehicle.trim()
         ? `Interested vehicle: ${form.interestedVehicle.trim()}`
         : "Interested vehicle: Not sure yet",
-      `Address: ${form.address.trim()}`,
-      `Date of birth: ${form.dateOfBirth.trim()}`,
-      `Driver's license: ${form.hasDriversLicense ? "Yes" : "No"}`,
-      form.driversLicenseState.trim()
-        ? `Driver's license state: ${form.driversLicenseState.trim().toUpperCase()}`
-        : null,
       form.message.trim() ? `Notes: ${form.message.trim()}` : null,
     ]
       .filter(Boolean)
@@ -99,6 +114,15 @@ export default function LoanApplicationForm({
         typeof window !== "undefined"
           ? window.location.pathname
           : "/loan-application",
+      addressStreet: form.address.trim() || undefined,
+      dateOfBirth: form.dateOfBirth.trim() || undefined,
+      hasDriverLicense: form.hasDriversLicense,
+      driverLicenseState:
+        form.driversLicenseState.trim().toUpperCase() || undefined,
+      // Attribution: ties this lead to the visitor's browsing journey. The
+      // server records the authoritative `lead_submitted` event using
+      // event_id (shared later with the Meta Pixel/CAPI for dedup).
+      tracking: getTrackingContext(),
     });
 
     if (result.ok) {
@@ -218,12 +242,13 @@ export default function LoanApplicationForm({
         <input
           type="checkbox"
           checked={form.hasDriversLicense}
-          onChange={(e) =>
+          onChange={(e) => {
+            markStarted();
             setForm((current) => ({
               ...current,
               hasDriversLicense: e.target.checked,
-            }))
-          }
+            }));
+          }}
           className="mt-0.5 size-4 accent-primary"
         />
         <span>Yes, I have a driver's license</span>
