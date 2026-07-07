@@ -89,20 +89,17 @@ export default function LoanApplicationForm({
     const listingCode =
       selectedVehicle?.listingCode ||
       listingCodeFromInterest(form.interestedVehicle);
-    // Sales-context only (incl. the customer's own free-text Notes). The PII
-    // — address, DOB, license — is sent as discrete structured fields below
-    // and encrypted at rest server-side; it must never enter `message`, which
-    // lands in the deal notes.
-    const message = [
-      "Standard approval form.",
-      "Customer wants to get approved with no credit check.",
-      form.interestedVehicle.trim()
-        ? `Interested vehicle: ${form.interestedVehicle.trim()}`
-        : "Interested vehicle: Not sure yet",
-      form.message.trim() ? `Notes: ${form.message.trim()}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    // Only genuine, customer-specific signal goes in the note. Boilerplate
+    // ("standard approval / no credit check") is identical for every BHPH lead
+    // — noise. When the typed vehicle resolves to a listing it's captured
+    // structurally; when it doesn't, keep the customer's words so the interest
+    // isn't lost. PII stays in the discrete encrypted fields, never here.
+    const noteParts: string[] = [];
+    if (!listingCode && form.interestedVehicle.trim()) {
+      noteParts.push(`Interested in: ${form.interestedVehicle.trim()}`);
+    }
+    if (form.message.trim()) noteParts.push(form.message.trim());
+    const message = noteParts.join("\n") || undefined;
 
     const result = await submitLead({
       name: `${form.firstName} ${form.lastName}`.trim(),

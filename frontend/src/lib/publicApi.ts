@@ -125,6 +125,10 @@ export interface LeadInput {
   message?: string;
   preferredDay?: string;
   preferredTime?: string;
+  // Structured preferred appointment slot: dealership-local date (YYYY-MM-DD)
+  // + hour (0-23). When set, the backend creates a pending appointment.
+  preferredDate?: string;
+  preferredHour?: number;
   sourcePage?: string;
   utm?: Partial<
     Record<"source" | "medium" | "campaign" | "term" | "content", string>
@@ -240,6 +244,9 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
   if (input.message) body.message = input.message;
   if (input.preferredDay) body.preferred_day = input.preferredDay;
   if (input.preferredTime) body.preferred_time = input.preferredTime;
+  if (input.preferredDate) body.preferred_date = input.preferredDate;
+  if (input.preferredHour !== undefined && input.preferredHour !== null)
+    body.preferred_hour = input.preferredHour;
   if (input.sourcePage) body.source_page = input.sourcePage;
 
   // Vehicle ref: explicit listingCode wins; otherwise a numeric id links by

@@ -82,6 +82,17 @@ function getTomorrow(): string {
   });
 }
 
+// Tomorrow as a plain YYYY-MM-DD (dealership-local calendar date). Sent to the
+// backend with the chosen hour so the requested slot becomes an appointment.
+function getTomorrowISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // — smooth slide-in wrapper (mounts hidden, transitions to visible on next frame) —
 function Slide({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -225,22 +236,19 @@ export default function InquiryForm({
     if (!slot) return;
     setLoading(true);
     setError(null);
-    const preferredTime = `${fmtSlot(slot)} on ${getTomorrow()}`;
-    // Sales-context only — the PII (address, DOB, license) is sent as discrete
-    // structured fields below and is encrypted at rest server-side. It must
-    // never be folded into `message`, which lands in the deal notes.
-    const message = [
-      "Buy here, pay here appointment request.",
-      "Customer wants to get approved in minutes.",
-      "No credit check approval requested.",
-    ].join("\n");
+    // No canned "message": every storefront lead is BHPH/no-credit-check, so
+    // boilerplate is identical for everyone and just clutters the deal notes.
+    // The vehicle is captured structurally (vehicleId) and the requested time
+    // below becomes a real pending appointment — not a note. PII stays in the
+    // discrete encrypted fields, never folded into a message.
     const result = await submitLead({
       name: `${firstName} ${lastName}`.trim(),
       email,
       phone,
       vehicleId,
-      message,
-      preferredTime,
+      preferredTime: `${fmtSlot(slot)} on ${getTomorrow()}`,
+      preferredDate: getTomorrowISO(),
+      preferredHour: slot,
       sourcePage:
         typeof window !== "undefined" ? window.location.pathname : undefined,
       addressStreet: address.trim() || undefined,

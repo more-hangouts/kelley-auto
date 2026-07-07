@@ -209,6 +209,10 @@ class PublicLeadRequest(BaseModel):
     message: str | None = Field(default=None, max_length=4000)
     preferred_day: str | None = Field(default=None, max_length=60)
     preferred_time: str | None = Field(default=None, max_length=60)
+    # Structured preferred appointment slot: dealership-local date + hour. When
+    # present, the lead becomes a pending appointment on the calendar.
+    preferred_date: str | None = Field(default=None, max_length=10)
+    preferred_hour: int | None = Field(default=None, ge=0, le=23)
     source_page: str | None = Field(default=None, max_length=500)
     utm_source: str | None = Field(default=None, max_length=120)
     utm_medium: str | None = Field(default=None, max_length=120)
@@ -359,6 +363,8 @@ def submit_lead(
         message=payload.message,
         preferred_day=payload.preferred_day,
         preferred_time=payload.preferred_time,
+        preferred_date=payload.preferred_date,
+        preferred_hour=payload.preferred_hour,
         source_page=payload.source_page,
         utm=payload.utm(),
         date_of_birth=payload.date_of_birth,
