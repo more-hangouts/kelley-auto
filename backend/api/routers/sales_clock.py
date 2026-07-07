@@ -80,6 +80,10 @@ class StatusResponse(BaseModel):
     timezone: str
     business_date: str
     selfie_policy: str
+    # Phase 14: 'payroll' or 'commission'. In commission mode the clock
+    # UI drops GPS-permission prompts and payroll phrasing ("clocked in"
+    # → "active in app"); the punch is accepted without a location fix.
+    attendance_mode: str
     # When True, the server-side attendance gate blocks sales-scope
     # appointment mutations while `state == 'out'`. The frontend uses
     # this to decide whether to redirect a punched-out stylist to
@@ -164,9 +168,28 @@ def _raise_for_selfie(exc: SelfieStorageError) -> None:
     ) from exc
 
 
-def _resolve_selfie_policy(db: Session) -> str:
+def _resolve_attendance_mode(db: Session) -> str:
+    """'payroll' (strict) or 'commission' (active-app signal). Default
+    'payroll' when the column/row is absent."""
     profile = db.query(BusinessProfile).first()
-    return profile.selfie_policy if profile is not None else "optional"
+    if profile is None:
+        return "payroll"
+    return getattr(profile, "attendance_mode", None) or "payroll"
+
+
+def _resolve_selfie_policy(db: Session) -> str:
+    """Effective selfie policy. In commission mode a 'required' policy is
+    downgraded to 'optional' so a rep is never blocked from clocking in —
+    the owner's stored setting is preserved for a switch back to payroll.
+    """
+    profile = db.query(BusinessProfile).first()
+    if profile is None:
+        return "optional"
+    policy = profile.selfie_policy
+    mode = getattr(profile, "attendance_mode", None) or "payroll"
+    if mode == "commission" and policy == "required":
+        return "optional"
+    return policy
 
 
 def _resolve_accuracy_buffer_max_m(db: Session) -> int:
@@ -286,6 +309,7 @@ async def post_clock_in(
     trusted_match = clock_in.is_ip_in_trusted_list(
         _real_client_ip(request), trusted_ips
     )
+    commission = _resolve_attendance_mode(db) == "commission"
 
     try:
         punch = clock_in.punch_in(
@@ -297,6 +321,9 @@ async def post_clock_in(
             accuracy_buffer_max_m=_resolve_accuracy_buffer_max_m(db),
             trusted_network_match=trusted_match,
             trusted_network_enabled=trusted_enabled,
+            # Commission mode: clock-in is an active-app signal, not a
+            # geofence-gated payroll punch.
+            require_geofence=not commission,
             ip=_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )
@@ -374,6 +401,7 @@ def get_clock_status(
         timezone=str(shop_tz()),
         business_date=business_date().isoformat(),
         selfie_policy=_resolve_selfie_policy(db),
+        attendance_mode=_resolve_attendance_mode(db),
         attendance_gate_enabled=_resolve_attendance_gate_enabled(db),
         trusted_network_enabled=trusted_enabled,
         trusted_network_detected=trusted_match,

@@ -1075,6 +1075,12 @@ class BusinessProfile(Base):
     attendance_gate_enabled = Column(
         Boolean, nullable=False, server_default=text("TRUE")
     )
+    # Phase 14: 'payroll' (strict geofence/selfie enforcement) or
+    # 'commission' (clock-in is an active-app signal; no GPS/geofence
+    # block, selfie never required). Migration 092.
+    attendance_mode = Column(
+        String(20), nullable=False, server_default=text("'payroll'")
+    )
     selfie_policy = Column(
         String(16), nullable=False, server_default=text("'optional'")
     )
