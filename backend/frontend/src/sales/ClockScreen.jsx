@@ -183,6 +183,10 @@ export default function ClockScreen() {
   const { status, isLoading, refetch } = useClockStatus()
   const invalidate = useInvalidateClockStatus()
 
+  // Phase 14: commission mode treats clock-in as an "active in app"
+  // signal — no geofence, no GPS prompt, no payroll phrasing.
+  const commissionMode = status?.attendance_mode === 'commission'
+
   const [coords, setCoords] = useState(null)
   const [coordsError, setCoordsError] = useState(null)
   const [coordsBusy, setCoordsBusy] = useState(false)
@@ -209,10 +213,14 @@ export default function ClockScreen() {
   // Acquire coords as soon as the screen mounts. Geolocation prompt
   // can take a beat; getting it kicked off first means by the time
   // the user has decided whether to take a selfie, we already have
-  // their location.
+  // their location. Commission mode skips this entirely — no geofence
+  // means no reason to prompt the rep for location permission.
+  const didCaptureRef = useRef(false)
   useEffect(() => {
+    if (!status || commissionMode || didCaptureRef.current) return
+    didCaptureRef.current = true
     captureCoords()
-  }, [])
+  }, [status, commissionMode])
 
   // Tear down camera stream on unmount or when the user closes it.
   useEffect(() => {
@@ -317,7 +325,8 @@ export default function ClockScreen() {
   async function handleSubmit() {
     if (submitting) return
     setSubmitError(null)
-    if (!coords && !onTrustedNetwork) {
+    // Commission mode accepts the punch without any location fix.
+    if (!commissionMode && !coords && !onTrustedNetwork) {
       setSubmitError('We need your location before clocking ' + action + '.')
       return
     }
@@ -382,7 +391,8 @@ export default function ClockScreen() {
   const onTrustedNetwork = Boolean(
     status?.trusted_network_detected && status?.trusted_network_enabled,
   )
-  const locationReady = gpsReady || onTrustedNetwork
+  // Commission mode never gates the button on location.
+  const locationReady = commissionMode || gpsReady || onTrustedNetwork
   const buttonDisabled =
     submitting || !locationReady || (selfieRequired && !selfieBlob)
   // 13.1 spec: when the only thing blocking the button is GPS, the
@@ -410,14 +420,22 @@ export default function ClockScreen() {
             >
               <Box>
                 <Typography variant="overline" color="text.secondary">
-                  Attendance
+                  {commissionMode ? 'Sales app' : 'Attendance'}
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   {onClock ? 'Clock out' : 'Clock in'}
                 </Typography>
               </Box>
               <Chip
-                label={onClock ? 'On the clock' : 'Off the clock'}
+                label={
+                  commissionMode
+                    ? onClock
+                      ? 'Active in app'
+                      : 'Not active'
+                    : onClock
+                    ? 'On the clock'
+                    : 'Off the clock'
+                }
                 color={onClock ? 'success' : 'default'}
                 variant="filled"
                 sx={{ fontWeight: 500 }}
@@ -426,9 +444,21 @@ export default function ClockScreen() {
 
             {status?.last_punch && (
               <Typography variant="body2" color="text.secondary">
-                Last punch:{' '}
-                {status.last_punch.direction === 'in' ? 'in' : 'out'} at{' '}
-                {formatTime(status.last_punch.punched_at, status.timezone)}
+                {commissionMode ? (
+                  <>
+                    {status.last_punch.direction === 'in'
+                      ? 'Started session'
+                      : 'Ended session'}{' '}
+                    at{' '}
+                    {formatTime(status.last_punch.punched_at, status.timezone)}
+                  </>
+                ) : (
+                  <>
+                    Last punch:{' '}
+                    {status.last_punch.direction === 'in' ? 'in' : 'out'} at{' '}
+                    {formatTime(status.last_punch.punched_at, status.timezone)}
+                  </>
+                )}
               </Typography>
             )}
 
@@ -539,7 +569,7 @@ export default function ClockScreen() {
                 came in from the boutique's public IP — exactly the same
                 trigger as before; just inline inside the unified card
                 instead of in its own outlined card. */}
-            {status?.trusted_network_detected && (
+            {!commissionMode && status?.trusted_network_detected && (
               <Stack
                 direction="row"
                 spacing={1}
@@ -568,7 +598,11 @@ export default function ClockScreen() {
             {/* Compact GPS readiness row directly above the primary
                 button. Shows a tiny spinner while resolving and the
                 'best so far' accuracy when available. The retry icon
-                stays reachable per accessibility guardrail. */}
+                stays reachable per accessibility guardrail. Commission
+                mode hides this whole row — there is no location to wait
+                on. */}
+            {!commissionMode && (
+            <>
             <Stack
               direction="row"
               alignItems="center"
@@ -622,6 +656,8 @@ export default function ClockScreen() {
             </Stack>
 
             {coordsError && <Alert severity="warning">{coordsError}</Alert>}
+            </>
+            )}
 
             {submitError && <Alert severity="error">{submitError}</Alert>}
 
