@@ -1279,6 +1279,39 @@ class ActivityLog(Base):
     )
 
 
+class SalesActivityEvent(Base):
+    """Commission-mode sales activity monitoring (Phase 14, migration 091).
+
+    Append-only stream of the meaningful *reads* a sales rep performs
+    (lead/event opened, appointment opened, contact opened, search run),
+    recorded server-side inside the sales read endpoints. Separate from
+    ``activity_log`` because contact/search views have no ``event_id`` to
+    anchor to. Privacy: no note bodies, no financial fields, no raw search
+    text — only normalized ``metadata`` (query length, result count).
+    """
+
+    __tablename__ = "sales_activity_events"
+
+    id = Column(BigInteger, primary_key=True)
+    actor_user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    activity_type = Column(String(40), nullable=False)
+    # Subject pair invariant (CHECK in migration 091): both set or both NULL.
+    subject_kind = Column(String(20))
+    subject_id = Column(Integer)
+    route = Column(Text)
+    source = Column(String(40))
+    activity_metadata = Column(
+        "metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
 class CatalogItem(Base):
     """One row per orderable style + color combination.
 

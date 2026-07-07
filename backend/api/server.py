@@ -19,6 +19,7 @@ from api.routers import admin_cron_health as admin_cron_health_router
 from api.routers import admin_booking_settings as admin_booking_settings_router
 from api.routers import admin_holidays as admin_holidays_router
 from api.routers import admin_me as admin_me_router
+from api.routers import admin_sales_activity as admin_sales_activity_router
 from api.routers import admin_sales_staff as admin_sales_staff_router
 from api.routers import admin_open_shifts as admin_open_shifts_router
 from api.routers import admin_schedule as admin_schedule_router
@@ -302,6 +303,11 @@ app.include_router(
     admin_sales_staff_router.router,
     prefix="/api/admin/sales-staff",
     tags=["admin-sales-staff"],
+)
+app.include_router(
+    admin_sales_activity_router.router,
+    prefix="/api/admin/sales-activity",
+    tags=["admin-sales-activity"],
 )
 app.include_router(
     admin_staff_router.router,
