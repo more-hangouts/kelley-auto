@@ -54,8 +54,9 @@ export default async function Hero() {
         </div>
       )}
 
-      {/* Navbar */}
-      <div className="absolute inset-x-0 top-0 z-20">
+      {/* Navbar — z-50 so the open mobile menu overlays the bottom CTA
+          (a same-z-20 sibling that otherwise paints over the dropdown). */}
+      <div className="absolute inset-x-0 top-0 z-50">
         <NavbarWrapper light />
       </div>
 
