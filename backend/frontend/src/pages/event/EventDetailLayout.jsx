@@ -161,17 +161,24 @@ export default function EventDetailLayout() {
       </Button>
 
       <Stack
-        direction="row"
+        direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
-        alignItems="flex-start"
+        alignItems={{ xs: 'stretch', md: 'flex-start' }}
+        spacing={2}
         mb={3}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" color="text.secondary">
             Deal #{event.id}
             {event.event_type === 'vehicle_sale' ? ' · Vehicle' : ''}
           </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              fontSize: { xs: '1.4rem', md: '2.125rem' },
+              lineHeight: 1.15,
+            }}
+          >
             {event.event_name}
           </Typography>
           {celebrantDiffersFromContact(event) ? (
@@ -184,14 +191,19 @@ export default function EventDetailLayout() {
             </Typography>
           )}
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ flexShrink: 0 }}
+        >
           <TextField
             select
             size="small"
             label="Status"
             value={event.status}
             onChange={(e) => changeStatus.mutate(e.target.value)}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: { xs: 0, md: 200 }, flex: { xs: 1, md: 'none' } }}
             disabled={changeStatus.isPending}
           >
             {(workflow?.statuses || []).map((s) => (
@@ -219,11 +231,26 @@ export default function EventDetailLayout() {
             flexShrink: 0,
           }}
         >
-          <List sx={{ p: 0 }}>
+          {/* Vertical rail on desktop; horizontal scroll strip on mobile so the
+              six tabs don't push the content a full screen down. */}
+          <List
+            sx={{
+              p: 0,
+              display: 'flex',
+              flexDirection: { xs: 'row', md: 'column' },
+              gap: 0.5,
+              overflowX: { xs: 'auto', md: 'visible' },
+              pb: { xs: 1, md: 0 },
+            }}
+          >
             {TABS.map(({ to, label, icon: Icon, countKey }) => {
               const count = countKey && counts ? counts[countKey] : null
               return (
-              <ListItem key={to} disablePadding sx={{ mb: 0.5 }}>
+              <ListItem
+                key={to}
+                disablePadding
+                sx={{ mb: { xs: 0, md: 0.5 }, width: 'auto', flexShrink: 0 }}
+              >
                 <ListItemButton
                   component={NavLink}
                   to={to}
