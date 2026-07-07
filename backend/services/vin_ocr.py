@@ -44,19 +44,38 @@ _CONFIGS = (
 _RUN_RE = re.compile(rf"[{_VIN_CHARS}]{{17,}}")
 
 _UPSCALE_TARGET = 1600  # upscale small phone crops so glyphs are legible
+# Cap the working resolution before OCR. A modern phone shoots 12 MP
+# (≈3024×4032); Tesseract time scales with pixel count and the slow
+# sparse-text pass (psm 11) is brutal on a full-frame photo full of
+# reflections/texture. VIN glyphs stay legible well below full res, so we
+# downscale the long edge to this before running any pass — the single
+# biggest win for scan latency. Kept comfortably above _UPSCALE_TARGET so
+# a mid-size crop is never both up- and down-scaled.
+_WORK_MAX = 2200
 _MAX_PIXELS = 40_000_000  # reject absurd inputs before Tesseract chews on them
 
 
 def _preprocess(body: bytes) -> Image.Image:
-    """Grayscale, orient, upscale-if-small, autocontrast — the cheap
-    transforms that most improve Tesseract on phone photos."""
+    """Grayscale, orient, resize into the OCR working band, autocontrast —
+    the cheap transforms that most improve Tesseract on phone photos.
+
+    Resize policy: downscale a large photo to ``_WORK_MAX`` on the long
+    edge (fast, and VIN glyphs stay legible), or upscale a tiny crop to
+    ``_UPSCALE_TARGET`` so small glyphs are readable. Most phone photos hit
+    the downscale branch."""
     img = Image.open(BytesIO(body))
     img = ImageOps.exif_transpose(img)
     if (img.width * img.height) > _MAX_PIXELS:
         raise ValueError("image too large to OCR")
     img = img.convert("L")
     longest = max(img.size)
-    if longest < _UPSCALE_TARGET:
+    if longest > _WORK_MAX:
+        scale = _WORK_MAX / longest
+        img = img.resize(
+            (round(img.width * scale), round(img.height * scale)),
+            Image.Resampling.LANCZOS,
+        )
+    elif longest < _UPSCALE_TARGET:
         scale = _UPSCALE_TARGET / longest
         img = img.resize(
             (round(img.width * scale), round(img.height * scale)),

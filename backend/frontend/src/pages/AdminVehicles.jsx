@@ -190,6 +190,46 @@ function parseIntField(value) {
   return { value: Number(trimmed), ok: true }
 }
 
+// Downscale a captured VIN photo before uploading for OCR. A phone shoots
+// ~12 MP (3–4 MB); shrinking the long edge to ~2000px (~200–400 KB) makes
+// the upload leg fast on cellular without hurting VIN legibility (the
+// server caps resolution again before Tesseract). Falls back to the
+// original file on any failure so scanning never breaks.
+function downscaleForScan(file, maxEdge = 2000) {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const longest = Math.max(img.width, img.height)
+        if (longest <= maxEdge) {
+          resolve(file)
+          return
+        }
+        const scale = maxEdge / longest
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(
+          (blob) =>
+            resolve(blob ? new File([blob], 'vin-scan.jpg', { type: 'image/jpeg' }) : file),
+          'image/jpeg',
+          0.9,
+        )
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(file)
+      }
+      img.src = url
+    } catch {
+      resolve(file)
+    }
+  })
+}
+
 // Build the create/patch body from the form, validating client-side first
 // so the obvious mistakes never round-trip. Returns { body } or { error }.
 function buildPayload(form, { isEdit }) {
@@ -626,7 +666,10 @@ export default function AdminVehicles() {
     setScanning(true)
     setDecodeFeedback(null)
     try {
-      const res = await scanVin(file)
+      // Shrink before upload so the slow leg (multi-MB upload over
+      // cellular) isn't what makes scanning feel slow.
+      const scanFile = await downscaleForScan(file)
+      const res = await scanVin(scanFile)
       if (!res.found || !res.best) {
         setDecodeFeedback({
           severity: 'warning',
