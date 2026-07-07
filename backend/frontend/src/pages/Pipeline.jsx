@@ -18,9 +18,7 @@ import GroupIcon from '@mui/icons-material/Group'
 import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
-import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
 import FingerprintOutlinedIcon from '@mui/icons-material/FingerprintOutlined'
-import SpeedOutlinedIcon from '@mui/icons-material/SpeedOutlined'
 import {
   DndContext,
   DragOverlay,
@@ -54,10 +52,6 @@ const VEHICLE_STATUS_COLORS = {
   hidden: { bg: 'action.hover', fg: 'text.disabled' },
 }
 
-function formatMileage(mi) {
-  if (mi == null) return null
-  return `${mi.toLocaleString()} mi`
-}
 
 function columnCollisionDetection(args) {
   const pointerCollisions = pointerWithin(args)
@@ -169,7 +163,13 @@ function CardBody({ card, dragging = false }) {
         </Stack>
       </Stack>
 
-      <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" mt={1.25}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        sx={{ columnGap: 0.5, rowGap: 0.75, mt: 1.25 }}
+      >
         <Tooltip title="Time in this status">
           <Chip
             size="small"
@@ -206,21 +206,10 @@ function CardBody({ card, dragging = false }) {
         </Tooltip>
         {card.vehicle && (
           <>
-            {[card.vehicle.year, card.vehicle.make, card.vehicle.model]
-              .filter(Boolean)
-              .join(' ') && (
-              <Tooltip title="Linked vehicle">
-                <Chip
-                  size="small"
-                  icon={<DirectionsCarOutlinedIcon sx={{ fontSize: 14 }} />}
-                  label={[card.vehicle.year, card.vehicle.make, card.vehicle.model]
-                    .filter(Boolean)
-                    .join(' ')}
-                  variant="outlined"
-                  sx={{ fontSize: 11, height: 22, maxWidth: 170 }}
-                />
-              </Tooltip>
-            )}
+            {/* Vehicle name intentionally NOT chipped here — it already leads
+                the card title (event_name), so repeating it is noise. These
+                chips carry only what the title doesn't: inventory status +
+                a VIN tail for lot lookup. Mileage is off the glance view. */}
             {card.vehicle.vehicle_status && (
               <Tooltip title={`Inventory status: ${card.vehicle.vehicle_status}`}>
                 <Chip
@@ -238,17 +227,6 @@ function CardBody({ card, dragging = false }) {
                       VEHICLE_STATUS_COLORS[card.vehicle.vehicle_status]?.fg ||
                       'text.secondary',
                   }}
-                />
-              </Tooltip>
-            )}
-            {card.vehicle.mileage != null && (
-              <Tooltip title="Mileage">
-                <Chip
-                  size="small"
-                  icon={<SpeedOutlinedIcon sx={{ fontSize: 14 }} />}
-                  label={formatMileage(card.vehicle.mileage)}
-                  variant="outlined"
-                  sx={{ fontSize: 11, height: 22 }}
                 />
               </Tooltip>
             )}
