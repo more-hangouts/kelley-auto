@@ -12,11 +12,11 @@ import SettingsPageHeader from '../components/SettingsPageHeader'
 // schedule page beneath /settings/staff/profiles), so drilling into a
 // sub-page keeps the parent tab highlighted.
 
+// Only the team roster is surfaced for the dealership. The scheduling /
+// time-off / boutique-locations / attendance tabs are dress-shop leftovers;
+// their routes still exist (see App.jsx) but are no longer shown here.
 const TABS = [
-  { value: '/settings/staff/profiles', label: 'Staff profiles', paths: ['/settings/staff/profiles/*'] },
-  { value: '/settings/staff/schedule', label: 'Schedule & time off', paths: ['/settings/staff/schedule/*'] },
-  { value: '/settings/staff/locations', label: 'Locations', paths: ['/settings/staff/locations'] },
-  { value: '/settings/staff/attendance', label: 'Attendance review', paths: ['/settings/staff/attendance'] },
+  { value: '/settings/staff/profiles', label: 'Team members', paths: ['/settings/staff/profiles/*'] },
 ]
 
 function activeTab(pathname) {
@@ -40,7 +40,7 @@ export default function StaffManagementLayout() {
       <SettingsPageHeader
         crumbs={[
           { label: 'Settings', to: '/settings' },
-          { label: 'Staff management' },
+          { label: 'Team & admins' },
         ]}
       />
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2.5 }}>

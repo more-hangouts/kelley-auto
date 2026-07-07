@@ -29,10 +29,10 @@ const SECTIONS = [
     description: 'Theme, copy, availability, blackout dates, and embed code for the public booking widget.',
   },
   {
-    to: '/settings/staff',
+    to: '/settings/staff/profiles',
     icon: GroupsIcon,
-    title: 'Staff management',
-    description: 'Stylist profiles, schedules and time off, boutique locations, and attendance review.',
+    title: 'Team & admins',
+    description: 'Add sales team members and admins, set roles, and manage login PINs.',
   },
   {
     to: '/settings/recycle-bin',
