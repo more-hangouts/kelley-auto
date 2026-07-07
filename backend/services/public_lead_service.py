@@ -187,6 +187,67 @@ def _record_notification_outcome(
         )
 
 
+def _send_customer_confirmation(
+    db: Session, *, contact: Any, vehicle: Any, deal_id: int
+) -> None:
+    """Send the customer a confirmation that we received their request.
+
+    Distinct from the staff alert. Fully best-effort — no email address, a
+    disabled transport, or a mailer failure must never fail the lead — and the
+    outcome is recorded on the deal timeline (lead.confirmation_sent/_failed).
+    """
+    email = (getattr(contact, "email", None) or "").strip()
+    if not email or not email_transport.email_delivery_enabled():
+        return
+
+    ok = False
+    try:
+        from services import notification_templates
+
+        vehicle_label = None
+        if vehicle is not None:
+            vehicle_label = (
+                " ".join(
+                    str(x) for x in (vehicle.year, vehicle.make, vehicle.model) if x
+                ).strip()
+                or None
+            )
+        profile = db.query(BusinessProfile).first()
+        rendered = notification_templates.render_lead_confirmation(
+            customer_name=contact.display_name,
+            vehicle_label=vehicle_label,
+            profile=profile,
+        )
+        ok = send_rendered_safely(
+            to=email, rendered=rendered, scope="public_lead.confirmation"
+        )
+    except Exception:  # noqa: BLE001 — confirmation is best-effort
+        log.exception("public_lead.confirmation_failed deal_id=%s", deal_id)
+
+    try:
+        activity_log.log_activity(
+            db,
+            event_id=deal_id,
+            actor_kind="system",
+            actor_user_id=None,
+            activity_type=(
+                activity_log.LEAD_CONFIRMATION_SENT
+                if ok
+                else activity_log.LEAD_CONFIRMATION_FAILED
+            ),
+            subject_kind="event",
+            subject_id=deal_id,
+            # Minimize PII in the audit payload — the email already lives on the
+            # contact record; the timeline only needs the delivery domain.
+            payload={"to_domain": email.rsplit("@", 1)[-1] if "@" in email else None},
+        )
+        db.flush()
+    except Exception:  # noqa: BLE001
+        log.exception(
+            "public_lead.confirmation_outcome_unrecorded deal_id=%s", deal_id
+        )
+
+
 class PublicLeadError(Exception):
     """Domain rejection surfaced as 4xx by the router."""
 
@@ -354,6 +415,9 @@ def submit_public_lead(
             storefront_analytics_service.attach_lead_attribution(
                 db, crm_event_id=existing.id, ctx=tracking
             )
+        _send_customer_confirmation(
+            db, contact=contact, vehicle=vehicle, deal_id=existing.id
+        )
         _notify_staff_of_lead(
             db,
             is_new=False,
@@ -410,6 +474,9 @@ def submit_public_lead(
         storefront_analytics_service.attach_lead_attribution(
             db, crm_event_id=event.id, ctx=tracking
         )
+    _send_customer_confirmation(
+        db, contact=contact, vehicle=vehicle, deal_id=event.id
+    )
     _notify_staff_of_lead(
         db,
         is_new=True,

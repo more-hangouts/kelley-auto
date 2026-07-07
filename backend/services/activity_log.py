@@ -115,6 +115,11 @@ PUBLIC_LEAD_SUBMITTED = "lead.public_submitted"
 # behind the "sent" of the submission itself.
 LEAD_NOTIFICATION_SENT = "lead.notification_sent"
 LEAD_NOTIFICATION_FAILED = "lead.notification_failed"
+# Outcome of the customer-facing confirmation email sent back to the person who
+# submitted the lead (distinct from the staff alert above). Best-effort: the
+# _failed variant records a missed confirmation without failing the submission.
+LEAD_CONFIRMATION_SENT = "lead.confirmation_sent"
+LEAD_CONFIRMATION_FAILED = "lead.confirmation_failed"
 # Access to decrypted BHPH application PII (migration 089). Every view or
 # edit of the sensitive fields writes one of these so there is a permanent
 # who-looked-at-DOB/DL/address trail. actor_kind='staff' with the user id.
@@ -217,6 +222,8 @@ _KNOWN_TYPES = frozenset(
         PUBLIC_LEAD_SUBMITTED,
         LEAD_NOTIFICATION_SENT,
         LEAD_NOTIFICATION_FAILED,
+        LEAD_CONFIRMATION_SENT,
+        LEAD_CONFIRMATION_FAILED,
         APPLICATION_PII_VIEWED,
         APPLICATION_PII_UPDATED,
         APPOINTMENT_ARRIVED,

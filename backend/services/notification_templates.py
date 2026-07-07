@@ -7,13 +7,22 @@ can swap to Jinja and keep the same render-at-send shape.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from html import escape
+from pathlib import Path
+from urllib.parse import urlparse
 
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm.session import object_session
 
-from config.settings import APP_TIMEZONE, SMTP_FROM_EMAIL, WIDGET_PUBLIC_BASE_URL
+from config.settings import (
+    APP_TIMEZONE,
+    PUBLIC_SITE_URL,
+    SMTP_FROM_EMAIL,
+    WIDGET_PUBLIC_BASE_URL,
+)
 from database.models import Appointment, AppointmentEnrichmentResponse
 from services.booking_service import format_confirmation_code
 from services.booking_tokens import cancel_url, enrichment_url, reschedule_url
@@ -76,6 +85,134 @@ class RenderedEmail:
     subject: str
     text: str
     html: str
+
+
+# ---------------------------------------------------------------------------
+# Customer lead-confirmation email (MJML-designed)
+# ---------------------------------------------------------------------------
+# The HTML body is authored in templates/emails/lead_confirmation.mjml and
+# compiled (once, via the mjml CLI) to lead_confirmation.html, which keeps the
+# {{ jinja }} placeholders. We render that compiled file at send time — MJML is
+# the design tool, Jinja does the variable fill. Autoescape guards the customer
+# name against HTML injection.
+_EMAIL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "emails"
+_email_jinja = Environment(
+    loader=FileSystemLoader(str(_EMAIL_TEMPLATE_DIR)),
+    autoescape=select_autoescape(["html"]),
+)
+
+
+def _first_name(full_name: str | None) -> str:
+    parts = (full_name or "").strip().split()
+    return parts[0] if parts else "there"
+
+
+def _tel_href(phone: str | None) -> str:
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) == 10:
+        return f"+1{digits}"
+    if len(digits) == 11 and digits.startswith("1"):
+        return f"+{digits}"
+    return digits
+
+
+def _one_line_address(profile) -> str:
+    if profile is None:
+        return ""
+    bits = [
+        getattr(profile, "address_line1", None),
+        getattr(profile, "city", None),
+        " ".join(
+            b
+            for b in (
+                getattr(profile, "state", None),
+                getattr(profile, "postal_code", None),
+            )
+            if b
+        ).strip()
+        or None,
+    ]
+    return ", ".join(b for b in bits if b)
+
+
+def render_lead_confirmation(
+    *,
+    customer_name: str | None,
+    vehicle_label: str | None,
+    profile,
+    site_url: str | None = None,
+) -> RenderedEmail:
+    """Customer-facing confirmation for a submitted public lead. ``profile`` is
+    the BusinessProfile row (or None); ``vehicle_label`` is a pre-built
+    "YEAR MAKE MODEL" string (or None for a general inquiry)."""
+    business_name = (
+        (getattr(profile, "display_name", None) or getattr(profile, "legal_name", None))
+        if profile is not None
+        else None
+    ) or "Kelley Autoplex"
+    business_phone = (
+        getattr(profile, "phone", None) if profile is not None else None
+    ) or ""
+    site_url = (site_url or PUBLIC_SITE_URL or "").rstrip("/")
+    site_host = urlparse(site_url).netloc or "our website"
+    browse_url = f"{site_url}/cars-for-sale" if site_url else ""
+
+    greeting_name = _first_name(customer_name)
+    if vehicle_label:
+        interest_line = (
+            f"You reached out about the {vehicle_label} — great pick. "
+            "We'll help you get behind the wheel."
+        )
+    else:
+        interest_line = (
+            "Thanks for reaching out about our inventory. "
+            "We'll help you find the right vehicle."
+        )
+    body_line = (
+        "A member of our team will contact you shortly to get you approved — "
+        "no credit check required. Have any questions ready and we'll take care "
+        "of the rest."
+    )
+    address = _one_line_address(profile)
+    footer_address = f" · {address}" if address else ""
+
+    ctx = {
+        "business_name": business_name,
+        "greeting_name": greeting_name,
+        "interest_line": interest_line,
+        "body_line": body_line,
+        "business_phone": business_phone or "us",
+        "phone_tel": _tel_href(business_phone),
+        "browse_url": browse_url or site_url,
+        "site_host": site_host,
+        "footer_address": footer_address,
+        "preheader": f"{business_name} received your request — we'll be in touch shortly.",
+        "current_year": datetime.now().year,
+    }
+    html = _email_jinja.get_template("lead_confirmation.html").render(**ctx)
+
+    text_lines = [
+        f"Thanks, {greeting_name} — we got your request!",
+        "",
+        interest_line,
+        body_line,
+        "",
+    ]
+    if browse_url or site_url:
+        text_lines.append(f"Browse our inventory: {browse_url or site_url}")
+    if business_phone:
+        text_lines.append(f"Call us: {business_phone}")
+    text_lines += [
+        "",
+        f"{business_name}{footer_address}",
+        f"You're receiving this because you submitted a request at {site_host}.",
+    ]
+
+    return RenderedEmail(
+        subject=f"We got your request — {business_name}",
+        text="\n".join(text_lines),
+        html=html,
+    )
 
 
 def _format_slot(appt: Appointment) -> str:
