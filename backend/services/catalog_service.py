@@ -78,7 +78,12 @@ class CatalogItemInput:
     that try to set it are bypassing the obfuscation contract.
     """
 
-    internal_sku: str
+    # Nullable for vehicle rows: when both internal_sku and stock_number
+    # are blank, create_catalog_item derives them from the minted
+    # public_code. Non-vehicle rows still require it (enforced by the API).
+    # No default (keeps dataclass field order valid); every caller passes
+    # it explicitly via the router's to_input / the importer.
+    internal_sku: str | None
     color: str
     category: str
     designer: str | None = None
@@ -907,8 +912,23 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
             style_number = data.model
 
     public_code = _assign_catalog_public_code(db)
+
+    # Vehicles: staff aren't asked to invent a stock number. When both
+    # internal_sku and stock_number are blank, fall back to the freshly
+    # minted public_code so the NOT NULL/unique internal_sku is satisfied
+    # and the car stays findable by a real code. Staff can set a real
+    # dealer stock number later via edit. Non-vehicle rows are unaffected
+    # (the API requires internal_sku for them).
+    internal_sku = data.internal_sku
+    stock_number = data.stock_number
+    if data.is_vehicle:
+        if not internal_sku:
+            internal_sku = public_code
+        if not stock_number:
+            stock_number = public_code
+
     item = CatalogItem(
-        internal_sku=data.internal_sku,
+        internal_sku=internal_sku,
         public_code=public_code,
         designer=designer,
         style_number=style_number,
@@ -929,7 +949,7 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
         unit_price_cents=data.unit_price_cents,
         is_vehicle=data.is_vehicle,
         vin=normalized_vin,
-        stock_number=data.stock_number,
+        stock_number=stock_number,
         year=data.year,
         make=data.make,
         model=data.model,

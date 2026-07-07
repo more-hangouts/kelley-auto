@@ -193,8 +193,9 @@ function parseIntField(value) {
 // Build the create/patch body from the form, validating client-side first
 // so the obvious mistakes never round-trip. Returns { body } or { error }.
 function buildPayload(form, { isEdit }) {
+  // Stock number is optional — staff shouldn't have to invent one. When
+  // left blank, the server auto-assigns it from the vehicle's public code.
   const stock = form.stock_number.trim()
-  if (!stock) return { error: 'Stock number is required.' }
 
   const exterior = form.exterior_color.trim()
   if (!exterior) return { error: 'Exterior color is required.' }
@@ -229,7 +230,7 @@ function buildPayload(form, { isEdit }) {
   const features = form.features.map((f) => f.trim()).filter(Boolean)
 
   const body = {
-    stock_number: stock,
+    stock_number: stock || null,
     exterior_color: exterior,
     vin: vin || null,
     year: yearRes.value,
@@ -1010,11 +1011,10 @@ export default function AdminVehicles() {
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Stock number"
+                label="Stock number (optional)"
                 value={form.stock_number}
                 onChange={(e) => setForm({ ...form, stock_number: e.target.value })}
-                required
-                helperText="Internal stock number staff use to find the car."
+                helperText="Leave blank to auto-assign from the vehicle's code."
                 sx={{ flex: 1 }}
               />
               <Stack direction="row" spacing={1} sx={{ flex: 1 }} alignItems="flex-start">

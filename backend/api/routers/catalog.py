@@ -104,8 +104,9 @@ class CatalogItemCreate(BaseModel):
             raise ValueError("vehicle_status is not allowed")
 
         if self.is_vehicle:
-            if not self.stock_number:
-                raise ValueError("stock_number is required for vehicle create")
+            # stock_number is optional: staff shouldn't have to invent one.
+            # When blank, the service derives internal_sku + stock_number
+            # from the minted public_code (see create_catalog_item).
             if not self.exterior_color:
                 raise ValueError("exterior_color is required for vehicle create")
             if self.category is not None and self.category != "vehicle":
