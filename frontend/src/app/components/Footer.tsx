@@ -56,7 +56,7 @@ export default async function Footer() {
               {nap.telHref ? (
                 <a
                   href={nap.telHref}
-                  className="text-lg font-medium text-neutral-100 hover:text-primary transition-colors"
+                  className="text-lg font-medium text-neutral-100 hover:text-primary-light transition-colors"
                 >
                   {nap.phoneDisplay}
                 </a>
@@ -74,7 +74,7 @@ export default async function Footer() {
             {nap.email && (
               <a
                 href={`mailto:${nap.email}`}
-                className="text-base font-medium text-neutral-100 hover:text-primary transition-colors"
+                className="text-base font-medium text-neutral-100 hover:text-primary-light transition-colors"
               >
                 {nap.email}
               </a>
@@ -111,7 +111,7 @@ export default async function Footer() {
               <li>
                 <Link
                   href="/cars-for-sale"
-                  className="mt-1 flex items-center gap-2 py-1.5 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
+                  className="mt-1 flex items-center gap-2 py-1.5 text-sm font-medium text-primary-light hover:text-white transition-colors"
                 >
                   Browse All Inventory
                   <svg className="size-4" fill="none" viewBox="0 0 20 20">
@@ -160,7 +160,7 @@ export default async function Footer() {
                   <Link
                     key={tag}
                     href={`/cars-for-sale?tag=${tag}`}
-                    className="rounded border border-neutral-600 px-3 py-1.5 text-sm font-medium text-neutral-100 hover:border-primary hover:text-primary transition-colors"
+                    className="rounded border border-neutral-600 px-3 py-1.5 text-sm font-medium text-neutral-100 hover:border-primary-light hover:text-primary-light transition-colors"
                   >
                     {tag}
                   </Link>

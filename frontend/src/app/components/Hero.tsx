@@ -34,7 +34,7 @@ export default async function Hero() {
 
       {/* Watermark text — fluid size so it fills the hero width on one line */}
       <div className="absolute inset-0 flex items-center justify-center px-4">
-        <h1 className="font-[family-name:var(--font-bebas)] text-[clamp(2.5rem,12.5vw,17rem)] leading-none tracking-[2px] whitespace-nowrap bg-gradient-to-b from-white/80 to-white/10 bg-clip-text text-transparent select-none uppercase text-center">
+        <h1 className="font-[family-name:var(--font-bebas)] text-[clamp(2.5rem,12.5vw,17rem)] leading-none tracking-[2px] whitespace-nowrap bg-gradient-to-b from-white/90 to-white/25 bg-clip-text text-transparent select-none uppercase text-center [-webkit-text-stroke:1px_rgba(255,255,255,0.4)] drop-shadow-[0_6px_16px_rgba(0,0,0,0.45)]">
           {watermark}
         </h1>
       </div>
