@@ -81,6 +81,40 @@ export default async function TermsAndConditionsPage() {
             </section>
 
             <section>
+              <h2 className="text-xl font-semibold text-neutral-700">Text Messaging (SMS) Terms</h2>
+              <p className="mt-3">
+                By providing your mobile phone number and checking the consent box on any
+                Kelley Autoplex form, you agree to receive calls and text messages from Kelley
+                Autoplex at that number about your inquiry, including via automated technology.
+                These messages relate to your vehicle inquiry, appointment scheduling, vehicle
+                availability, and financing questions. Consent to receive text messages is not a
+                condition of purchasing any vehicle or service.
+              </p>
+              <p className="mt-3">
+                <strong>Message frequency varies.</strong> Message and data rates may apply,
+                depending on your mobile carrier and plan. Kelley Autoplex and your mobile
+                carrier are not liable for delayed or undelivered messages.
+              </p>
+              <p className="mt-3">
+                You can cancel the SMS service at any time by replying <strong>STOP</strong> to
+                any message. After you reply STOP, we will send a one-time confirmation and will
+                no longer send text messages to that number. For help, reply <strong>HELP</strong>{" "}
+                or contact us using the details below. To resume messages after opting out, reply{" "}
+                <strong>START</strong>.
+              </p>
+              <p className="mt-3">
+                Carriers, including but not limited to T-Mobile, are not liable for delayed or
+                undelivered messages. For information on how we handle the data you provide,
+                including mobile information, see our{" "}
+                <a className="font-medium text-primary underline" href="/privacy-policy">
+                  Privacy Policy
+                </a>
+                . Mobile opt-in information and consent are never shared with third parties for
+                marketing purposes.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-xl font-semibold text-neutral-700">Financing Information</h2>
               <p className="mt-3">
                 Financing content on this website is provided as a convenience. Kelley Autoplex
