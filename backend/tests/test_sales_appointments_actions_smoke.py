@@ -311,9 +311,10 @@ def main() -> None:
 
     # ------------------------------------------------------------------
     # Scenario A: arrived on appointment with NO event.
-    # Expectation: event is created (status starts at 'lead', then
-    # transitions to 'consulted'); both event.status_changed and
-    # appointment.arrived rows land in activity_log.
+    # Expectation: a vehicle_sale event is created (status starts at
+    # 'new_lead', then the arrival advance bumps it to 'appointment');
+    # both event.status_changed and appointment.arrived rows land in
+    # activity_log.
     # ------------------------------------------------------------------
     contact_a = _seed_contact()
     appt_a = _seed_appointment(contact_id=contact_a, event_id=None)
@@ -328,7 +329,7 @@ def main() -> None:
     assert body["appointment_status"] == "attended"
     assert body["promoted_event"] is True
     assert body["prior_event_status"] is None
-    assert body["new_event_status"] == "consulted"
+    assert body["new_event_status"] == "appointment"
     assert body["changed"] is True
 
     appt_a_row = _refresh_appt(appt_a)
@@ -341,16 +342,17 @@ def main() -> None:
     assert arrived_rows[0].subject_kind == "appointment"
     assert arrived_rows[0].subject_id == appt_a
     assert arrived_rows[0].payload["promoted_event"] is True
-    assert arrived_rows[0].payload["new_event_status"] == "consulted"
+    assert arrived_rows[0].payload["new_event_status"] == "appointment"
 
     status_changed_rows = _activity_for_event(new_event_id, "event.status_changed")
     assert len(status_changed_rows) == 1
-    assert status_changed_rows[0].payload["from_status"] == "lead"
-    assert status_changed_rows[0].payload["to_status"] == "consulted"
+    assert status_changed_rows[0].payload["from_status"] == "new_lead"
+    assert status_changed_rows[0].payload["to_status"] == "appointment"
 
-    # promote_appointment_to_event seeds an initial null→lead audit row
-    # in event_status_change_events; change_event_status appends another
-    # row (lead→consulted) in the same transaction. So we expect 2.
+    # promote_appointment_to_event seeds an initial null→new_lead audit
+    # row in event_status_change_events; change_event_status appends
+    # another row (new_lead→appointment) in the same transaction. So we
+    # expect 2.
     assert len(_event_status_changes(new_event_id)) == 2
 
     # Idempotent re-tap: second `arrived` is a no-op (no new rows).

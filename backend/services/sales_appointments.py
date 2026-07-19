@@ -388,6 +388,19 @@ _ACTION_TO_ACTIVITY_TYPE: dict[str, str] = {
 }
 
 
+# Per-workflow status bump applied when a customer arrives for an
+# appointment: {event_type: {current_status: advanced_status}}. Statuses
+# not listed (already at or past the visit stage) are left untouched.
+_ARRIVAL_ADVANCE: dict[str, dict[str, str]] = {
+    "vehicle_sale": {
+        "new_lead": "appointment",
+        "contacted": "appointment",
+    },
+    # legacy Bella's-era rows keep their historical behavior
+    "quinceanera": {"lead": "consulted"},
+}
+
+
 class SalesActionError(Exception):
     """Raised when a status action cannot be applied. Carries a stable
     `code` the router maps to an HTTP status."""
@@ -487,7 +500,7 @@ def apply_status_action(
                 ) from exc
             event_id = event.id
             prior_event_status = None
-            new_event_status = event.status  # 'lead' fresh from promote
+            new_event_status = event.status  # workflow initial status fresh from promote
             promoted = True
         else:
             event = db.get(Event, event_id)
@@ -499,12 +512,20 @@ def apply_status_action(
             prior_event_status = event.status
             new_event_status = event.status
 
-        if new_event_status == "lead":
+        # Arrival auto-advance: showing up moves a pre-visit event to the
+        # stage that reflects a showroom visit. The pipeline has no
+        # dedicated "visited" bucket, so vehicle_sale caps at
+        # 'appointment' (attended_at carries the arrival fact); legacy
+        # quinceanera rows keep their historical lead -> consulted bump.
+        arrival_target = _ARRIVAL_ADVANCE.get(event.event_type, {}).get(
+            new_event_status
+        )
+        if arrival_target is not None:
             try:
                 event = event_service.change_event_status(
                     db,
                     event_id=event_id,
-                    new_status="consulted",
+                    new_status=arrival_target,
                     actor_user_id=actor_user_id,
                     notes=notes,
                 )
