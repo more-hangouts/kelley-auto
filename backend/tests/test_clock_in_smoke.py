@@ -53,6 +53,11 @@ _punch_ids: list[int] = []
 # of the smoke so the "no active locations" assertion in step 10 is
 # meaningful. _cleanup re-activates them.
 _parked_location_ids: list[int] = []
+# Prod runs attendance_mode='commission' (Phase 14), which disables the
+# strict geofence this smoke asserts, and may require selfies. Pin
+# 'payroll' + selfie_policy='optional' for the run and restore the
+# original values in _cleanup.
+_orig_attendance_profile: dict | None = None
 
 # Boutique-ish coordinates for the smoke. Real Bellas geofence will be
 # seeded by the owner via the admin endpoint at deploy time; the
@@ -121,6 +126,24 @@ def _set_trusted_network(*, enabled: bool, ips: list[str]) -> None:
         db.close()
 
 
+def _set_attendance_profile(mode: str, selfie_policy: str) -> None:
+    """Slam business_profile attendance columns directly (same rationale as
+    _set_trusted_network): the geofence assertions below only hold in
+    'payroll' mode with selfies not required."""
+    db = SessionLocal()
+    try:
+        db.execute(
+            sql_text(
+                "UPDATE business_profile "
+                "SET attendance_mode = :m, selfie_policy = :sp WHERE id = 1"
+            ),
+            {"m": mode, "sp": selfie_policy},
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
 def _coords_offset(lat: float, lng: float, north_m: float, east_m: float):
     """Return (lat', lng') offset by `north_m` meters north and
     `east_m` meters east. Approximate; good enough for smoke."""
@@ -156,6 +179,15 @@ def _cleanup() -> None:
         _set_trusted_network(enabled=False, ips=[])
     except Exception:
         pass
+
+    if _orig_attendance_profile:
+        try:
+            _set_attendance_profile(
+                _orig_attendance_profile["attendance_mode"],
+                _orig_attendance_profile["selfie_policy"],
+            )
+        except Exception:
+            pass
 
     db = SessionLocal()
     try:
@@ -206,6 +238,24 @@ def _cleanup() -> None:
 
 
 def main() -> None:
+    # ---- 0. Pin strict attendance mode for the geofence assertions. ----
+    global _orig_attendance_profile
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            sql_text(
+                "SELECT attendance_mode, selfie_policy "
+                "FROM business_profile WHERE id = 1"
+            )
+        ).one()
+        _orig_attendance_profile = {
+            "attendance_mode": row[0],
+            "selfie_policy": row[1],
+        }
+    finally:
+        db.close()
+    _set_attendance_profile("payroll", "optional")
+
     # ---- 1. Haversine reference values. ----
     # Same point: zero distance.
     assert (

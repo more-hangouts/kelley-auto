@@ -106,6 +106,7 @@ represent customer-facing state.
 | `staff_schedule_entries` | `services.staff_schedule.delete_entry` (draft rows only) |
 | `staff_locations` | (column reset, not row delete — owner deactivates) |
 | `recurring_unavailability` | `services.recurring_availability.delete_block` (stylist deletes their own row; ownership check enforced in the service) |
+| `notification_subscribers` | `services.notification_subscriber_service.delete_subscriber` (admin removes a digest/alert recipient; `notification_subscriptions` children go via ON DELETE CASCADE) |
 
 **Rules:**
 - Hard-delete via `db.delete(row)` is fine; the row has no financial meaning.

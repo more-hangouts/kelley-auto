@@ -309,14 +309,19 @@ try:
             ),
             {"exclude": tuple(_ids["quotes"]) or (0,)},
         ).first()
-        assert row is not None, "expected a pre-existing signed quote on prod"
-        existing = db.get(Quote, row.id)
-        assert h.verify(existing), (
-            f"backfilled HMAC on existing quote id={existing.id} no longer verifies"
-        )
+        if row is not None:
+            existing = db.get(Quote, row.id)
+            assert h.verify(existing), (
+                f"backfilled HMAC on existing quote id={existing.id} no longer verifies"
+            )
     finally:
         db.close()
-    print(f"pre-C3 backfilled quote id={row.id} still verifies ok")
+    if row is not None:
+        print(f"pre-C3 backfilled quote id={row.id} still verifies ok")
+    else:
+        # The C3 backfill only touched Bella's-era signed quotes; a fresh
+        # deployment (Kelley) has none, so there is no drift to prove.
+        print("no pre-existing signed quotes on this deployment; backfill check skipped")
 
     # ---------------------------------------------------------------------
     # 6. Tampering with a stable business term (NOT a signature column)
