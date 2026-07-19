@@ -13,3 +13,4 @@ weasyprint==63.1
 redis==7.4.0
 Pillow==12.2.0
 pytesseract==0.3.13  # VIN sticker OCR; needs system `tesseract-ocr` binary
+google-auth[requests]==2.56.0  # Gmail API email transport (services/email_transport.py)
