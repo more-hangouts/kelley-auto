@@ -35,16 +35,6 @@ import {
   adminTagAppointmentParticipant,
   archiveEventParticipant,
 } from '../../../services/api'
-import {
-  STYLE_LABELS,
-  BACK_LABELS,
-  BUDGET_LABELS,
-  formatSizeRange,
-} from '../../../utils/boutiqueExperience'
-import {
-  celebrantDiffersFromContact,
-  getCelebrantName,
-} from '../../../utils/eventCelebrant'
 import { formatUSD } from '../../../utils/money'
 
 dayjs.extend(relativeTime)
@@ -118,147 +108,14 @@ function NotesBlock({ notes }) {
   )
 }
 
+// Includes legacy Bella's-era bucket values so old rows still label.
 const PARTY_LABEL = {
   solo: 'Just me',
   '2_3': '2-3',
   '4_plus': '4+',
-  pair: 'Parent + celebrant',
+  pair: '2',
   '3_4': '3-4',
   '5_plus': '5+',
-}
-
-function BoutiqueExperienceBlock({ status, profile, summary, submittedAt }) {
-  const isComplete = status === 'complete'
-  return (
-    <Box mt={2}>
-      <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontWeight: 600 }}
-        >
-          Boutique Experience
-        </Typography>
-        <Chip
-          size="small"
-          label={isComplete ? 'Complete' : 'Not started'}
-          color={isComplete ? 'success' : 'default'}
-          variant={isComplete ? 'filled' : 'outlined'}
-        />
-      </Stack>
-
-      {!isComplete && (
-        <Typography variant="body2" color="text.secondary">
-          Customer hasn't filled out the Boutique Experience profile yet.
-        </Typography>
-      )}
-
-      {isComplete && profile && (
-        <Box>
-          {submittedAt && (
-            <KV label="Submitted" value={formatDateTime(submittedAt)} />
-          )}
-          {profile.source && (
-            <KV
-              label="Source"
-              value={profile.source.replace(/_/g, ' ')}
-            />
-          )}
-
-          <Box mt={1.5}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}
-            >
-              Sizing
-            </Typography>
-            <KV label="Estimated range" value={formatSizeRange(profile)} />
-            {(profile.size_by_bust != null ||
-              profile.size_by_waist != null ||
-              profile.size_by_hips != null) && (
-              <KV
-                label="By measurement"
-                value={
-                  `bust ${profile.size_by_bust ?? '—'}` +
-                  ` · waist ${profile.size_by_waist ?? '—'}` +
-                  ` · hips ${profile.size_by_hips ?? '—'}`
-                }
-              />
-            )}
-            <KV
-              label="Measurements"
-              value={
-                profile.bust_inches != null ||
-                profile.waist_inches != null ||
-                profile.hips_inches != null
-                  ? `bust ${profile.bust_inches ?? '—'}"` +
-                    ` · waist ${profile.waist_inches ?? '—'}"` +
-                    ` · hips ${profile.hips_inches ?? '—'}"`
-                  : null
-              }
-            />
-            {(profile.height_ft != null || profile.height_in != null) && (
-              <KV
-                label="Height"
-                value={`${profile.height_ft ?? 0}'${profile.height_in ?? 0}"`}
-              />
-            )}
-            {profile.chart_source && (
-              <KV label="Chart" value={profile.chart_source} />
-            )}
-            {profile.off_chart && (
-              <Typography
-                variant="caption"
-                color="warning.main"
-                sx={{ display: 'block', mt: 0.5 }}
-              >
-                Customer is at the upper end of the reference chart. Confirm
-                with extended-size designers in store.
-              </Typography>
-            )}
-          </Box>
-
-          <Box mt={1.5}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}
-            >
-              Style preferences
-            </Typography>
-            <KV label="Style" value={STYLE_LABELS[profile.style] || profile.style} />
-            <KV label="Back" value={BACK_LABELS[profile.back] || profile.back} />
-            <KV
-              label="Budget"
-              value={BUDGET_LABELS[profile.budget] || profile.budget}
-            />
-            {profile.colors && <KV label="Colors" value={profile.colors} />}
-            {profile.likes && <KV label="Likes" value={profile.likes} />}
-            {profile.avoids && <KV label="Avoid" value={profile.avoids} />}
-          </Box>
-
-          {summary && (
-            <Box mt={1.5}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}
-              >
-                Customer summary
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ whiteSpace: 'pre-line', color: 'text.primary' }}
-              >
-                {summary}
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
-    </Box>
-  )
 }
 
 function BookingDetail({ appointment: a, eventId, participants }) {
@@ -372,13 +229,6 @@ function BookingDetail({ appointment: a, eventId, participants }) {
         )}
       </Box>
 
-      <BoutiqueExperienceBlock
-        status={a.boutique_experience_status}
-        profile={a.boutique_experience}
-        summary={a.boutique_experience_summary}
-        submittedAt={a.boutique_experience_submitted_at}
-      />
-
       {enrichment && (
         <Box mt={2}>
           <Typography
@@ -386,7 +236,7 @@ function BookingDetail({ appointment: a, eventId, participants }) {
             color="text.secondary"
             sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}
           >
-            Enrichment survey
+            Intake survey (legacy)
           </Typography>
           {enrichment.submitted_at && (
             <KV label="Submitted" value={formatDateTime(enrichment.submitted_at)} />
@@ -400,6 +250,7 @@ function BookingDetail({ appointment: a, eventId, participants }) {
           {enrichment.court_size != null && (
             <KV label="Court size" value={enrichment.court_size} />
           )}
+          {/* legacy Bella's-era rows */}
           {enrichment.dress_styles?.length > 0 && (
             <KV label="Style picks" value={enrichment.dress_styles.join(', ')} />
           )}
@@ -680,7 +531,7 @@ function BuyerJourneys({ event }) {
                   variant="body2"
                   sx={{ fontWeight: 600, color: 'text.secondary' }}
                 >
-                  Untagged (celebrant or legacy)
+                  Untagged (legacy)
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {countLabel(untagged)}
@@ -742,9 +593,9 @@ export default function Overview() {
   return (
     <Box>
       <Section title={event.event_type === 'vehicle_sale' ? 'Deal' : 'Event'}>
-        {/* Quinceañera-era fields are noise on a vehicle deal (always empty),
-            so they only render for non-vehicle events. Event date shows on a
-            vehicle deal only when it's actually set. */}
+        {/* legacy Bella's-era rows: quince-era fields only render for
+            non-vehicle events. Event date shows on a vehicle deal only
+            when it's actually set. */}
         {event.event_type !== 'vehicle_sale' && (
           <>
             <KV
@@ -803,15 +654,6 @@ export default function Overview() {
         <KV label="Name" value={event.primary_contact?.display_name} />
         <KV label="Phone" value={event.primary_contact_phone} />
         <KV label="Email" value={event.primary_contact_email} />
-        {celebrantDiffersFromContact(event) && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: 'block', mt: 1 }}
-          >
-            Celebrant on this event: {getCelebrantName(event)}
-          </Typography>
-        )}
       </Section>
 
       {event.event_type === 'vehicle_sale' && (
@@ -936,7 +778,7 @@ export default function Overview() {
       </Section>
 
       <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 4 }}>
-        Dress orders, alterations, and payments will appear here in a later release.
+        Orders and payments will appear here in a later release.
       </Typography>
 
       <RecordDependenciesDialog

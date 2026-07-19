@@ -236,7 +236,7 @@ export default function ContactEditDialog({
                     color="text.secondary"
                     sx={{ display: 'block', mb: 0.5 }}
                   >
-                    Other celebrant names seen on this contact
+                    Other customer names seen on this contact
                   </Typography>
                   <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                     {contact.alternate_celebrants.map((name) => (

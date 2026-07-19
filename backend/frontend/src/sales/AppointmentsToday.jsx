@@ -56,12 +56,12 @@ function partySizeLabel(bucket) {
   }
 }
 
+// Renders the intake summary line; only legacy Bella's-era rows carry
+// an enrichment summary anymore.
 function enrichmentLine(summary) {
   if (!summary) return null
   const bits = []
   if (summary.budget_range) bits.push(summary.budget_range)
-  if (summary.quince_theme) bits.push(summary.quince_theme)
-  if (summary.dress_styles?.length) bits.push(summary.dress_styles.join(', '))
   return bits.length ? bits.join(' · ') : null
 }
 

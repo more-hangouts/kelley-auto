@@ -11,11 +11,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import {
-  STYLE_LABELS,
-  BUDGET_LABELS,
-  formatSizeRange,
-} from '../utils/boutiqueExperience'
 import { formatUSD } from '../utils/money'
 import CloseIcon from '@mui/icons-material/Close'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
@@ -25,7 +20,6 @@ import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 
 import { getEvent, getEventWorkflow } from '../services/api'
-import { celebrantDiffersFromContact } from '../utils/eventCelebrant'
 
 function formatDate(d) {
   if (!d) return '—'
@@ -112,15 +106,9 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {card.event_name}
             </Typography>
-            {celebrantDiffersFromContact(detail) ? (
-              <Typography variant="caption" color="text.secondary">
-                Contact: {card.primary_contact?.display_name}
-              </Typography>
-            ) : (
-              <Typography color="text.secondary" variant="body2">
-                {card.primary_contact?.display_name}
-              </Typography>
-            )}
+            <Typography color="text.secondary" variant="body2">
+              {card.primary_contact?.display_name}
+            </Typography>
 
             <Box sx={{ mt: 2.5 }}>
               <TextField
@@ -238,11 +226,8 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
                   )}
                 </>
               ) : card.event_type === 'quinceanera' ? (
-                <>
-                  <KV label="Event date" value={formatDate(card.event_date)} />
-                  <KV label="Court size" value={card.court_size ?? '—'} />
-                  <KV label="Theme" value={card.quince_theme} />
-                </>
+                /* legacy Bella's-era rows */
+                <KV label="Event date" value={formatDate(card.event_date)} />
               ) : (
                 <KV
                   label="Vehicle"
@@ -441,70 +426,6 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
                   />
                 </Stack>
 
-                {card.event_type === 'quinceanera' && (
-                <>
-                <Divider sx={{ my: 2.5 }} />
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  spacing={1}
-                  sx={{ mb: 0.5 }}
-                >
-                  <Typography
-                    variant="overline"
-                    color="text.secondary"
-                    sx={{ fontWeight: 600 }}
-                  >
-                    Boutique Experience
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label={
-                      latestAppt.boutique_experience_status === 'complete'
-                        ? 'Complete'
-                        : 'Not started'
-                    }
-                    color={
-                      latestAppt.boutique_experience_status === 'complete'
-                        ? 'success'
-                        : 'default'
-                    }
-                    variant={
-                      latestAppt.boutique_experience_status === 'complete'
-                        ? 'filled'
-                        : 'outlined'
-                    }
-                  />
-                </Stack>
-                {latestAppt.boutique_experience_status === 'complete' &&
-                latestAppt.boutique_experience ? (
-                  <Stack spacing={0.5}>
-                    <KV
-                      label="Size estimate"
-                      value={formatSizeRange(latestAppt.boutique_experience)}
-                    />
-                    <KV
-                      label="Style"
-                      value={
-                        STYLE_LABELS[latestAppt.boutique_experience.style] ||
-                        latestAppt.boutique_experience.style
-                      }
-                    />
-                    <KV
-                      label="Budget"
-                      value={
-                        BUDGET_LABELS[latestAppt.boutique_experience.budget] ||
-                        latestAppt.boutique_experience.budget
-                      }
-                    />
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Customer hasn't filled this out yet.
-                  </Typography>
-                )}
-                </>
-                )}
               </>
             )}
 

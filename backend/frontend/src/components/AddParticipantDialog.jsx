@@ -17,7 +17,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { addEventParticipant } from '../services/api'
 
-const STEPS = ['Parent', 'Celebrant', 'Contact']
+const STEPS = ['Parent', 'Buyer', 'Contact']
 
 // PartySizeBucket vocabulary mirrors the backend Pydantic Literal in
 // `api/routers/event_participants.py`. The legacy values
@@ -25,7 +25,7 @@ const STEPS = ['Parent', 'Celebrant', 'Contact']
 // widget no longer emits them, and Phase 6 prunes them so new
 // participant rows do not collect drift values.
 const PARTY_BUCKETS = [
-  { value: 'pair', label: 'Parent + celebrant' },
+  { value: 'pair', label: '2 of us' },
   { value: '3_4', label: '3-4 of us' },
   { value: '5_plus', label: '5 or more' },
 ]
@@ -41,10 +41,10 @@ const INITIAL_FORM = {
   role: 'other',
 }
 
+// The legacy Bella's-era court roles (quinceanera/dama/chambelan) are
+// still accepted by the backend for historical rows but are no longer
+// offered for new participants.
 const ROLE_OPTIONS = [
-  { value: 'quinceanera', label: 'Buyer' },
-  { value: 'dama', label: 'Court — dama' },
-  { value: 'chambelan', label: 'Court — chambelán' },
   { value: 'parent', label: 'Parent' },
   { value: 'other', label: 'Other' },
 ]

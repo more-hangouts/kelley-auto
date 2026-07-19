@@ -214,7 +214,9 @@ function ThemeAndCopy() {
           <CopyRow label="Submit button" value={data.copy_text.submit_label} onChange={(v) => setCopy('submit_label', v)} />
           <CopyRow label="Success heading" value={data.copy_text.success_heading} onChange={(v) => setCopy('success_heading', v)} />
           <CopyRow label="Success subtitle" value={data.copy_text.success_subtitle} onChange={(v) => setCopy('success_subtitle', v)} multiline />
-          <CopyRow label="Boutique label" value={data.copy_text.boutique_label} onChange={(v) => setCopy('boutique_label', v)} />
+          {/* boutique_label is the legacy Bella's-era copy key; the widget
+              reads location_label first and falls back to it. */}
+          <CopyRow label="Location label" value={data.copy_text.boutique_label} onChange={(v) => setCopy('boutique_label', v)} />
           <CopyRow label="Timezone label" value={data.copy_text.timezone_label} onChange={(v) => setCopy('timezone_label', v)} />
         </Stack>
         <Box mt={2}>

@@ -850,7 +850,7 @@ export async function updateCatalogItem(catalogItemId, patch) {
   return data
 }
 
-// Price decomposition for the catalog detail view: package vs dress-only
+// Price decomposition for the catalog detail view: package vs base item
 // and what each removable package item saves. Derived prices only — the
 // backend never returns wholesale cost or the multiplier here.
 export async function getCatalogPriceBreakdown(catalogItemId) {
@@ -863,7 +863,7 @@ export async function getCatalogPriceBreakdown(catalogItemId) {
 // ---------------------------------------------------------------------------
 //
 // Vehicles are `catalog_items` rows with `is_vehicle=true` (migration 085).
-// These wrappers reuse the same /catalog endpoints the dress catalog uses
+// These wrappers reuse the same /catalog endpoints the product catalog uses
 // but scope reads to the vehicle group AND re-gate on the `is_vehicle`
 // discriminator client-side — per the Day 1 rule, `is_vehicle` is the only
 // reliable "this is a car" signal, so a backfilled non-vehicle row that
@@ -962,7 +962,7 @@ export async function salesGetClockStatus({ signal } = {}) {
 
 function _buildClockForm({ latitude, longitude, accuracy_m, selfieBlob }) {
   const form = new FormData()
-  // Coords are optional: on the boutique WiFi a staffer can punch
+  // Coords are optional: on the shop WiFi a staffer can punch
   // before (or without) a GPS fix. Only send them when we actually
   // have both — a half-set pair is treated server-side as no fix.
   if (

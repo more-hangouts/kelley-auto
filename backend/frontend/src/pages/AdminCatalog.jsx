@@ -42,22 +42,27 @@ import {
 import CatalogDetailModal from '../components/CatalogDetailModal'
 // Admin catalog (products) page, mounted at /products (top-level nav).
 //
-// Staff think in three buckets — dresses, accessories, alterations — but
-// the underlying catalog_items.category enum still uses the granular
-// values quince_gown / bridal_gown / formal_gown / accessory / service
+// Staff think in buckets — accessories, add-ons, and the legacy
+// Bella's-era gown inventory — but the underlying catalog_items.category
+// enum still uses the granular stored values (accessory / service /
+// vehicle plus the legacy quince_gown / bridal_gown / formal_gown)
 // because the customer-copy renderer in catalog_service falls back to
 // the category label when a row has no house_name. This page maps the
-// three UI buckets onto those enum values via the `group=` query
-// param and a Quince/Bridal/Formal sub-selector when the user is
-// creating a Dress.
+// UI buckets onto those enum values via the `group=` query param. New
+// items can only be accessories or add-ons (vehicles have their own
+// page); 'dress' renders as Legacy for historical rows and is no
+// longer offered for new items.
 
 const GROUP_TABS = [
-  { value: 'dress', label: 'Dresses' },
   { value: 'accessory', label: 'Accessories' },
-  { value: 'addon', label: 'Alterations' },
+  { value: 'addon', label: 'Add-ons' },
+  // legacy Bella's-era rows: stored 'dress' bucket values still render.
+  { value: 'dress', label: 'Legacy' },
   { value: '', label: 'All' },
 ]
 
+// legacy Bella's-era rows: subtype selector only appears when editing
+// an existing legacy gown row.
 const DRESS_SUBTYPES = [
   { value: 'quince_gown', label: 'Quince' },
   { value: 'bridal_gown', label: 'Bridal' },
@@ -65,11 +70,13 @@ const DRESS_SUBTYPES = [
 ]
 
 const CATEGORY_DISPLAY = {
-  quince_gown: 'Quince gown',
-  bridal_gown: 'Bridal gown',
-  formal_gown: 'Formal gown',
+  // legacy Bella's-era stored values
+  quince_gown: 'Gown (legacy)',
+  bridal_gown: 'Gown (legacy)',
+  formal_gown: 'Gown (legacy)',
   accessory: 'Accessory',
-  service: 'Alteration',
+  service: 'Add-on',
+  vehicle: 'Vehicle',
 }
 
 const VIEW_MODES = [
@@ -171,7 +178,7 @@ function sortCatalogRows(rows, orderBy, order) {
 
 const DEFAULT_FORM = {
   internal_sku: '',
-  bucket: 'dress',
+  bucket: 'accessory',
   dress_subtype: 'quince_gown',
   product_title: '',
   designer: '',
@@ -211,6 +218,7 @@ function categoryFromForm(form) {
 function bucketFromCategory(category) {
   if (category === 'accessory') return 'accessory'
   if (category === 'service') return 'addon'
+  // legacy Bella's-era gown enum values map to the read-only Legacy bucket
   return 'dress'
 }
 
@@ -267,7 +275,7 @@ export default function AdminCatalog() {
   const [items, setItems] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [actionError, setActionError] = useState(null)
-  const [tab, setTab] = useState('dress')
+  const [tab, setTab] = useState('accessory')
   const [query, setQuery] = useState('')
   const [includeInactive, setIncludeInactive] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -332,7 +340,7 @@ export default function AdminCatalog() {
     setEditingVariants([])
     setForm({
       ...DEFAULT_FORM,
-      bucket: tab && tab !== '' ? tab : 'dress',
+      bucket: tab && tab !== '' && tab !== 'dress' ? tab : 'accessory',
     })
     setActionError(null)
     setDialogOpen(true)
@@ -510,12 +518,12 @@ export default function AdminCatalog() {
 
   const headerNote = useMemo(() => {
     switch (tab) {
-      case 'dress':
-        return 'Gowns — bridal and formal.'
       case 'accessory':
-        return 'Accessories like veils, jewelry, headpieces.'
+        return 'Accessories and add-on products.'
       case 'addon':
-        return 'Alteration and tailoring services.'
+        return 'Service add-ons.'
+      case 'dress':
+        return 'Legacy inventory from before the dealership conversion.'
       default:
         return 'Every product across all buckets.'
     }
@@ -899,16 +907,20 @@ export default function AdminCatalog() {
                 value={form.bucket}
                 onChange={(e) => setForm({ ...form, bucket: e.target.value })}
               >
-                <MenuItem value="dress">Dress</MenuItem>
+                {/* legacy rows keep their stored bucket; not offered for
+                    new items */}
+                {form.bucket === 'dress' && (
+                  <MenuItem value="dress">Legacy (gown)</MenuItem>
+                )}
                 <MenuItem value="accessory">Accessory</MenuItem>
-                <MenuItem value="addon">Alteration</MenuItem>
+                <MenuItem value="addon">Add-on</MenuItem>
               </Select>
             </FormControl>
             {isDress && (
               <FormControl fullWidth>
-                <InputLabel>Dress kind</InputLabel>
+                <InputLabel>Legacy kind</InputLabel>
                 <Select
-                  label="Dress kind"
+                  label="Legacy kind"
                   value={form.dress_subtype}
                   onChange={(e) => setForm({ ...form, dress_subtype: e.target.value })}
                 >

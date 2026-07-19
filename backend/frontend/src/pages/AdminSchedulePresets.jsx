@@ -368,7 +368,7 @@ export default function AdminSchedulePresets() {
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
             Picking this preset on the grid fills the start, end, and
-            late-grace fields. Times use the boutique's local clock.
+            late-grace fields. Times use the shop's local clock.
           </DialogContentText>
           <Stack spacing={2}>
             <TextField

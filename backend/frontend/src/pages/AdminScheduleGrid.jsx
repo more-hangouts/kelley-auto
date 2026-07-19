@@ -153,17 +153,17 @@ function localDateTimeInputValue(date, hhmm) {
   // Build a "YYYY-MM-DDTHH:MM" string the <input type="datetime-local">
   // round-trips through. The browser interprets these in the user's
   // local zone, which is what the manager wants — they think in
-  // boutique-local time.
+  // shop-local time.
   const [hh, mm] = hhmm.split(':')
   return `${date}T${hh.padStart(2, '0')}:${mm.padStart(2, '0')}`
 }
 
 function isoFromLocalInput(value) {
   // datetime-local inputs come back as 'YYYY-MM-DDTHH:mm' with no
-  // timezone. Treat them as boutique-local by feeding them through
+  // timezone. Treat them as shop-local by feeding them through
   // `new Date(...)` (browser's local tz) and emitting the resulting
   // absolute ISO string. The backend stamps the entry with this
-  // boutique-local interpretation and validates business_date against
+  // shop-local interpretation and validates business_date against
   // the same conversion.
   if (!value) return null
   const d = new Date(value)
@@ -175,7 +175,7 @@ function isoToLocalDateTimeInput(iso) {
   // Inverse of `isoFromLocalInput` for pre-filling the edit dialog:
   // takes an absolute ISO timestamp from the API and emits
   // 'YYYY-MM-DDTHH:MM' in the user's local timezone — the browser's
-  // local tz is the boutique's tz in practice, which matches what
+  // local tz is the shop's tz in practice, which matches what
   // the backend validates against.
   if (!iso) return ''
   const d = new Date(iso)

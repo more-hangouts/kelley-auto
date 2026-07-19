@@ -13,9 +13,6 @@ import {
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import EventIcon from '@mui/icons-material/Event'
-import GroupIcon from '@mui/icons-material/Group'
-import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import FingerprintOutlinedIcon from '@mui/icons-material/FingerprintOutlined'
@@ -180,105 +177,6 @@ function CardBody({ card, dragging = false }) {
             sx={{ fontSize: 11, height: 22 }}
           />
         </Tooltip>
-        {card.event_type === 'quinceanera' && (
-          <Tooltip
-            title={
-              card.event_date
-                ? `Event on ${dayjs(card.event_date).format('MMM D, YYYY')}`
-                : 'Event date not set yet'
-            }
-          >
-            <Chip
-              size="small"
-              icon={<EventIcon sx={{ fontSize: 14 }} />}
-              label={card.event_date ? daysUntil(card.event_date) : 'TBD'}
-              variant="outlined"
-              sx={{
-                fontSize: 11,
-                height: 22,
-                ...(card.event_date
-                  ? null
-                  : {
-                      opacity: 0.5,
-                      color: 'text.secondary',
-                      borderStyle: 'dashed',
-                    }),
-              }}
-            />
-          </Tooltip>
-        )}
-        {card.vehicle && (
-          <>
-            {/* Vehicle name intentionally NOT chipped here — it already leads
-                the card title (event_name), so repeating it is noise. These
-                chips carry only what the title doesn't: inventory status +
-                a VIN tail for lot lookup. Mileage is off the glance view. */}
-            {card.vehicle.vehicle_status && (
-              <Tooltip title={`Inventory status: ${card.vehicle.vehicle_status}`}>
-                <Chip
-                  size="small"
-                  label={card.vehicle.vehicle_status}
-                  sx={{
-                    fontSize: 11,
-                    height: 22,
-                    textTransform: 'capitalize',
-                    fontWeight: 600,
-                    bgcolor:
-                      VEHICLE_STATUS_COLORS[card.vehicle.vehicle_status]?.bg ||
-                      'action.hover',
-                    color:
-                      VEHICLE_STATUS_COLORS[card.vehicle.vehicle_status]?.fg ||
-                      'text.secondary',
-                  }}
-                />
-              </Tooltip>
-            )}
-            {card.vehicle.price_cents != null && (
-              <Tooltip title={`Asking price ${formatUSD(card.vehicle.price_cents)}`}>
-                <Chip
-                  size="small"
-                  icon={<LocalOfferOutlinedIcon sx={{ fontSize: 14 }} />}
-                  label={formatUSD(card.vehicle.price_cents)}
-                  variant="outlined"
-                  sx={{ fontSize: 11, height: 22 }}
-                />
-              </Tooltip>
-            )}
-            {card.vehicle.vin && (
-              <Tooltip title={`VIN ${card.vehicle.vin}`}>
-                <Chip
-                  size="small"
-                  icon={<FingerprintOutlinedIcon sx={{ fontSize: 14 }} />}
-                  label={card.vehicle.vin.slice(-6)}
-                  variant="outlined"
-                  sx={{ fontSize: 11, height: 22 }}
-                />
-              </Tooltip>
-            )}
-          </>
-        )}
-        {card.event_type === 'quinceanera' && card.court_size != null && (
-          <Tooltip title="Court size">
-            <Chip
-              size="small"
-              icon={<GroupIcon sx={{ fontSize: 14 }} />}
-              label={card.court_size}
-              variant="outlined"
-              sx={{ fontSize: 11, height: 22 }}
-            />
-          </Tooltip>
-        )}
-        {card.event_type === 'quinceanera' && card.quince_theme && (
-          <Tooltip title={card.quince_theme}>
-            <Chip
-              size="small"
-              icon={<PaletteIcon sx={{ fontSize: 14 }} />}
-              label={card.quince_theme}
-              variant="outlined"
-              sx={{ fontSize: 11, height: 22, maxWidth: 140 }}
-            />
-          </Tooltip>
-        )}
         {card.outstanding_balance_cents > 0 && (
           <Tooltip
             title={`${formatUSD(card.outstanding_balance_cents)} outstanding across sent or partial invoices`}

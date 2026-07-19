@@ -61,9 +61,6 @@ function emptyDetails() {
     event_name: '',
     event_date: '',
     party_size_bucket: '3_4',
-    court_size: '',
-    quince_theme: '',
-    quince_theme_colors: '',
     budget_range: '',
     notes: '',
   }
@@ -109,13 +106,6 @@ function describeError(err) {
   }
   if (typeof detail === 'string') return detail
   return 'Could not create the walk-in. Try again.'
-}
-
-function splitCsv(value) {
-  return (value || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
 }
 
 export default function SalesWalkInDialog({ open, onClose, onCreated }) {
@@ -208,13 +198,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
       },
       enrichment: {
         party_size_bucket: details.party_size_bucket,
-        court_size:
-          details.court_size === '' ? null : Number(details.court_size),
-        quince_theme: trimOrNull(details.quince_theme),
-        quince_theme_colors: splitCsv(details.quince_theme_colors),
         budget_range: trimOrNull(details.budget_range),
-        dress_styles: null,
-        colors: null,
         notes: trimOrNull(details.notes),
       },
       assigned_user_id:
@@ -339,7 +323,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                 helperText={
                   details.event_name
                     ? null
-                    : `Will default to "${autoEventName || 'celebrant'}" when blank.`
+                    : `Will default to "${autoEventName || 'buyer'}" when blank.`
                 }
               />
 
@@ -388,17 +372,6 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  label="Court size"
-                  value={details.court_size}
-                  onChange={(e) =>
-                    patchDetails({ court_size: e.target.value })
-                  }
-                  inputProps={{ min: 0, max: 100 }}
-                />
-                <TextField
                   select
                   fullWidth
                   size="small"
@@ -418,27 +391,6 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                   ))}
                 </TextField>
               </Stack>
-
-              <TextField
-                fullWidth
-                size="small"
-                label="Theme"
-                value={details.quince_theme}
-                onChange={(e) =>
-                  patchDetails({ quince_theme: e.target.value })
-                }
-              />
-
-              <TextField
-                fullWidth
-                size="small"
-                label="Theme colors"
-                value={details.quince_theme_colors}
-                onChange={(e) =>
-                  patchDetails({ quince_theme_colors: e.target.value })
-                }
-                helperText="Comma-separated, e.g. sage, blush, gold."
-              />
 
               <TextField
                 fullWidth

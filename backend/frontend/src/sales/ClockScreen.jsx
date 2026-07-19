@@ -40,7 +40,7 @@ function formatTime(iso, tz) {
 // best (smallest reported accuracy_m). Phones routinely return a coarse
 // network-based fix as their FIRST reading and tighten to a real GPS
 // fix over the next few seconds. Trusting the first reading is what
-// produced the "I'm standing inside the boutique but it says I'm 230m
+// produced the "I'm standing inside the shop but it says I'm 230m
 // away" support tickets.
 const SAMPLING_WINDOW_MS = 12_000
 const SAMPLING_EARLY_EXIT_M = 20
@@ -130,29 +130,29 @@ function describeGateError(detail, action, status) {
     if (dist != null && closest) {
       core = `You're about ${Math.round(dist)}m from ${closest}.`
     } else if (dist != null) {
-      core = `You're about ${Math.round(dist)}m from the nearest boutique.`
+      core = `You're about ${Math.round(dist)}m from the dealership.`
     } else {
-      core = "You're outside the boutique geofence."
+      core = "You're outside the dealership geofence."
     }
     if (buffer != null && buffer > 0) {
       core += ` We already allowed ±${Math.round(buffer)}m of GPS slack.`
     }
     // When the trusted-network bypass is on and the request did NOT
     // come from a trusted IP, the user has a second path: connect to
-    // the boutique Wi-Fi. Don't surface this option when the bypass
+    // the shop Wi-Fi. Don't surface this option when the bypass
     // is off; that would just confuse them.
     if (
       status?.trusted_network_enabled &&
       !status?.trusted_network_detected
     ) {
-      return `${core} Connect to the boutique Wi-Fi or move closer, then tap Retry.`
+      return `${core} Connect to the shop Wi-Fi or move closer, then tap Retry.`
     }
-    return `${core} Move closer to the boutique to clock ${action}.`
+    return `${core} Move closer to the dealership to clock ${action}.`
   }
   if (code === 'already_punched_in') return "You're already clocked in."
   if (code === 'not_punched_in') return "You're not clocked in yet."
   if (code === 'selfie_required') return 'A selfie is required to clock in. Tap the camera button.'
-  if (code === 'selfie_disabled') return 'Selfies are disabled for this boutique. Try again without one.'
+  if (code === 'selfie_disabled') return 'Selfies are disabled for this dealership. Try again without one.'
   if (code === 'selfie_too_large') return 'That photo is too large. Take a new one.'
   if (code === 'selfie_unsupported_type') return "That file type isn't supported."
   if (code === 'selfie_invalid') return "We couldn't read that photo. Try again."
@@ -340,7 +340,7 @@ export default function ClockScreen() {
     try {
       const fn = action === 'in' ? salesPunchIn : salesPunchOut
       await fn({
-        // Coords may be absent on the boutique WiFi fast-path; the API
+        // Coords may be absent on the shop WiFi fast-path; the API
         // helper omits them and the server accepts via trusted network.
         latitude: coords?.latitude,
         longitude: coords?.longitude,
@@ -384,7 +384,7 @@ export default function ClockScreen() {
   // behavior all live in the same handlers as before.
   const onClock = status?.state === 'in'
   const gpsReady = Boolean(coords)
-  // On the boutique WiFi the punch goes through without a GPS fix, so
+  // On the shop WiFi the punch goes through without a GPS fix, so
   // the button is live the moment the screen loads — the girls no
   // longer wait out the 30s location lock. GPS still runs in the
   // background and rides along for the audit trail if it resolves.
@@ -566,7 +566,7 @@ export default function ClockScreen() {
             )}
 
             {/* Trusted-network indicator. Only renders when the request
-                came in from the boutique's public IP — exactly the same
+                came in from the dealership's public IP — exactly the same
                 trigger as before; just inline inside the unified card
                 instead of in its own outlined card. */}
             {!commissionMode && status?.trusted_network_detected && (
@@ -587,7 +587,7 @@ export default function ClockScreen() {
                   sx={{ mt: '2px' }}
                 />
                 <Typography variant="body2" sx={{ flex: 1 }}>
-                  Connected through boutique network.
+                  Connected through the dealership network.
                   {!status.trusted_network_enabled
                     ? ' Not yet a backup path; for audit only.'
                     : ' Clock-in works here even without GPS.'}
@@ -633,7 +633,7 @@ export default function ClockScreen() {
                 {!coordsBusy &&
                   !gpsReady &&
                   onTrustedNetwork &&
-                  'On boutique WiFi · GPS optional'}
+                  'On shop WiFi · GPS optional'}
                 {!coordsBusy &&
                   !gpsReady &&
                   !onTrustedNetwork &&

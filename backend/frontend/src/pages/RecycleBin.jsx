@@ -65,6 +65,8 @@ function describeRestoreError(err) {
   if (code === 'restore_phone_collision') {
     return 'Another live contact already has this phone. Archive that contact or change its phone first.'
   }
+  // legacy Bella's-era error code name; means the primary-buyer slot
+  // is occupied.
   if (code === 'quinceanera_slot_taken') {
     return 'Another active primary buyer already occupies this deal.'
   }

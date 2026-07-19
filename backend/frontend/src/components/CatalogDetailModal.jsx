@@ -18,7 +18,7 @@ import { getCatalogPriceBreakdown } from '../services/api'
 
 // Read-only catalog detail view, opened by clicking a product card photo
 // or title on the Products page. Deliberately separate from the Edit
-// dialog: this is the "look at the dress" surface (gallery, colors,
+// dialog: this is the "look at the item" surface (gallery, colors,
 // description, and a plain-language price breakdown), while Edit stays
 // the admin write surface. The Edit button here just hands off to the
 // existing editor.
@@ -85,7 +85,9 @@ export default function CatalogDetailModal({ group, open, onClose, onEdit }) {
     primary.public_code
 
   const packagePrice = formatPrice(breakdown?.package_price_cents)
-  const dressOnly = formatPrice(breakdown?.dress_only_price_cents)
+  // dress_only_price_cents is the legacy Bella's-era API field name
+  // for the base-item price.
+  const itemOnly = formatPrice(breakdown?.dress_only_price_cents)
   const removable = (breakdown?.items || []).filter((i) => i.removable)
 
   return (
@@ -202,7 +204,7 @@ export default function CatalogDetailModal({ group, open, onClose, onEdit }) {
                         .join(', ')}
                       .
                     </Typography>
-                    {dressOnly && (
+                    {itemOnly && (
                       <>
                         <Divider />
                         <Stack
@@ -210,9 +212,9 @@ export default function CatalogDetailModal({ group, open, onClose, onEdit }) {
                           justifyContent="space-between"
                           alignItems="baseline"
                         >
-                          <Typography variant="body2">Dress only</Typography>
+                          <Typography variant="body2">Item only</Typography>
                           <Typography variant="body1" fontWeight={700}>
-                            {dressOnly}
+                            {itemOnly}
                           </Typography>
                         </Stack>
                       </>

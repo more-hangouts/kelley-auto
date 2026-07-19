@@ -13,7 +13,7 @@ import SettingsPageHeader from '../components/SettingsPageHeader'
 // sub-page keeps the parent tab highlighted.
 
 // Only the team roster is surfaced for the dealership. The scheduling /
-// time-off / boutique-locations / attendance tabs are dress-shop leftovers;
+// time-off / locations / attendance tabs are Bella's-era leftovers;
 // their routes still exist (see App.jsx) but are no longer shown here.
 const TABS = [
   { value: '/settings/staff/profiles', label: 'Team members', paths: ['/settings/staff/profiles/*'] },

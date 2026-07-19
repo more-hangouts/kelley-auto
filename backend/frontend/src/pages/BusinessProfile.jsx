@@ -595,7 +595,7 @@ export default function BusinessProfile() {
                 the geofence by the smaller of (a) the phone&apos;s reported
                 accuracy and (b) the cap below, so a phone reporting
                 &plusmn;40m gets up to 40m of slack but a phone reporting
-                &plusmn;500m does not. The trusted boutique network is a
+                &plusmn;500m does not. The trusted dealership network is a
                 second path that accepts a clock-in from a known shop IP
                 even if GPS rejects.
               </Typography>
@@ -619,7 +619,7 @@ export default function BusinessProfile() {
                     }
                   />
                 }
-                label="Allow clock-in from trusted boutique network"
+                label="Allow clock-in from trusted dealership network"
               />
               <TextField
                 label="Trusted IPs or CIDRs (one per line)"

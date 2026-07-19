@@ -466,7 +466,7 @@ export default function AttendanceReview({ mode = 'full' } = {}) {
     setBusyId(adjustDialog.punch.id)
     try {
       // datetime-local inputs come back as 'YYYY-MM-DDTHH:mm' in the
-      // boutique's local clock (no timezone). Convert to a real Date
+      // shop's local clock (no timezone). Convert to a real Date
       // so the JSON body carries a proper ISO with offset.
       const dt = new Date(adjustDialog.value)
       if (Number.isNaN(dt.getTime())) {
@@ -1301,7 +1301,7 @@ export default function AttendanceReview({ mode = 'full' } = {}) {
           </DialogContentText>
           <Stack spacing={2}>
             <TextField
-              label="Out time (boutique-local)"
+              label="Out time (shop-local)"
               type="datetime-local"
               value={resolveDialog?.outAtLocal || ''}
               onChange={(e) =>
@@ -1547,7 +1547,7 @@ export default function AttendanceReview({ mode = 'full' } = {}) {
                 setAdjustDialog((d) => ({ ...d, value: e.target.value }))
               }
               InputLabelProps={{ shrink: true }}
-              helperText="Boutique local time"
+              helperText="Shop local time"
               fullWidth
             />
             {adjustDialog?.punch && (

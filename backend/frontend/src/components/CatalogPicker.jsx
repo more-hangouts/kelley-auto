@@ -19,9 +19,10 @@ import { searchCatalog } from '../services/api'
 // in services/catalog_service.py.
 const GROUP_TABS = [
   { value: '', label: 'All' },
-  { value: 'dress', label: 'Dresses' },
   { value: 'accessory', label: 'Accessories' },
-  { value: 'addon', label: 'Alterations' },
+  { value: 'addon', label: 'Add-ons' },
+  // legacy Bella's-era rows: stored 'dress' bucket still filterable.
+  { value: 'dress', label: 'Legacy' },
 ]
 
 // Catalog SKU obfuscation Phase 3 line-item picker.
@@ -63,7 +64,7 @@ export default function CatalogPicker({ value, onChange, disabled }) {
   // "do we have one of these on the floor?" without opening another
   // tool.
   const [sampleFilter, setSampleFilter] = useState(undefined)
-  // UI bucket: '' (all), 'dress', 'accessory', 'addon'. Default to
+  // UI bucket: '' (all), 'accessory', 'addon', legacy 'dress'. Default to
   // 'all' so existing picker behavior is unchanged for a staff
   // member who hasn't tapped a tab; the tabs are a way to narrow
   // when staff already know what they're inserting.

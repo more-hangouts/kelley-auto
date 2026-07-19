@@ -133,7 +133,7 @@ export default function ParticipantTagDialog({
 
           <Typography variant="body2" color="text.secondary">
             Mark which event participant this appointment is for. Untag
-            it to mean "celebrant or unspecified."
+            it to mean "buyer or unspecified."
           </Typography>
 
           {hasParticipants ? (
@@ -146,7 +146,7 @@ export default function ParticipantTagDialog({
               onChange={(e) => setSelection(e.target.value)}
             >
               <MenuItem value={UNTAGGED_VALUE}>
-                <em>Untagged (celebrant or unspecified)</em>
+                <em>Untagged (buyer or unspecified)</em>
               </MenuItem>
               {(participants || []).map((p) => (
                 <MenuItem key={p.id} value={String(p.id)}>

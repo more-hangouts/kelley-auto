@@ -53,7 +53,7 @@ import VehiclePhotoManager from '../components/VehiclePhotoManager'
 // Vehicles are catalog_items rows discriminated by is_vehicle=true
 // (migration 085). This page is the dealership-facing surface: it lists,
 // creates, and edits cars through the existing /catalog API using the
-// vehicle shape. The dress/accessory catalog lives separately at
+// vehicle shape. The accessory/legacy product catalog lives separately at
 // /products (AdminCatalog) and is untouched by anything here.
 //
 // Create sends is_vehicle + stock_number + exterior_color + the vehicle

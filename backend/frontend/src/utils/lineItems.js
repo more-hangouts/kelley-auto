@@ -7,11 +7,13 @@
 // validation logic in one place so the two editors cannot drift apart.
 
 const CATEGORY_LABELS = {
-  quince_gown: 'Quince gown',
-  bridal_gown: 'Bridal gown',
-  formal_gown: 'Formal gown',
+  // legacy Bella's-era stored category values
+  quince_gown: 'Gown (legacy)',
+  bridal_gown: 'Gown (legacy)',
+  formal_gown: 'Gown (legacy)',
   accessory: 'Accessory',
   service: 'Service',
+  vehicle: 'Vehicle',
 }
 
 // Mirrors `services/catalog_service.customer_line_description`. The

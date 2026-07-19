@@ -463,17 +463,19 @@ export default function AppointmentDetail() {
             </Button>
           ) : (
             <Typography variant="caption" color="text.secondary">
-              Add a sister, friend, or court member once the appointment
-              is checked in.
+              Add a co-buyer or family member once the appointment is
+              checked in.
             </Typography>
           )}
         </Box>
       </Section>
 
+      {/* legacy Bella's-era rows: only historical appointments carry an
+          enrichment survey; the intake surfaces are gone. */}
       {data.enrichment && (
-        <Section title="Enrichment">
+        <Section title="Intake survey (legacy)">
           <Field
-            label="Dress styles"
+            label="Style picks"
             value={
               data.enrichment.dress_styles?.length
                 ? data.enrichment.dress_styles.join(', ')

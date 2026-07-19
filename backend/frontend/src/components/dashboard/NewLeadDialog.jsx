@@ -66,9 +66,6 @@ function emptyDetailsStep() {
     event_name: '',
     event_date: '',
     party_size_bucket: '3_4',
-    court_size: '',
-    quince_theme: '',
-    quince_theme_colors: [],
     budget_range: '',
     notes: '',
   }
@@ -172,15 +169,7 @@ export default function NewLeadDialog({ open, onClose }) {
       },
       enrichment: {
         party_size_bucket: detailsStep.party_size_bucket,
-        court_size:
-          detailsStep.court_size === '' ? null : Number(detailsStep.court_size),
-        quince_theme: trimOrNull(detailsStep.quince_theme),
-        quince_theme_colors: detailsStep.quince_theme_colors.length
-          ? detailsStep.quince_theme_colors
-          : null,
         budget_range: trimOrNull(detailsStep.budget_range),
-        dress_styles: null,
-        colors: null,
         notes: trimOrNull(detailsStep.notes),
       },
     }
@@ -476,58 +465,23 @@ function DetailsStep({ value, onChange, contactDisplayName }) {
         </Stack>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <TextField
-          fullWidth
-          label="Court size"
-          type="number"
-          value={value.court_size}
-          onChange={(e) => patch({ court_size: e.target.value })}
-          size="small"
-          inputProps={{ min: 0, max: 100 }}
-        />
-        <TextField
-          fullWidth
-          select
-          label="Budget"
-          value={value.budget_range}
-          onChange={(e) => patch({ budget_range: e.target.value })}
-          size="small"
-        >
-          <MenuItem value="">
-            <em>Unspecified</em>
+      <TextField
+        fullWidth
+        select
+        label="Budget"
+        value={value.budget_range}
+        onChange={(e) => patch({ budget_range: e.target.value })}
+        size="small"
+      >
+        <MenuItem value="">
+          <em>Unspecified</em>
+        </MenuItem>
+        {BUDGET_OPTIONS.map((opt) => (
+          <MenuItem key={opt} value={opt}>
+            {opt}
           </MenuItem>
-          {BUDGET_OPTIONS.map((opt) => (
-            <MenuItem key={opt} value={opt}>
-              {opt}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Stack>
-
-      <TextField
-        fullWidth
-        label="Theme"
-        value={value.quince_theme}
-        onChange={(e) => patch({ quince_theme: e.target.value })}
-        size="small"
-      />
-
-      <TextField
-        fullWidth
-        label="Theme colors (comma-separated)"
-        value={value.quince_theme_colors.join(', ')}
-        onChange={(e) =>
-          patch({
-            quince_theme_colors: e.target.value
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          })
-        }
-        size="small"
-        helperText="Free text, e.g. sage, blush, gold."
-      />
+        ))}
+      </TextField>
 
       <TextField
         fullWidth

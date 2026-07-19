@@ -308,7 +308,7 @@ export default function AdminStaffLocations() {
         <Box>
           <Typography variant="h4">Staff locations</Typography>
           <Typography variant="body2" color="text.secondary">
-            Boutique geofences. Stylists must clock in within the radius
+            Dealership geofences. Staff must clock in within the radius
             of an active location. Auto-close time drives the daily
             forgotten-clock-out cron; leave it blank to fall back to the
             24-hour runaway guard.
@@ -415,7 +415,7 @@ export default function AdminStaffLocations() {
           <DialogContentText sx={{ mb: 2 }}>
             Stylists clock in only when their phone reports coordinates
             inside this radius. Use the "Use my current location" button
-            from inside the boutique to seed the geofence accurately.
+            from inside the dealership to seed the geofence accurately.
           </DialogContentText>
           <Stack spacing={2}>
             <TextField

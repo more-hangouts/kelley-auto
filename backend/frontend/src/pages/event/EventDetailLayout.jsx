@@ -40,7 +40,6 @@ import {
   getEventWorkflow,
   patchEventStatus,
 } from '../../services/api'
-import { celebrantDiffersFromContact } from '../../utils/eventCelebrant'
 
 const RAIL_WIDTH = 200
 
@@ -181,15 +180,9 @@ export default function EventDetailLayout() {
           >
             {event.event_name}
           </Typography>
-          {celebrantDiffersFromContact(event) ? (
-            <Typography variant="caption" color="text.secondary">
-              Contact: {event.primary_contact?.display_name}
-            </Typography>
-          ) : (
-            <Typography color="text.secondary">
-              {event.primary_contact?.display_name}
-            </Typography>
-          )}
+          <Typography color="text.secondary">
+            {event.primary_contact?.display_name}
+          </Typography>
         </Box>
         <Stack
           direction="row"
