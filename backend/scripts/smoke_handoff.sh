@@ -18,7 +18,7 @@
 #   - concurrency one-offs:       test_invoices_concurrent.py
 #   - admin scripts:              test_catalog_cleanup_report_smoke.py,
 #                                 test_catalog_seed_import_smoke.py,
-#                                 test_ariana_vara_scraper_smoke.py
+#                                 (dress-era scraper smokes removed)
 #   - migration validations:      test_invoice_quote_discount_phase2a_smoke.py,
 #                                 test_webhook_ingest_smoke.py,
 #                                 test_catalog_lines_smoke.py,
@@ -86,7 +86,6 @@ SUITE=(
   # booking / customer
   tests/test_booking_smoke.py
   tests/test_booking_marketing_consent_smoke.py
-  tests/test_boutique_experience_smoke.py
   tests/test_confirmation_code_entropy_smoke.py
 
   # admin appointments
@@ -123,7 +122,6 @@ SUITE=(
   tests/test_sales_auth_smoke.py
   tests/test_sales_appointments_smoke.py
   tests/test_sales_appointments_actions_smoke.py
-  tests/test_sales_tried_on_smoke.py
   tests/test_sales_quote_sign_convert_smoke.py
   tests/test_sales_team_schedule_smoke.py
   tests/test_portal_smoke.py
