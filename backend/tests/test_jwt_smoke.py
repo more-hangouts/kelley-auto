@@ -19,9 +19,8 @@ app via TestClient, plus a happy-path probe per scope:
   - booking signed token: expired → 404, wrong-purpose → 404, malformed
     → 404 (the public route collapses everything to a generic 404).
 
-The smoke uses the real SECRET_KEY / RESCHEDULE_TOKEN_SECRET /
-ENRICHMENT_TOKEN_SECRET from .env so a wire-compat regression would
-surface here too.
+The smoke uses the real SECRET_KEY / RESCHEDULE_TOKEN_SECRET from .env
+so a wire-compat regression would surface here too.
 """
 
 import os
@@ -51,7 +50,6 @@ from sqlalchemy import text as sql_text  # noqa: E402
 from api.server import app  # noqa: E402
 from config.settings import (  # noqa: E402
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    ENRICHMENT_TOKEN_SECRET,
     RESCHEDULE_TOKEN_SECRET,
     SECRET_KEY,
 )
@@ -367,20 +365,20 @@ try:
         raise AssertionError("wrong-purpose token should raise InvalidBookingToken")
     print("booking wrong-purpose token → InvalidBookingToken ok")
 
-    # Enrichment token uses a DIFFERENT secret. Decoding it against the
-    # reschedule secret should fail at the signature step.
-    enrichment_tok = pyjwt.encode(
+    # A token signed with the wrong secret must fail at the signature step
+    # even when its claims look right.
+    forged_tok = pyjwt.encode(
         {
             "sub": str(appt_id),
-            "purpose": "enrichment",
+            "purpose": "reschedule",
             "iat": now,
             "exp": now + timedelta(days=7),
         },
-        ENRICHMENT_TOKEN_SECRET,
+        "not-the-real-secret-" + RESCHEDULE_TOKEN_SECRET[::-1],
         algorithm="HS256",
     )
     try:
-        verify_token(enrichment_tok, "reschedule")
+        verify_token(forged_tok, "reschedule")
     except InvalidBookingToken:
         pass
     else:
@@ -402,7 +400,7 @@ try:
         ("garbage", "garbage.not.a.token"),
         ("expired", expired_resched),
         ("wrong-purpose", cancel_tok),
-        ("wrong-secret", enrichment_tok),
+        ("wrong-secret", forged_tok),
     ]
     for label, tok in bad_token_responses:
         resp = client.get(f"/api/booking/reschedule/{tok}")

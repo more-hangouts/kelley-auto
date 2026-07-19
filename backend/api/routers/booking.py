@@ -23,7 +23,6 @@ from config.settings import APP_TIMEZONE
 from database.connection import get_db
 from database.models import (
     Appointment,
-    AppointmentEnrichmentResponse,
     AppointmentSessionEvent,
     AppointmentVisitor,
     Event,
@@ -44,10 +43,6 @@ from services.booking_contracts import (
     AvailabilityDay,
     AvailabilityResponse,
     AvailabilitySlot,
-    BoutiqueExperienceConfirmRequest,
-    BoutiqueExperienceCreatedResponse,
-    BoutiqueExperienceSubmission,
-    BoutiqueExperienceTokenResponse,
     CancelRequest,
     RescheduleRequest,
     RescheduleSummary,
@@ -57,7 +52,6 @@ from services.booking_contracts import (
 from services.booking_tokens import (
     InvalidBookingToken,
     cancel_url,
-    enrichment_url,
     ensure_not_revoked,
     reschedule_url,
     revoke_appointment_tokens,
@@ -69,27 +63,18 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 # Per-IP buckets for public booking surfaces. Sized to the action:
-# - writes (create / pre-booking profile) are tight: real customers do
-#   each once or twice per session.
+# - writes (create) are tight: real customers do each once or twice per
+#   session.
 # - telemetry (events + abandon) is generous: a single session can fire
 #   many step events legitimately during heavy interaction.
-# - tokenized routes (reschedule, cancel, profile-by-token) are medium:
-#   the signed token is hard to forge, so we are mostly defending
-#   against scripted DOS rather than guessing.
-# - the confirmation-code attach path is tight per-IP AND tight per-email
-#   so a brute-force search over codes for one email is stopped before
-#   the row lookup, layered with D1's pending entropy boost.
+# - tokenized routes (reschedule, cancel) are medium: the signed token
+#   is hard to forge, so we are mostly defending against scripted DOS
+#   rather than guessing.
 _booking_create_ip_limit = rate_limit(
     bucket="booking_create_ip", limit=5, window=60
 )
 _booking_telemetry_ip_limit = rate_limit(
     bucket="booking_telemetry_ip", limit=240, window=60
-)
-_booking_profile_ip_limit = rate_limit(
-    bucket="booking_profile_ip", limit=10, window=60
-)
-_booking_confirm_ip_limit = rate_limit(
-    bucket="booking_confirm_ip", limit=10, window=60
 )
 _booking_token_ip_limit = rate_limit(
     bucket="booking_token_ip", limit=30, window=60
@@ -180,12 +165,6 @@ def _parse_visitor_id(raw: str | None) -> UUID | None:
 
 
 def _appointment_to_response(db: Session, appt: Appointment) -> AppointmentResponse:
-    attached = (
-        db.query(AppointmentEnrichmentResponse.id)
-        .filter(AppointmentEnrichmentResponse.appointment_id == appt.id)
-        .first()
-        is not None
-    )
     return AppointmentResponse(
         confirmation_code=booking_service.format_confirmation_code(appt.confirmation_code),
         slot_start=appt.slot_start_at,
@@ -194,8 +173,6 @@ def _appointment_to_response(db: Session, appt: Appointment) -> AppointmentRespo
         status=appt.status,
         reschedule_url=reschedule_url(appt),
         cancel_url=cancel_url(appt),
-        boutique_experience_url=enrichment_url(appt),
-        boutique_experience_attached=attached,
     )
 
 
@@ -339,25 +316,6 @@ def create_appointment(
             attribution=payload.attribution.model_dump(),
             booked=True,
         )
-
-    # Link a pre-booking Boutique Experience profile, if one is claimed.
-    # Best-effort: a stale or already-linked id must not invalidate the
-    # booking. Support can re-attach later if anything goes wrong here.
-    if payload.boutique_experience_profile_id is not None:
-        try:
-            booking_service.link_profile_to_appointment(
-                db,
-                profile_id=payload.boutique_experience_profile_id,
-                appointment_id=appt.id,
-            )
-            db.commit()
-        except Exception:
-            log.exception(
-                "boutique-experience link failed appt_id=%s profile_id=%s",
-                appt.id,
-                payload.boutique_experience_profile_id,
-            )
-            db.rollback()
 
     # Auto-promote to a CRM lead so the appointment shows up on the pipeline
     # board immediately. Best-effort: a promotion failure must not invalidate
@@ -513,134 +471,6 @@ def post_abandon(
 
 
 # ---------------------------------------------------------------------------
-# Boutique Experience profile (sizing + style preferences)
-# ---------------------------------------------------------------------------
-
-
-_PROFILE_BLOCKED_STATUSES = ("cancelled", "rescheduled", "attended", "no_show")
-
-
-@router.post(
-    "/boutique-experience",
-    response_model=BoutiqueExperienceCreatedResponse,
-    status_code=201,
-    dependencies=[Depends(_booking_profile_ip_limit)],
-)
-def create_boutique_experience_profile(
-    payload: BoutiqueExperienceSubmission,
-    db: Session = Depends(get_db),
-) -> BoutiqueExperienceCreatedResponse:
-    """Calculator-first path: create an unlinked profile before booking.
-
-    The returned `profile_id` is then passed to `POST /api/booking/appointments`
-    via `boutique_experience_profile_id` so the booking endpoint can link the
-    profile to the new appointment.
-    """
-    profile = booking_service.create_pre_booking_profile(db, payload=payload)
-    db.commit()
-    db.refresh(profile)
-    return BoutiqueExperienceCreatedResponse(profile_id=profile.id)
-
-
-@router.post(
-    "/boutique-experience/confirm",
-    response_model=BoutiqueExperienceTokenResponse,
-    dependencies=[Depends(_booking_confirm_ip_limit)],
-)
-def submit_boutique_experience_profile_by_confirmation(
-    payload: BoutiqueExperienceConfirmRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-) -> BoutiqueExperienceTokenResponse:
-    """Confirmation-code path: attach profile answers to an existing booking.
-
-    This covers customers who open the calculator from a fresh browser or
-    device and do not have the tokenized email/success URL handy. The
-    confirmation code must match the booking, and the email must match the
-    appointment email before the profile is written.
-    """
-    # Per-email bucket: tighter than per-IP and always counts (even before
-    # we check whether the appointment exists) so the 429 cannot be used
-    # to enumerate registered emails. Five attempts per email per minute
-    # is enough headroom for a real customer who mistypes a code once or
-    # twice, and tight enough that a brute-force search over codes for
-    # one known email gets shut down before D1's entropy boost ships.
-    enforce_or_raise(
-        bucket="booking_confirm_email",
-        scoped=str(payload.email).strip().lower(),
-        limit=5,
-        window=60,
-        request=request,
-    )
-
-    appt = _appointment_from_confirmation(db, payload.confirmation_code)
-    if not _email_matches_appointment(str(payload.email), appt):
-        raise HTTPException(status_code=404, detail="appointment not found")
-    if appt.status in _PROFILE_BLOCKED_STATUSES:
-        raise HTTPException(
-            status_code=409,
-            detail=f"appointment is {appt.status} and cannot accept profile updates",
-        )
-
-    profile = booking_service.upsert_profile_for_appointment(
-        db,
-        appointment_id=appt.id,
-        payload=payload.profile,
-        # Existing DB constraint allows `manual_attach` for support/customer
-        # code-confirmed attachment. Keep the API response specific below.
-        source="manual_attach",
-    )
-    db.commit()
-    db.refresh(profile)
-    return BoutiqueExperienceTokenResponse(
-        profile_id=profile.id,
-        source="post_booking_confirmation",
-        slot_start=appt.slot_start_at,
-        timezone=appt.timezone,
-        confirmation_code=booking_service.format_confirmation_code(appt.confirmation_code),
-    )
-
-
-@router.post(
-    "/boutique-experience/{token}",
-    response_model=BoutiqueExperienceTokenResponse,
-    dependencies=[Depends(_booking_token_ip_limit)],
-)
-def submit_boutique_experience_profile_by_token(
-    token: str,
-    payload: BoutiqueExperienceSubmission,
-    db: Session = Depends(get_db),
-) -> BoutiqueExperienceTokenResponse:
-    """Email-token path: upsert the profile for the appointment in the token.
-
-    Customer never has to enter a confirmation code or phone number; the
-    signed token identifies the appointment. A re-submit replaces the prior
-    answers in place.
-    """
-    appt = _appointment_from_token(db, token, "enrichment")
-    if appt.status in _PROFILE_BLOCKED_STATUSES:
-        raise HTTPException(
-            status_code=409,
-            detail=f"appointment is {appt.status} and cannot accept profile updates",
-        )
-
-    profile = booking_service.upsert_profile_for_appointment(
-        db,
-        appointment_id=appt.id,
-        payload=payload,
-        source="post_booking_email",
-    )
-    db.commit()
-    db.refresh(profile)
-    return BoutiqueExperienceTokenResponse(
-        profile_id=profile.id,
-        slot_start=appt.slot_start_at,
-        timezone=appt.timezone,
-        confirmation_code=booking_service.format_confirmation_code(appt.confirmation_code),
-    )
-
-
-# ---------------------------------------------------------------------------
 # Reschedule
 # ---------------------------------------------------------------------------
 
@@ -667,26 +497,6 @@ def _appointment_from_token(
         raise HTTPException(status_code=404, detail="link is invalid or expired")
 
     return appt
-
-
-def _appointment_from_confirmation(db: Session, confirmation_code: str) -> Appointment:
-    # Canonicalise input the same way new codes are stored (D1): strip
-    # every non-alphanumeric and uppercase. Legacy `BX-ABCDEF` rows were
-    # backfilled to `BXABCDEF` in migration 064, so the same comparison
-    # works for codes minted before and after D1.
-    canonical = booking_service.normalize_confirmation_code(confirmation_code)
-    appt = (
-        db.query(Appointment)
-        .filter(Appointment.confirmation_code == canonical)
-        .first()
-    )
-    if appt is None:
-        raise HTTPException(status_code=404, detail="appointment not found")
-    return appt
-
-
-def _email_matches_appointment(raw_email: str, appt: Appointment) -> bool:
-    return (raw_email or "").strip().lower() == (appt.email or "").strip().lower()
 
 
 def _to_summary(appt: Appointment) -> RescheduleSummary:
@@ -861,7 +671,7 @@ def post_cancel(
     appt.updated_at = datetime.now(timezone.utc)
     # G1: invalidate every self-service token minted for this row.
     # The cancel-side status check already 409s a re-cancel attempt;
-    # this closes the loop on the reschedule/enrichment surfaces.
+    # this closes the loop on the reschedule surface.
     revoke_appointment_tokens(appt)
     db.commit()
     db.refresh(appt)

@@ -11,11 +11,11 @@ User-spec acceptance cases:
   5. Token after reschedule → 404 (original appointment's tokens are
      revoked when the original is marked rescheduled).
   6. Newly-issued token after re-issue works (the new appointment's
-     reschedule/cancel/enrichment links are fully valid).
+     reschedule/cancel links are fully valid).
 
 Plus a couple of nearby invariants worth pinning:
 
-  - TTL `exp` for far-future appointments is capped by the 30/14-day
+  - TTL `exp` for far-future appointments is capped by the 30-day
     default (the slot-bound is even further out).
   - TTL `exp` for near-term appointments is capped by `slot_start_at +
     bound_days` (slot bound is tighter than the default).
@@ -59,7 +59,6 @@ from services.booking_tokens import (  # noqa: E402
     _SLOT_BOUND_DAYS,
     _exp_for,
     cancel_url,
-    enrichment_url,
     ensure_not_revoked,
     mint_token,
     reschedule_url,
@@ -211,7 +210,6 @@ print("wrong-purpose token → 404 with generic detail ok")
 # ---------------------------------------------------------------------------
 appt2 = _make_appointment(slot_offset_days=14)
 pre_cancel_resched_token = mint_token(appt2, "reschedule")
-pre_cancel_enrich_token = mint_token(appt2, "enrichment")
 # Sanity: token works before cancel.
 assert client.get(f"/api/booking/reschedule/{pre_cancel_resched_token}").status_code == 200
 
@@ -233,13 +231,6 @@ assert appt2_refreshed.cancelled_at is not None
 resp = client.get(f"/api/booking/reschedule/{pre_cancel_resched_token}")
 assert resp.status_code == 404, resp.text
 assert resp.json()["detail"] == "link is invalid or expired", resp.json()
-
-# Pre-cancel enrichment token must also 404.
-resp = client.post(
-    f"/api/booking/boutique-experience/{pre_cancel_enrich_token}",
-    json={"summary": "minimum-meaningful payload to satisfy the validator"},
-)
-assert resp.status_code == 404, resp.text
 print("token after cancellation → 404 (revoked via tokens_invalidated_at) ok")
 
 
@@ -254,7 +245,7 @@ print("token after cancellation → 404 (revoked via tokens_invalidated_at) ok")
 # ---------------------------------------------------------------------------
 appt3 = _make_appointment(slot_offset_days=14)
 pre_resched_resched_token = mint_token(appt3, "reschedule")
-pre_resched_enrich_token = mint_token(appt3, "enrichment")
+pre_resched_cancel_token = mint_token(appt3, "cancel")
 # Sanity: token works before "reschedule".
 assert client.get(f"/api/booking/reschedule/{pre_resched_resched_token}").status_code == 200
 
@@ -278,10 +269,10 @@ resp = client.get(f"/api/booking/reschedule/{pre_resched_resched_token}")
 assert resp.status_code == 404, resp.text
 assert resp.json()["detail"] == "link is invalid or expired", resp.json()
 
-# Pre-reschedule enrichment token must also 404.
+# Pre-reschedule cancel token must also 404.
 resp = client.post(
-    f"/api/booking/boutique-experience/{pre_resched_enrich_token}",
-    json={"summary": "minimum-meaningful payload to satisfy the validator"},
+    f"/api/booking/cancel/{pre_resched_cancel_token}",
+    json={"reason": "should be revoked"},
 )
 assert resp.status_code == 404, resp.text
 print("token after reschedule → 404 (original's tokens revoked) ok")
@@ -318,15 +309,6 @@ assert abs((far_exp - expected_default).total_seconds()) < 1, (far_exp, expected
 expected_slot = near_term + timedelta(days=_SLOT_BOUND_DAYS["reschedule"])
 assert abs((near_exp - expected_slot).total_seconds()) < 1, (near_exp, expected_slot)
 print("TTL bounds: far-future default ceiling + near-term slot ceiling ok")
-
-
-# ---------------------------------------------------------------------------
-# 8. Enrichment bound = slot_start exactly (no grace past slot).
-# ---------------------------------------------------------------------------
-enrich_exp = _exp_for(near_term, "enrichment", now)
-# enrichment slot bound is 0, so exp = slot_start exactly.
-assert abs((enrich_exp - near_term).total_seconds()) < 1, (enrich_exp, near_term)
-print("enrichment exp = slot_start (no grace past slot) ok")
 
 
 # ---------------------------------------------------------------------------

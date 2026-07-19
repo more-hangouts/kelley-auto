@@ -17,17 +17,6 @@
   var NS = 'bxv';
   var VISITOR_COOKIE = 'bxv_vid';
   var ATTRIBUTION_LS_KEY = 'bxv_attribution';
-  // Boutique Experience handoff keys, written by widgets/kelley-fit-prep-tool.js
-  // when the customer completes their profile before booking. Both are cleared
-  // on successful submission. The summary is the textual fallback for browsers
-  // where the server profile create failed; the profile id is the canonical
-  // server-side link.
-  var SUMMARY_LS_KEY = 'bxv_fit_prep_summary';
-  var PROFILE_ID_LS_KEY = 'bxv_boutique_profile_id';
-  // Post-booking handoff key, written after a booking succeeds so a customer
-  // who opens the standalone sizing calculator from the same browser session
-  // can still attach their answers to the appointment they just booked.
-  var POST_BOOKING_URL_LS_KEY = 'bxv_boutique_experience_url';
   var VISITOR_COOKIE_DAYS = 365;
   var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var MONTHS = [
@@ -77,15 +66,6 @@
       marketing_consent: false,
       company_website: '', // honeypot
     },
-    // Server-side Boutique Experience profile id from the calculator-first
-    // path. When set, included in the appointment submission so the lead
-    // binds to the prep answers. Cleared on a successful booking.
-    boutiqueExperienceProfileId: null,
-    // True if `formData.note` was prefilled from the Fit Prep handoff,
-    // so step 3 can render an in-widget notice instead of relying on
-    // page-level glue. Switches to false the moment the customer edits
-    // or removes the note.
-    notePrefilled: false,
     confirmation: null,
     abandonSent: false,
   };
@@ -131,35 +111,6 @@
     var id = uuid();
     writeCookie(VISITOR_COOKIE, id, VISITOR_COOKIE_DAYS);
     return id;
-  }
-
-  function readStoredSummary() {
-    try { return window.localStorage.getItem(SUMMARY_LS_KEY) || ''; }
-    catch (e) { return ''; }
-  }
-
-  function readStoredProfileId() {
-    try {
-      var raw = window.localStorage.getItem(PROFILE_ID_LS_KEY);
-      var n = parseInt(raw, 10);
-      return isFinite(n) && n > 0 ? n : null;
-    } catch (e) { return null; }
-  }
-
-  function clearBoutiqueExperienceHandoff() {
-    try { window.localStorage.removeItem(SUMMARY_LS_KEY); } catch (e) { /* ignore */ }
-    try { window.localStorage.removeItem(PROFILE_ID_LS_KEY); } catch (e) { /* ignore */ }
-  }
-
-  function savePostBookingBoutiqueExperienceUrl(url) {
-    if (!url) return;
-    try { window.localStorage.setItem(POST_BOOKING_URL_LS_KEY, String(url)); }
-    catch (e) { /* ignore */ }
-  }
-
-  function clearPostBookingBoutiqueExperienceUrl() {
-    try { window.localStorage.removeItem(POST_BOOKING_URL_LS_KEY); }
-    catch (e) { /* ignore */ }
   }
 
   var ATTR_KEYS = [
@@ -439,7 +390,6 @@
       event_id: state.eventId,
       visitor_id: state.visitorId,
       session_id: state.sessionId,
-      boutique_experience_profile_id: state.boutiqueExperienceProfileId,
       company_website: state.formData.company_website || '',
       attribution: captureAttribution(),
       device: captureDevice(),
@@ -453,17 +403,6 @@
         state.confirmation = res.data;
         state.step = 'success';
         track('submit_succeeded', { confirmation_code: res.data.confirmation_code });
-        // The Boutique Experience handoff (note + profile id) has been
-        // consumed. Clear both keys so a future visit doesn't resurface a
-        // stale notice or attach the wrong profile id.
-        clearBoutiqueExperienceHandoff();
-        if (res.data.boutique_experience_attached) {
-          clearPostBookingBoutiqueExperienceUrl();
-        } else if (res.data.boutique_experience_url) {
-          savePostBookingBoutiqueExperienceUrl(res.data.boutique_experience_url);
-        } else {
-          clearPostBookingBoutiqueExperienceUrl();
-        }
       } else {
         state.step = 'step3';
         track('submit_failed', { status: res.status, detail: res.data && res.data.detail });
@@ -708,39 +647,6 @@
   font-size: 22px; margin: 4px 0;
 }
 .${NS}-success-meta { color: var(--bxv-text-muted); font-size: 14px; }
-.${NS}-success-be {
-  margin-top: 18px; padding: 16px 18px; border-radius: var(--bxv-radius-sm);
-  background: rgba(167, 97, 111, 0.06); border: 1px solid var(--bxv-border);
-  text-align: left; width: 100%; max-width: 380px;
-}
-.${NS}-success-be.be-attached {
-  background: rgba(80, 130, 90, 0.08);
-  border-color: rgba(80, 130, 90, 0.25);
-}
-.${NS}-success-be-title {
-  font-weight: 600; color: var(--bxv-text);
-  margin-bottom: 4px; font-size: 14px;
-}
-.${NS}-success-be-body {
-  color: var(--bxv-text-muted); font-size: 13px; line-height: 1.5;
-}
-.${NS}-success-be-link {
-  display: inline-block; margin-top: 10px; color: var(--bxv-accent-dark);
-  font-weight: 600; text-decoration: none; font-size: 14px;
-}
-.${NS}-success-be-link:hover { text-decoration: underline; }
-.${NS}-prefill-notice {
-  background: rgba(167, 97, 111, 0.08); color: var(--bxv-accent-dark);
-  padding: 10px 12px; border-radius: var(--bxv-radius-sm);
-  font-size: 13px; margin-bottom: 12px;
-  display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
-}
-.${NS}-prefill-notice-text { flex: 1; min-width: 200px; line-height: 1.4; }
-.${NS}-prefill-notice-remove {
-  background: transparent; border: none; cursor: pointer;
-  color: var(--bxv-accent-dark); font-weight: 600; font-size: 13px;
-  text-decoration: underline; padding: 0;
-}
 .${NS}-loading { padding: 60px 0; text-align: center; color: var(--bxv-text-muted); }
 `;
     var style = document.getElementById(NS + '-styles');
@@ -836,7 +742,9 @@
     pane.appendChild(el('div', { className: NS + '-meta' }, [
       el('div', { className: NS + '-meta-row' }, [
         el('span', { html: '\u{1F4CD}' }),
-        document.createTextNode(state.copy.boutique_label || "Kelley Autoplex"),
+        // location_label is current; boutique_label is the legacy Bella's-era
+        // copy key still present in older theme-settings rows.
+        document.createTextNode(state.copy.location_label || state.copy.boutique_label || "Kelley Autoplex"),
       ]),
     ]));
 
@@ -1116,10 +1024,6 @@
       input('email', 'email', { required: 'required', autocomplete: 'email', placeholder: 'you@example.com' })
     ));
 
-    if (state.notePrefilled && state.formData.note) {
-      form.appendChild(renderPrefillNotice());
-    }
-
     form.appendChild(field(
       state.copy.step3_note_label || "Anything you'd like us to know? (optional)",
       textarea('note')
@@ -1157,24 +1061,6 @@
     ]));
     form.appendChild(actions);
     return form;
-  }
-
-  function renderPrefillNotice() {
-    var box = el('div', { className: NS + '-prefill-notice' });
-    box.appendChild(el('span', { className: NS + '-prefill-notice-text' }, [
-      'Your Boutique Experience answers were added as the appointment note. You can edit or remove it before submitting.',
-    ]));
-    box.appendChild(el('button', {
-      className: NS + '-prefill-notice-remove',
-      type: 'button',
-      onclick: function () {
-        state.formData.note = '';
-        state.notePrefilled = false;
-        try { window.localStorage.removeItem(SUMMARY_LS_KEY); } catch (e) { /* ignore */ }
-        render();
-      },
-    }, ['Remove']));
-    return box;
   }
 
   function validateStep3() {
@@ -1270,42 +1156,7 @@
         'Confirmation: ' + c.confirmation_code,
       ]));
     }
-    wrap.appendChild(renderBoutiqueExperienceCallout(c));
     return wrap;
-  }
-
-  function renderBoutiqueExperienceCallout(c) {
-    // Already linked: short acknowledgement so the customer is not asked
-    // to fill in answers a second time.
-    if (c.boutique_experience_attached) {
-      return el('div', { className: NS + '-success-be be-attached' }, [
-        el('div', { className: NS + '-success-be-title' }, [
-          'Boutique Experience profile added',
-        ]),
-        el('div', { className: NS + '-success-be-body' }, [
-          'Your stylist will see your size estimate and style notes before you arrive.',
-        ]),
-      ]);
-    }
-    // Not linked yet: invite the customer to complete the profile via the
-    // tokenized URL the API returned.
-    if (c.boutique_experience_url) {
-      return el('div', { className: NS + '-success-be be-cta' }, [
-        el('div', { className: NS + '-success-be-title' }, [
-          'One last optional step',
-        ]),
-        el('div', { className: NS + '-success-be-body' }, [
-          'Tell us your size and style so your stylist can pull dresses for you before you arrive.',
-        ]),
-        el('a', {
-          className: NS + '-success-be-link',
-          href: c.boutique_experience_url,
-        }, ['Complete your Boutique Experience Profile →']),
-      ]);
-    }
-    // Older API not returning the URL: render nothing so the success
-    // screen looks identical to the pre-Phase-5 release.
-    return document.createDocumentFragment();
   }
 
   // ---------------------------------------------------------------------
@@ -1341,29 +1192,9 @@
 
     state.step = 'loading';
 
-    // Boutique Experience handoff. The fit-prep widget writes these
-    // localStorage keys when the customer finishes their profile before
-    // booking. Config wins: only `undefined` (key absent) falls back to
-    // localStorage. Any explicit value (including `null` or `""`)
-    // suppresses the localStorage handoff so an embed can opt out
-    // without race-conditioning on storage state.
-    if (config.prefillNote === undefined) {
-      var stored = readStoredSummary();
-      if (stored) {
-        state.formData.note = stored;
-        state.notePrefilled = true;
-      }
-    } else if (typeof config.prefillNote === 'string' && config.prefillNote) {
+    // Optional embed-provided note prefill.
+    if (typeof config.prefillNote === 'string' && config.prefillNote) {
       state.formData.note = config.prefillNote;
-      state.notePrefilled = true;
-    }
-    // else: prefillNote is null/""/non-string -> leave note empty, no notice.
-
-    if (config.boutiqueExperienceProfileId === undefined) {
-      state.boutiqueExperienceProfileId = readStoredProfileId();
-    } else {
-      var n = parseInt(config.boutiqueExperienceProfileId, 10);
-      state.boutiqueExperienceProfileId = (isFinite(n) && n > 0) ? n : null;
     }
 
     loadTheme().then(function () {
@@ -1387,25 +1218,13 @@
     if (style) style.parentNode.removeChild(style);
   }
 
-  // Public note setter so the Fit Prep Tool can drop its summary into the
-  // booking note field after init (e.g. when both widgets are on the same
-  // page and the user clicks "Save it for my booking"). Re-renders so the
-  // textarea reflects the new value if step 3 is currently visible.
+  // Public note setter so an embedding page can drop text into the
+  // booking note field after init. Re-renders so the textarea reflects
+  // the new value if step 3 is currently visible.
   function setNote(text) {
     var next = (typeof text === 'string') ? text : '';
     state.formData.note = next;
-    state.notePrefilled = !!next;
     if (state.root && state.step !== 'loading' && state.step !== 'error') render();
-  }
-
-  // Public setter so the Fit Prep Tool can hand off the server-side
-  // profile id after the customer completes their pre-booking profile.
-  // Phase 5: the booking submission picks this up and sends it to the API.
-  // Pass null/undefined to clear (e.g. on error fallback in the fit-prep
-  // widget so a stale id doesn't ride along with the new note).
-  function setBoutiqueExperienceProfileId(id) {
-    var n = parseInt(id, 10);
-    state.boutiqueExperienceProfileId = (isFinite(n) && n > 0) ? n : null;
   }
 
   window.KelleyBookingWidget = {
@@ -1413,6 +1232,5 @@
     init: init,
     destroy: destroy,
     setNote: setNote,
-    setBoutiqueExperienceProfileId: setBoutiqueExperienceProfileId,
   };
 })(window, document);

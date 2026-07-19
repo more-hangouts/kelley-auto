@@ -15,7 +15,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from sqlalchemy.orm.session import object_session
 
 from config.settings import (
     APP_TIMEZONE,
@@ -23,62 +22,26 @@ from config.settings import (
     SMTP_FROM_EMAIL,
     WIDGET_PUBLIC_BASE_URL,
 )
-from database.models import Appointment, AppointmentEnrichmentResponse
+from database.models import Appointment
 from services.booking_service import format_confirmation_code
-from services.booking_tokens import cancel_url, enrichment_url, reschedule_url
+from services.booking_tokens import cancel_url, reschedule_url
 from services.email_transport import EmailMessagePayload
 from services.sms_transport import SmsMessagePayload
 
 
 _PARTY_LABEL = {
-    # Legacy buckets (pre parent-capture flow). Kept for historical rows.
+    # legacy Bella's-era rows: older buckets kept so historical
+    # appointments still render a label.
     "solo": "Just you",
     "2_3": "2-3 people",
     "4_plus": "4 or more",
+    "pair": "2 of us",
     # Current buckets used by the booking widget.
-    "pair": "Me and my quinceañera",
     "3_4": "3-4 of us",
     "5_plus": "5 or more",
 }
-_BOUTIQUE_ADDRESS = "5803 San Pedro Ave, San Antonio, TX 78212"
-_BOUTIQUE_PHONE = "(210) 251-3644"
-
-_BE_INTRO = (
-    "Help us prepare dresses in your size, style, and budget before you arrive."
-)
-_BE_CTA_LABEL = "Complete your Boutique Experience Profile"
-
-
-def is_boutique_profile_attached(appt: Appointment) -> bool:
-    """True iff any appointment on this lead has a submitted profile.
-
-    A profile completed on the original appointment must keep counting as
-    "this lead is done" after a reschedule, since Phase 1 keeps the
-    profile attached to the original appointment as historical data
-    rather than copying it forward. So when ``crm_event_id`` is set, the
-    check spans every appointment tied to that CRM event.
-
-    Falls back to a per-appointment check for legacy rows that predate
-    auto-promotion. Falls back to ``False`` on a detached appointment so
-    a template never errors on the absence of session context.
-    """
-    sess = object_session(appt)
-    if sess is None:
-        return False
-    base = sess.query(AppointmentEnrichmentResponse.id).filter(
-        AppointmentEnrichmentResponse.submitted_at.is_not(None),
-    )
-    if appt.crm_event_id is None:
-        q = base.filter(AppointmentEnrichmentResponse.appointment_id == appt.id)
-    else:
-        q = base.join(
-            Appointment,
-            Appointment.id == AppointmentEnrichmentResponse.appointment_id,
-        ).filter(Appointment.crm_event_id == appt.crm_event_id)
-    return q.first() is not None
-
-
-
+_DEALERSHIP_ADDRESS = "5803 San Pedro Ave, San Antonio, TX 78212"
+_DEALERSHIP_PHONE = "(210) 251-3644"
 
 @dataclass
 class RenderedEmail:
@@ -286,23 +249,20 @@ def _payment_method_label(method: str | None) -> str:
 
 
 def _arrival_tips(appt: Appointment) -> list[str]:
-    # Static list on purpose. The "Things to remember" section in the
-    # booking confirmation slices index 0 (the inspiration-photos line is
-    # covered by the Boutique Experience profile CTA above it); the
-    # reminder template uses the full list. Dynamic per-party / per-event-
-    # date variants were removed because they read more like reassurance
-    # than reminders and stacked bullets undermined the brief feel.
+    # Static list on purpose. Dynamic per-visit variants were removed
+    # because they read more like reassurance than reminders and stacked
+    # bullets undermined the brief feel.
     return [
-        "Bring your favorite inspiration photos, color ideas, or theme details.",
-        "Wear easy-to-change clothes and bring shoes with a similar heel height if you have them.",
-        "Plan for your first visit to be relaxed, focused, and celebrant-led.",
+        "Bring your driver's license so you can test drive.",
+        "If you plan to finance, proof of income and residence speed things up.",
+        "Plan about an hour so there's time for questions and a relaxed look around the lot.",
     ]
 
 
 def _appointment_details(appt: Appointment) -> list[tuple[str, str]]:
     return [
         ("When", f"{_format_slot(appt)} ({APP_TIMEZONE})"),
-        ("Where", f"Kelley Autoplex, {_BOUTIQUE_ADDRESS}"),
+        ("Where", f"Kelley Autoplex, {_DEALERSHIP_ADDRESS}"),
         ("Party", _party_label(appt)),
         ("Event date", _format_event_date(appt)),
         ("Confirmation", format_confirmation_code(appt.confirmation_code)),
@@ -410,7 +370,7 @@ def _wrap_html(body_html: str, *, preheader: str = "") -> str:
 {body_html}
 </div>
 </div>
-<p style="color:#6B7280; font-size:12px; text-align:center;">Kelley Autoplex · {_BOUTIQUE_ADDRESS} · {_BOUTIQUE_PHONE}</p>
+<p style="color:#6B7280; font-size:12px; text-align:center;">Kelley Autoplex · {_DEALERSHIP_ADDRESS} · {_DEALERSHIP_PHONE}</p>
 </div>
 </body></html>"""
 
@@ -426,39 +386,18 @@ def render_booking_confirmation(appt: Appointment) -> RenderedEmail:
     party = _party_label(appt)
     resched = reschedule_url(appt)
     cancel = cancel_url(appt)
-    profile_link = enrichment_url(appt)
-    # Drop the first arrival tip ("Bring your inspiration photos…") — it's
-    # superseded by the Boutique Experience Profile CTA that now sits right
-    # below the details table. The remaining tips read as a quick reminder.
-    tips = _arrival_tips(appt)[1:]
+    tips = _arrival_tips(appt)
     event_date = _format_event_date(appt)
-    needs_profile = not is_boutique_profile_attached(appt)
-
-    profile_text = (
-        f"{_BE_CTA_LABEL}.\n"
-        f"{_BE_INTRO}\n"
-        f"  {profile_link}\n\n"
-        if needs_profile
-        else ""
-    )
-    profile_html = (
-        f"<h2 style=\"font-size:18px; margin-top:24px;\">{escape(_BE_CTA_LABEL)}</h2>"
-        f"<p style=\"margin:0 0 12px 0;\">{escape(_BE_INTRO)}</p>"
-        f"<p>{_html_button(_BE_CTA_LABEL, profile_link)}</p>"
-        if needs_profile
-        else ""
-    )
 
     subject = f"You're booked at Kelley Autoplex — {slot}"
     text = (
         f"Hi {name},\n\n"
         f"Your initial consultation is confirmed.\n\n"
         f"  When: {slot} ({APP_TIMEZONE})\n"
-        f"  Where: Kelley Autoplex, {_BOUTIQUE_ADDRESS}\n"
+        f"  Where: Kelley Autoplex, {_DEALERSHIP_ADDRESS}\n"
         f"  Party: {party}\n"
         f"  Event date: {event_date}\n"
         f"  Confirmation: {format_confirmation_code(appt.confirmation_code)}\n\n"
-        + profile_text
         + f"Things to remember:\n"
         + "".join(f"  - {tip}\n" for tip in tips)
         + "\n"
@@ -471,7 +410,6 @@ def render_booking_confirmation(appt: Appointment) -> RenderedEmail:
         f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">You're booked.</h1>"
         f"<p>Hi {escape(name)}, your initial consultation is confirmed.</p>"
         + _details_table(_appointment_details(appt))
-        + profile_html
         + f"<h2 style=\"font-size:18px; margin-top:24px;\">Things to remember</h2>"
         + _bullet_list(tips)
         + f"<p style=\"margin-top:22px;\">"
@@ -496,14 +434,14 @@ def render_booking_thank_you(appt: Appointment) -> RenderedEmail:
     value_line = (
         f"We noted today's visit at {_format_money(appt.purchase_value_cents)}."
         if appt.purchase_value_cents
-        else "We loved helping you explore dresses and ideas for the celebration."
+        else "We loved helping you explore your options and find the right fit."
     )
     text = (
         f"Hi {name},\n\n"
         f"Thank you for spending time with us at Kelley Autoplex.\n\n"
         f"{value_line}\n\n"
-        f"If you have questions about anything you tried on, reply to this "
-        f"email or call the dealership. We are happy to help with next steps.\n\n"
+        f"If you have questions about anything you test drove or saw on the "
+        f"lot, reply to this email or call the dealership. We are happy to help with next steps.\n\n"
         f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
@@ -512,9 +450,9 @@ def render_booking_thank_you(appt: Appointment) -> RenderedEmail:
         f"<p>Hi {escape(name)}, thank you for spending time with us at "
         f"Kelley Autoplex.</p>"
         f"<p>{escape(value_line)}</p>"
-        f"<p>If you have questions about anything you tried on, reply to "
-        f"this email or call the dealership. We are happy to help with next "
-        f"steps.</p>"
+        f"<p>If you have questions about anything you test drove or saw on "
+        f"the lot, reply to this email or call the dealership. We are happy "
+        f"to help with next steps.</p>"
         f"<p>The Kelley Autoplex team</p>",
         preheader="Thank you for visiting Kelley Autoplex.",
     )
@@ -668,7 +606,7 @@ def render_internal_new_booking(appt: Appointment) -> RenderedEmail:
     subject = f"New booking: {name} — {slot}"
     text = (
         f"New appointment booked.\n\n"
-        f"  Quinceañera: {name}\n"
+        f"  Customer: {name}\n"
         f"  When: {slot} ({APP_TIMEZONE})\n"
         f"  Party: {_party_label(appt)}\n"
         f"  Phone: {appt.phone_e164 or appt.phone}\n"
@@ -686,7 +624,7 @@ def render_internal_new_booking(appt: Appointment) -> RenderedEmail:
         f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; margin-top:0;\">New booking</h1>"
         + _details_table(
             [
-                ("Quinceanera", name),
+                ("Customer", name),
                 ("When", f"{slot} ({APP_TIMEZONE})"),
                 ("Contact", f"{appt.phone_e164 or appt.phone} · {appt.email}"),
                 ("Party", _party_label(appt)),
@@ -710,45 +648,6 @@ def render_internal_new_booking(appt: Appointment) -> RenderedEmail:
 
 
 # ---------------------------------------------------------------------------
-# Customer: enrichment survey invitation (T+2min)
-# ---------------------------------------------------------------------------
-
-
-def render_enrichment_invitation(appt: Appointment) -> RenderedEmail:
-    name = _customer_name(appt)
-    slot = _format_slot(appt)
-    link = enrichment_url(appt)
-    days = _days_until_event(appt)
-    timing = (
-        f"Your event date is {_format_event_date(appt)}, so there are {days} days to plan."
-        if days is not None and days >= 0
-        else "Your event date is not shared yet. You can add it inside your profile."
-    )
-
-    subject = _BE_CTA_LABEL
-    text = (
-        f"Hi {name},\n\n"
-        f"We can't wait to meet you on {slot}.\n\n"
-        f"{timing}\n\n"
-        f"{_BE_INTRO}\n\n"
-        f"  {link}\n\n"
-        f"This is optional. Your appointment is already confirmed either way.\n\n"
-        f"The Kelley Autoplex team\n"
-    )
-    html = _wrap_html(
-        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">{escape(_BE_CTA_LABEL)}</h1>"
-        f"<p>Hi {escape(name)}, we can't wait to meet you on {escape(slot)}.</p>"
-        f"<p>{escape(timing)}</p>"
-        f"<p>{escape(_BE_INTRO)}</p>"
-        f"<p>{_html_button(_BE_CTA_LABEL, link)}</p>"
-        f"<p style=\"color:#6B7280; font-size:13px;\">Optional. Your appointment is already confirmed.</p>"
-        ,
-        preheader=f"{_BE_INTRO}",
-    )
-    return RenderedEmail(subject=subject, text=text, html=html)
-
-
-# ---------------------------------------------------------------------------
 # Customer: appointment reminder (T-24h)
 # ---------------------------------------------------------------------------
 
@@ -758,54 +657,35 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
     slot = _format_slot(appt)
     resched = reschedule_url(appt)
     cancel = cancel_url(appt)
-    profile_link = enrichment_url(appt)
-    tips = _arrival_tips(appt)[:3]
-    needs_profile = not is_boutique_profile_attached(appt)
+    tips = _arrival_tips(appt)
 
     subject = f"See you tomorrow at Kelley Autoplex — {slot}"
 
-    profile_text = (
-        f"\nOne thing to do before you arrive:\n"
-        f"{_BE_CTA_LABEL}.\n"
-        f"{_BE_INTRO}\n"
-        f"  {profile_link}\n"
-        if needs_profile
-        else ""
-    )
     text = (
         f"Hi {name},\n\n"
-        f"Quick reminder: your fitting is {slot} ({APP_TIMEZONE}).\n\n"
-        f"  Kelley Autoplex, {_BOUTIQUE_ADDRESS}\n"
+        f"Quick reminder: your appointment is {slot} ({APP_TIMEZONE}).\n\n"
+        f"  Kelley Autoplex, {_DEALERSHIP_ADDRESS}\n"
         f"  Confirmation: {format_confirmation_code(appt.confirmation_code)}\n\n"
         f"Quick prep:\n"
         + "".join(f"  - {tip}\n" for tip in tips)
-        + profile_text
         + "\n"
         f"Need to change your time? {resched}\n"
         f"Can't make it? {cancel}\n\n"
         f"The Kelley Autoplex team\n"
     )
 
-    profile_html = (
-        f"<h2 style=\"font-size:18px; margin-top:24px;\">{escape(_BE_CTA_LABEL)}</h2>"
-        f"<p style=\"margin:0 0 12px 0;\">{escape(_BE_INTRO)}</p>"
-        f"<p>{_html_button(_BE_CTA_LABEL, profile_link)}</p>"
-        if needs_profile
-        else ""
-    )
     html = _wrap_html(
         f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">See you tomorrow</h1>"
-        f"<p>Hi {escape(name)}, just a reminder that your fitting is <strong>{escape(slot)}</strong>.</p>"
+        f"<p>Hi {escape(name)}, just a reminder that your appointment is <strong>{escape(slot)}</strong>.</p>"
         + _details_table(_appointment_details(appt))
         + f"<h2 style=\"font-size:18px; margin-top:24px;\">Quick prep</h2>"
         + _bullet_list(tips)
-        + profile_html
         + f"<p style=\"margin-top:22px;\">"
         + _html_button("Reschedule", resched, secondary=True)
         + _html_button("Cancel", cancel, secondary=True)
         + "</p>"
         ,
-        preheader=f"Reminder: your Kelley Autoplex fitting is {slot}.",
+        preheader=f"Reminder: your Kelley Autoplex appointment is {slot}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -889,7 +769,7 @@ def render_sms_reminder(appt: Appointment) -> SmsMessagePayload:
         to=appt.phone_e164 or appt.phone,
         body=(
             f"Kelley Autoplex: see you tomorrow at {_format_slot(appt)}. "
-            f"7723 Guilbeau Rd #101. Reply STOP to opt out."
+            f"5803 San Pedro Ave. Reply STOP to opt out."
         ),
     )
 
@@ -902,7 +782,6 @@ def render_sms_reminder(appt: Appointment) -> SmsMessagePayload:
 EMAIL_RENDERERS = {
     "booking_confirmation": render_booking_confirmation,
     "internal_new_booking": render_internal_new_booking,
-    "enrichment_invitation": render_enrichment_invitation,
     "reminder": render_reminder,
     "reschedule_confirmation": render_reschedule_confirmation,
     "cancellation_confirmation": render_cancellation_confirmation,
@@ -1508,7 +1387,7 @@ def render_password_reset_request(
 ) -> RenderedEmail:
     """Forgot-password email. Replaces the plain-text inline renderer
     that lived in services/password_reset.py so the email picks up the
-    boutique chrome shared with every other transactional message.
+    branded chrome shared with every other transactional message.
     """
     name = user.full_name or user.username
     subject = "Reset your Kelley Autoplex admin password"
@@ -2399,10 +2278,12 @@ def render_admin_walk_in_lead_created(
     new) Contact the lead is attached to.
     """
     actor = captured_by.full_name or captured_by.username
-    celebrant = (appointment.celebrant_first_name or "").strip()
+    # celebrant_* are the legacy Bella's-era column names; they now hold
+    # the customer's name.
+    customer = (appointment.celebrant_first_name or "").strip()
     if appointment.celebrant_last_name:
-        celebrant = f"{celebrant} {appointment.celebrant_last_name}".strip()
-    celebrant = celebrant or contact.display_name or "(name unknown)"
+        customer = f"{customer} {appointment.celebrant_last_name}".strip()
+    customer = customer or contact.display_name or "(name unknown)"
     contact_label = (
         contact.display_name
         or " ".join(
@@ -2411,10 +2292,10 @@ def render_admin_walk_in_lead_created(
         or "(no name)"
     )
     notes_clean = (notes or "").strip()
-    subject = f"New walk-in lead: {celebrant}"
+    subject = f"New walk-in lead: {customer}"
     text = (
         f"{actor} just logged a walk-in lead.\n\n"
-        f"  Celebrant: {celebrant}\n"
+        f"  Customer: {customer}\n"
         f"  Contact: {contact_label}\n"
         f"  Phone: {contact.phone_e164 or contact.phone or '(not provided)'}\n"
         f"  Email: {contact.email or '(not provided)'}\n"
@@ -2433,7 +2314,7 @@ def render_admin_walk_in_lead_created(
         f"<p><strong>{escape(actor)}</strong> just logged a walk-in lead.</p>"
         + _details_table(
             [
-                ("Celebrant", celebrant),
+                ("Customer", customer),
                 ("Contact", contact_label),
                 ("Phone", contact.phone_e164 or contact.phone or "(not provided)"),
                 ("Email", contact.email or "(not provided)"),

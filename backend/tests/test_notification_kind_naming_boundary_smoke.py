@@ -66,7 +66,6 @@ LEGACY_ENQUEUE_KEYS: frozenset[str] = frozenset(
     {
         "booking_confirmation",
         "internal_new_booking",
-        "enrichment_invitation",
         "reminder",
         "reschedule_confirmation",
         "cancellation_confirmation",

@@ -32,7 +32,6 @@ import {
 import { isAttendanceGateError, attendanceGateMessage } from './attendanceGate'
 import QuotesSection from './QuotesSection'
 import SalesAssignmentDialog from './SalesAssignmentDialog'
-import TriedOnSection from './TriedOnSection'
 
 const ACTION_LABEL = {
   arrived: 'Arrived',
@@ -516,18 +515,6 @@ export default function AppointmentDetail() {
         </Section>
       )}
 
-      <TriedOnSection
-        appointmentId={a.id}
-        hasEvent={Boolean(data.event)}
-        onArrivePrompt={
-          isTerminal
-            ? null
-            : () => {
-                setActionError(null)
-                setPendingAction('arrived')
-              }
-        }
-      />
 
       <QuotesSection
         event={data.event}

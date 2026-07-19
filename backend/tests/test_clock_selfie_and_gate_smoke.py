@@ -623,54 +623,15 @@ def main() -> None:
     )
     assert resp.status_code == 200, resp.text
 
-    # ---- The gate also covers tried-on add. ----
+    # ---- Re-enabling the gate re-blocks the still-punched-out user. ----
     _set_attendance_gate(enabled=True, selfie_policy="optional")
-    # User is still out from the punch-out earlier. Seed a catalog
-    # item by hitting the admin endpoint.
-    from services import catalog_service
-    db = SessionLocal()
-    try:
-        item = catalog_service.create_catalog_item(
-            db,
-            catalog_service.CatalogItemInput(
-                internal_sku=f"P7S2-PROBE-{uuid.uuid4().hex[:6]}",
-                color="ivory",
-                category="quince_gown",
-                designer="Probe House",
-                style_number="P7S2-001",
-                product_title="Probe Gown",
-            ),
-        )
-        db.commit()
-        catalog_id = item.id
-    finally:
-        db.close()
-    try:
-        resp = client.post(
-            f"/api/sales/appointments/{appt_id}/tried-on",
-            headers=sales_headers,
-            json={"catalog_item_id": catalog_id, "size_label": "10"},
-        )
-        assert resp.status_code == 403, resp.text
-        assert resp.json()["detail"]["code"] == "attendance_gate"
-    finally:
-        # Best-effort catalog cleanup so the smoke leaves no debris.
-        db = SessionLocal()
-        try:
-            db.execute(
-                sql_text(
-                    "DELETE FROM appointment_tried_on_items "
-                    "WHERE catalog_item_id = :cid"
-                ),
-                {"cid": catalog_id},
-            )
-            db.execute(
-                sql_text("DELETE FROM catalog_items WHERE id = :cid"),
-                {"cid": catalog_id},
-            )
-            db.commit()
-        finally:
-            db.close()
+    resp = client.patch(
+        f"/api/sales/appointments/{appt_id}/notes",
+        headers=sales_headers,
+        json={"internal_notes": "gate re-enabled, this should 403"},
+    )
+    assert resp.status_code == 403, resp.text
+    assert resp.json()["detail"]["code"] == "attendance_gate"
 
     # ---- The gate also covers event-document upload (Phase 9 audit). ----
     # Sales user is currently punched out (we punched out earlier).

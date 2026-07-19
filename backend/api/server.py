@@ -67,7 +67,6 @@ from api.routers import sales_search as sales_search_router
 from api.routers import sales_assignment as sales_assignment_router
 from api.routers import sales_walk_ins as sales_walk_ins_router
 from api.routers import sales_time_off as sales_time_off_router
-from api.routers import sales_tried_on as sales_tried_on_router
 from api.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
 from api.routers import walk_in_leads as walk_in_leads_router
@@ -89,7 +88,6 @@ log = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _WIDGETS_DIR = _REPO_ROOT / "widgets"
-_MARKETING_DIR = _REPO_ROOT / "marketing"
 
 
 def _warn_if_email_delivery_disabled() -> None:
@@ -327,11 +325,6 @@ app.include_router(
     tags=["sales-appointments"],
 )
 app.include_router(
-    sales_tried_on_router.router,
-    prefix="/api/sales",
-    tags=["sales-tried-on"],
-)
-app.include_router(
     admin_sales_staff_router.router,
     prefix="/api/admin/sales-staff",
     tags=["admin-sales-staff"],
@@ -469,16 +462,6 @@ app.include_router(
 # embed URL matches production (where Nginx serves the same path from disk).
 if _WIDGETS_DIR.exists():
     app.mount("/widgets", StaticFiles(directory=_WIDGETS_DIR), name="widgets")
-
-# Marketing site served alongside the API in dev so the booking widget can be
-# exercised end-to-end on a single origin. Production serves marketing through
-# Nginx; this mount is a dev convenience only.
-if _MARKETING_DIR.exists():
-    app.mount(
-        "/marketing",
-        StaticFiles(directory=_MARKETING_DIR, html=True),
-        name="marketing",
-    )
 
 
 @app.get("/api/health")

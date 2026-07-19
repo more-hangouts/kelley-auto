@@ -242,7 +242,6 @@ TIMING_MODE: dict[str, str] = {
     # mode if a B2 hook moves them to record_event.
     "booking.confirmation": "real_time",
     "booking.reminder": "real_time",
-    "booking.enrichment_invitation": "real_time",
     "booking.reschedule_confirmation": "real_time",
     "booking.cancellation_confirmation": "real_time",
     "booking.thank_you": "real_time",

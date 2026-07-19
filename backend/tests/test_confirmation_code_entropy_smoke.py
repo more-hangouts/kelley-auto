@@ -14,21 +14,18 @@ Covers the user-specified acceptance plus a couple of nearby checks:
 
   3. Legacy short-code rows post-backfill: a row created with the
      pre-D1 generator (simulated by writing `BXOLDCDE` directly) is
-     found via the confirm endpoint when the customer types
+     found via canonicalised lookup when the customer types
      `BX-OLDCDE` (with the legacy hyphen). Old emails in the wild
-     still work.
+     still resolve.
 
   4. New-code lookup tolerates every reasonable input shape:
-     canonical, hyphen-grouped, all-spaces, lowercase. Wrong code on
-     the same email returns 404 (anti-enumeration matches B3's
-     pattern). Wrong email on a real code also returns 404.
+     canonical, hyphen-grouped, all-spaces, lowercase. A wrong code
+     resolves to no row.
 
-  5. B3 per-email rate limit still trips on the 6th wrong-code attempt
-     from a single email. Demonstrates that entropy + rate limit are
-     layered defenses, not duplicate ones.
-
-  6. Correct code attaches once: the happy path returns 200 and the
-     profile row appears in the DB.
+  (The Boutique Experience confirm endpoint that originally exercised
+  cases 3-6 over HTTP was removed with the dress-shop enrichment flow;
+  lookup canonicalisation is now pinned at the service layer, which is
+  what any future confirmation-code entry point must call.)
 
 Run with: venv/bin/python tests/test_confirmation_code_entropy_smoke.py
 """
@@ -57,13 +54,10 @@ os.environ.setdefault(
 os.environ.setdefault("REDIS_URL", "redis://127.0.0.1:6379/0")
 os.environ.setdefault("RATE_LIMIT_FAIL_OPEN", "true")
 
-from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text as sql_text  # noqa: E402
 
-from api import redis_rate_limit as rrl  # noqa: E402
-from api.server import app  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
-from database.models import Appointment, AppointmentEnrichmentResponse  # noqa: E402
+from database.models import Appointment  # noqa: E402
 from services.booking_service import (  # noqa: E402
     _CODE_ALPHABET,
     _CODE_LENGTH,
@@ -74,16 +68,7 @@ from services.booking_service import (  # noqa: E402
 )
 
 
-client = TestClient(app)
-
-
 _appt_ids: list[int] = []
-_profile_ids: list[int] = []
-
-
-def _flush_b3_buckets() -> None:
-    """Drop confirm-email rate-limit keys so re-runs start clean."""
-    rrl.flush_for_testing(patterns=["rl:booking_confirm_email:*", "rl:booking_confirm_ip:*"])
 
 
 def _seed_appointment(*, code: str, email: str, status: str = "confirmed") -> int:
@@ -119,19 +104,10 @@ def _seed_appointment(*, code: str, email: str, status: str = "confirmed") -> in
 def _cleanup() -> None:
     db = SessionLocal()
     try:
-        if _profile_ids:
-            db.execute(
-                sql_text("DELETE FROM appointment_enrichment_responses WHERE id = ANY(:ids)"),
-                {"ids": _profile_ids},
-            )
         if _appt_ids:
             db.execute(
                 sql_text("DELETE FROM appointment_session_events WHERE event_id IN ("
                          "SELECT event_id FROM appointments WHERE id = ANY(:ids))"),
-                {"ids": _appt_ids},
-            )
-            db.execute(
-                sql_text("DELETE FROM appointment_enrichment_responses WHERE appointment_id = ANY(:ids)"),
                 {"ids": _appt_ids},
             )
             db.execute(
@@ -143,7 +119,22 @@ def _cleanup() -> None:
         db.close()
 
 
-_flush_b3_buckets()
+def _lookup(raw_input: str) -> int | None:
+    """Resolve customer-typed input to an appointment id the same way the
+    (removed) confirm endpoint did: canonicalise, then exact-match the
+    stored code."""
+    canonical = normalize_confirmation_code(raw_input)
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(Appointment.id)
+            .filter(Appointment.confirmation_code == canonical)
+            .first()
+        )
+        return row[0] if row else None
+    finally:
+        db.close()
+
 
 try:
     # ---------------------------------------------------------------------
@@ -192,21 +183,11 @@ try:
     # ---------------------------------------------------------------------
     legacy_email = f"d1-legacy-{uuid.uuid4().hex[:6]}@example.com"
     legacy_code_canon = "BXOLDCDE"  # 8 chars, post-backfill canonical
-    _seed_appointment(code=legacy_code_canon, email=legacy_email)
+    legacy_appt_id = _seed_appointment(code=legacy_code_canon, email=legacy_email)
 
-    # Customer types the pre-D1 display form (`BX-OLDCDE`); endpoint must
-    # resolve it to the legacy_code_canon stored row.
-    resp = client.post(
-        "/api/booking/boutique-experience/confirm",
-        json={
-            "confirmation_code": "BX-OLDCDE",
-            "email": legacy_email,
-            "profile": {"summary": "legacy hyphenated input"},
-        },
-    )
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    _profile_ids.append(body["profile_id"])
+    # Customer types the pre-D1 display form (`BX-OLDCDE`); canonicalised
+    # lookup must resolve it to the legacy_code_canon stored row.
+    assert _lookup("BX-OLDCDE") == legacy_appt_id
     print("legacy BX-XXXXXX input still resolves post-backfill ok")
 
     # ---------------------------------------------------------------------
@@ -214,107 +195,22 @@ try:
     # ---------------------------------------------------------------------
     new_code = _generate_code()
     new_email = f"d1-new-{uuid.uuid4().hex[:6]}@example.com"
-    _seed_appointment(code=new_code, email=new_email)
+    new_appt_id = _seed_appointment(code=new_code, email=new_email)
 
     display = format_confirmation_code(new_code)
     spaced = display.replace("-", " ")
     lower = display.lower()
 
     for variant in (new_code, display, spaced, lower):
-        resp = client.post(
-            "/api/booking/boutique-experience/confirm",
-            json={
-                "confirmation_code": variant,
-                "email": new_email,
-                "profile": {"summary": f"variant: {variant[:6]}..."},
-            },
-        )
-        assert resp.status_code == 200, (variant, resp.text)
-        _profile_ids.append(resp.json()["profile_id"])
+        assert _lookup(variant) == new_appt_id, variant
     print("new code resolves via canonical / hyphenated / spaced / lower ok")
 
-    # Wrong code on the same email → 404, NOT 429 (rate limit is the next
-    # defense, not the first).
-    resp = client.post(
-        "/api/booking/boutique-experience/confirm",
-        json={
-            "confirmation_code": "BX-WRONGWRONGWRONGWRONGWRONG",
-            "email": new_email,
-            "profile": {"summary": "wrong code probe"},
-        },
-    )
-    assert resp.status_code == 404, resp.text
-
-    # Wrong email on a real code → 404 (anti-enumeration).
-    resp = client.post(
-        "/api/booking/boutique-experience/confirm",
-        json={
-            "confirmation_code": new_code,
-            "email": "stranger@example.com",
-            "profile": {"summary": "wrong email probe"},
-        },
-    )
-    assert resp.status_code == 404, resp.text
-    print("wrong-code / wrong-email both return 404 ok")
-
-    # ---------------------------------------------------------------------
-    # 5. B3 per-email rate limit still trips on the 6th wrong attempt.
-    # B3's `booking_confirm_email` bucket is 5/min/email. TestClient
-    # without an X-Forwarded-For header is treated as the
-    # `_TESTCLIENT_BYPASS` sentinel and the limiter is skipped — set the
-    # header explicitly so the bucket actually engages (same pattern as
-    # the B2 + B3 dedicated smokes).
-    # ---------------------------------------------------------------------
-    target_email = f"d1-burn-{uuid.uuid4().hex[:6]}@example.com"
-    _seed_appointment(code=_generate_code(), email=target_email)
-    fake_ip_hdrs = {"X-Forwarded-For": "203.0.113.77"}
-    for i in range(5):
-        resp = client.post(
-            "/api/booking/boutique-experience/confirm",
-            json={
-                "confirmation_code": "BX-NOPENOPENOPENOPENOPENO",
-                "email": target_email,
-                "profile": {"summary": f"burn {i}"},
-            },
-            headers=fake_ip_hdrs,
-        )
-        assert resp.status_code == 404, (i, resp.status_code, resp.text)
-    resp = client.post(
-        "/api/booking/boutique-experience/confirm",
-        json={
-            "confirmation_code": "BX-NOPENOPENOPENOPENOPENO",
-            "email": target_email,
-            "profile": {"summary": "should be 429"},
-        },
-        headers=fake_ip_hdrs,
-    )
-    assert resp.status_code == 429, resp.text
-    assert resp.json()["detail"] == "rate_limited", resp.text
-    print("B3 per-email rate limit trips at 6th wrong-code attempt ok")
-
-    # ---------------------------------------------------------------------
-    # 6. Correct code attaches once (idempotent re-write); the first
-    # caller wrote a profile in step 4 already.
-    # ---------------------------------------------------------------------
-    db = SessionLocal()
-    try:
-        attached = db.execute(
-            sql_text(
-                "SELECT COUNT(*) FROM appointment_enrichment_responses "
-                "WHERE appointment_id = (SELECT id FROM appointments "
-                "WHERE confirmation_code = :c)"
-            ),
-            {"c": new_code},
-        ).scalar()
-        assert attached >= 1, attached
-    finally:
-        db.close()
-    print("profile attached to new-code appointment ok")
+    # Wrong code resolves to nothing.
+    assert _lookup("BX-WRONGWRONGWRONGWRONGWRONG") is None
+    print("wrong-code resolves to no row ok")
 
 finally:
-    _flush_b3_buckets()
     _cleanup()
-    rrl.get_client().close()
     print("cleanup done")
 
 print("\ntest_confirmation_code_entropy_smoke OK")

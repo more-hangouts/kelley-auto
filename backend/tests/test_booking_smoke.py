@@ -233,11 +233,6 @@ try:
     assert body["status"] == "confirmed"
     assert body["reschedule_url"].startswith("http")
     assert body["cancel_url"].startswith("http")
-    # Phase 5: every booking response carries the tokenized Boutique
-    # Experience URL. With no profile id submitted, attached should be
-    # False so the booking widget shows the "complete profile" CTA.
-    assert body["boutique_experience_attached"] is False, body
-    assert "/fit-prep.html?token=" in body["boutique_experience_url"], body
     code1 = body["confirmation_code"]
     print(f"booking creation ok ({code1})")
 
@@ -341,7 +336,7 @@ try:
     print("cancel via signed token ok (mirrored to event)")
 
     # Wrong-purpose token rejected
-    bad_token = mint_token(appt_for_token, "enrichment")
+    bad_token = mint_token(appt_for_token, "reschedule")
     resp = client.post(f"/api/booking/cancel/{bad_token}", json={})
     assert resp.status_code == 404
     print("wrong-purpose token rejected ok")

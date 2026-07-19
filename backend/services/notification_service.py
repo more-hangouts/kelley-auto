@@ -39,7 +39,6 @@ from services.notification_templates import (
     EMAIL_RENDERERS,
     SMS_RENDERERS,
     RenderedEmail,
-    is_boutique_profile_attached,
     render_account_locked,
     render_admin_daily_digest,
     render_admin_missing_clock_out,
@@ -75,9 +74,11 @@ log = logging.getLogger(__name__)
 
 _LIVE_STATUSES = ("pending", "confirmed")
 _REMINDER_LEAD_HOURS = 24
-_ENRICHMENT_DELAY_MINUTES = 2
 
 _MAX_ATTEMPTS = 5
+
+# Notification kinds that existed in earlier releases but have been removed.
+_RETIRED_KINDS = frozenset({"enrichment_invitation"})
 
 
 StaffEmailRenderer = Callable[..., RenderedEmail]
@@ -281,12 +282,7 @@ def enqueue_staff_job(
 
 
 def enqueue_for_new_booking(db: Session, appt: Appointment) -> None:
-    """Customer confirmation + internal notification + enrichment + reminder.
-
-    The profile invitation is skipped when a Boutique Experience profile is
-    already attached to this lead (calculator-first path), so the customer
-    doesn't get asked to fill out something they just submitted.
-    """
+    """Customer confirmation + internal notification + reminder."""
     now = datetime.now(timezone.utc)
     _enqueue(
         db,
@@ -303,15 +299,6 @@ def enqueue_for_new_booking(db: Session, appt: Appointment) -> None:
             appointment_id=appt.id,
             recipient=staff_email,
         )
-    if not is_boutique_profile_attached(appt):
-        _enqueue(
-            db,
-            kind="enrichment_invitation",
-            channel="email",
-            appointment_id=appt.id,
-            recipient=appt.email,
-            due_at=now + timedelta(minutes=_ENRICHMENT_DELAY_MINUTES),
-        )
     reminder_due = appt.slot_start_at - timedelta(hours=_REMINDER_LEAD_HOURS)
     if reminder_due > now:
         _enqueue(
@@ -327,14 +314,7 @@ def enqueue_for_new_booking(db: Session, appt: Appointment) -> None:
 def enqueue_for_reschedule(
     db: Session, *, original_id: int, new_appt: Appointment
 ) -> None:
-    """Reschedule confirmation + enrichment + reminder for the new appt.
-
-    Phase 1 keeps the Boutique Experience profile attached to the original
-    appointment as historical data and aggregates "complete?" across the
-    CRM event, so a customer who finished their profile before
-    rescheduling does not get re-asked. The invitation enqueue checks
-    that here.
-    """
+    """Reschedule confirmation + reminder for the new appt."""
     cancel_pending_for_appointment(db, original_id)
     _enqueue(
         db,
@@ -344,15 +324,6 @@ def enqueue_for_reschedule(
         recipient=new_appt.email,
     )
     now = datetime.now(timezone.utc)
-    if not is_boutique_profile_attached(new_appt):
-        _enqueue(
-            db,
-            kind="enrichment_invitation",
-            channel="email",
-            appointment_id=new_appt.id,
-            recipient=new_appt.email,
-            due_at=now + timedelta(minutes=_ENRICHMENT_DELAY_MINUTES),
-        )
     reminder_due = new_appt.slot_start_at - timedelta(hours=_REMINDER_LEAD_HOURS)
     if reminder_due > now:
         _enqueue(
@@ -433,6 +404,12 @@ def dispatch_job(
     sms_transport: SmsTransport,
 ) -> None:
     """Render + send a single job, updating its status in place."""
+    if job.kind in _RETIRED_KINDS:
+        # legacy Bella's-era rows: a job of a removed kind (e.g. the old
+        # Boutique Experience enrichment invite) may still sit queued in
+        # notification_jobs. Cancel it quietly instead of retry-failing.
+        _mark(job, "cancelled", "retired notification kind")
+        return
     if job.channel == "email" and job.kind in STAFF_EMAIL_RENDERERS:
         _dispatch_staff_email(db, job, email_transport=email_transport)
         return
@@ -582,9 +559,9 @@ def _coerce_temporals(value: Any, key: str | None = None) -> Any:
 
 
 def _should_skip_for_status(kind: str, status: str) -> bool:
-    # Reminders + enrichment invites should not fire if the appointment is
+    # Reminders should not fire if the appointment is
     # already cancelled/rescheduled/attended/no_show.
-    if kind in ("reminder", "enrichment_invitation", "sms_reminder"):
+    if kind in ("reminder", "sms_reminder"):
         return status not in _LIVE_STATUSES
     # Confirmation messages still go out even if the appointment was just
     # cancelled — the customer should know the round-trip happened.

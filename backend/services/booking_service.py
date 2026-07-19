@@ -14,7 +14,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Iterable
 from zoneinfo import ZoneInfo
 
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,10 +23,8 @@ from database.models import (
     Appointment,
     AppointmentAvailabilityRule,
     AppointmentBlackout,
-    AppointmentEnrichmentResponse,
     BookingWidgetThemeSettings,
 )
-from services.booking_contracts import BoutiqueExperienceSubmission
 
 # Confirmation code alphabet — no 0/O/I/1 to avoid customer transcription errors.
 # 31 chars (Crockford-ish without 0/1/I/L/O); log2(31) ≈ 4.954 bits per char.
@@ -410,135 +407,3 @@ def hash_ip(raw_ip: str | None) -> str | None:
     if not raw_ip:
         return None
     return hashlib.sha256(raw_ip.encode("utf-8")).hexdigest()
-
-
-# ---------------------------------------------------------------------------
-# Boutique Experience profile
-# ---------------------------------------------------------------------------
-
-
-def _parse_visitor_uuid(raw: str | None) -> UUID | None:
-    if not raw:
-        return None
-    try:
-        return UUID(raw)
-    except (ValueError, TypeError):
-        return None
-
-
-def _apply_profile_payload(
-    profile: AppointmentEnrichmentResponse,
-    payload: BoutiqueExperienceSubmission,
-    *,
-    source: str,
-) -> None:
-    """Copy a Boutique Experience submission onto an existing profile row.
-
-    Stamps `submitted_at`, sets `source` if not already set (the original
-    source wins on upsert so we can distinguish "first arrived via email"
-    from a later edit), and stashes the request payload so we can recover
-    if a column is added later.
-    """
-    m = payload.measurements
-    s = payload.sizing
-    p = payload.preferences
-
-    profile.bust_inches = m.bust_inches
-    profile.waist_inches = m.waist_inches
-    profile.hips_inches = m.hips_inches
-    profile.height_ft = m.height_ft
-    profile.height_in = m.height_in
-
-    profile.estimated_size_low = s.estimated_size_low
-    profile.estimated_size_high = s.estimated_size_high
-    profile.size_by_bust = s.size_by_bust
-    profile.size_by_waist = s.size_by_waist
-    profile.size_by_hips = s.size_by_hips
-    profile.chart_source = s.chart_source
-    profile.off_chart = s.off_chart
-
-    profile.style_preference = p.style
-    profile.back_preference = p.back
-    profile.budget_preference = p.budget
-    profile.color_preferences_text = p.colors
-    profile.likes = p.likes
-    profile.avoids = p.avoids
-
-    profile.summary = payload.summary
-    profile.session_id = payload.session_id or profile.session_id
-    visitor_uuid = _parse_visitor_uuid(payload.visitor_id)
-    if visitor_uuid is not None:
-        profile.visitor_id = visitor_uuid
-
-    if profile.source is None:
-        profile.source = source
-    profile.submitted_at = datetime.now(timezone.utc)
-    profile.raw_payload = payload.model_dump(mode="json")
-
-
-def create_pre_booking_profile(
-    db: Session, *, payload: BoutiqueExperienceSubmission
-) -> AppointmentEnrichmentResponse:
-    """Insert an unlinked profile for the calculator-first path."""
-    profile = AppointmentEnrichmentResponse(appointment_id=None)
-    _apply_profile_payload(profile, payload, source="pre_booking")
-    db.add(profile)
-    db.flush()
-    return profile
-
-
-def upsert_profile_for_appointment(
-    db: Session,
-    *,
-    appointment_id: int,
-    payload: BoutiqueExperienceSubmission,
-    source: str,
-) -> AppointmentEnrichmentResponse:
-    """Create-or-update the Boutique Experience profile for one appointment.
-
-    Used by the email-token path. If a profile already exists for this
-    appointment (e.g. promoted from a pre-booking row, or a re-submit), update
-    it in place rather than rejecting the duplicate.
-    """
-    existing = (
-        db.query(AppointmentEnrichmentResponse)
-        .filter(AppointmentEnrichmentResponse.appointment_id == appointment_id)
-        .first()
-    )
-    if existing is None:
-        existing = AppointmentEnrichmentResponse(appointment_id=appointment_id)
-        db.add(existing)
-    _apply_profile_payload(existing, payload, source=source)
-    db.flush()
-    return existing
-
-
-def link_profile_to_appointment(
-    db: Session, *, profile_id: int, appointment_id: int
-) -> bool:
-    """Best-effort attach of a pre-booking profile to a freshly created appointment.
-
-    Returns True on success. Returns False (and does not raise) if:
-      - the profile id is unknown,
-      - the profile is already linked to a different appointment,
-      - another profile already exists for the target appointment.
-
-    Callers should swallow False: the appointment is the source of truth, and
-    a missed link is recoverable by support re-attaching after the fact.
-    """
-    profile = db.get(AppointmentEnrichmentResponse, profile_id)
-    if profile is None:
-        return False
-    if profile.appointment_id == appointment_id:
-        return True
-    if profile.appointment_id is not None:
-        return False
-    other = (
-        db.query(AppointmentEnrichmentResponse)
-        .filter(AppointmentEnrichmentResponse.appointment_id == appointment_id)
-        .first()
-    )
-    if other is not None:
-        return False
-    profile.appointment_id = appointment_id
-    return True

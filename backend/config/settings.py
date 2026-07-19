@@ -52,10 +52,9 @@ BOOKING_WIDGET_ALLOWED_ORIGINS = _csv(
     "BOOKING_WIDGET_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8000"
 )
 
-# Booking widget — signed token secrets. Fall back to SECRET_KEY in dev so the
-# stack still boots; production should set both explicitly.
+# Booking widget — signed token secret. Falls back to SECRET_KEY in dev so the
+# stack still boots; production should set it explicitly.
 RESCHEDULE_TOKEN_SECRET = os.getenv("RESCHEDULE_TOKEN_SECRET") or SECRET_KEY
-ENRICHMENT_TOKEN_SECRET = os.getenv("ENRICHMENT_TOKEN_SECRET") or SECRET_KEY
 ATTRIBUTION_COOKIE_DOMAIN = os.getenv("ATTRIBUTION_COOKIE_DOMAIN") or None
 
 # Booking widget — paid-ad conversion (server-side)

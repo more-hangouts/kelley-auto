@@ -61,7 +61,7 @@ deleting these rows.
 | Table | Why append-only |
 |---|---|
 | `appointments` | Booking history; `appointment_session_events` references it. Lifecycle handled by `appointments.status` (`cancelled` / `no_show` / etc.) |
-| `catalog_items` | Referenced by `appointment_tried_on_items` (RESTRICT) and quote/invoice line items via name/SKU snapshot. `catalog_items.is_active` is the deactivation knob. |
+| `catalog_items` | Referenced by quote/invoice line items via name/SKU snapshot (plus the legacy Bella's-era `appointment_tried_on_items` table, RESTRICT). `catalog_items.is_active` is the deactivation knob. |
 
 **Rules:**
 - No `session.delete()`, `db.delete()`, or `DELETE FROM` against these tables
@@ -137,11 +137,10 @@ new set in the same transaction.
 
 ## Special case — `appointment_tried_on_items`
 
-Sales staff can remove a tried-on item via `services.sales_tried_on.remove_tried_on`,
-which calls `db.delete(row)` and writes an `activity_log` breadcrumb in the same
-transaction. The breadcrumb is the audit-trail substitute; there is no business
-need to soft-delete the row itself because the activity log records what
-happened. Allowlisted explicitly in the guardrail.
+Legacy Bella's-era table. The tried-on tooling (service + routes + UI) was
+removed with the dealership conversion; the table and its historical rows stay
+per the append-only schema policy, but no code path writes or deletes rows
+anymore, so there is no guardrail allowlist entry.
 
 ## Adding a new table — checklist
 

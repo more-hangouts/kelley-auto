@@ -1029,34 +1029,6 @@ export async function salesPatchAppointmentNotes(appointmentId, internalNotes) {
   return data
 }
 
-// ---------------------------------------------------------------------------
-// Sales Portal — Try-on log (Phase 4)
-// ---------------------------------------------------------------------------
-
-export async function salesListTriedOn(appointmentId) {
-  const { data } = await api.get(
-    `/sales/appointments/${appointmentId}/tried-on`,
-  )
-  return data
-}
-
-export async function salesAddTriedOn(appointmentId, body) {
-  const { data } = await api.post(
-    `/sales/appointments/${appointmentId}/tried-on`,
-    body,
-  )
-  return data
-}
-
-export async function salesPatchTriedOn(triedOnId, patch) {
-  const { data } = await api.patch(`/sales/tried-on/${triedOnId}`, patch)
-  return data
-}
-
-export async function salesDeleteTriedOn(triedOnId) {
-  await api.delete(`/sales/tried-on/${triedOnId}`)
-}
-
 // Catalog search (dual-scope GET; sales staff search the same fields
 // admins do). Lightweight wrapper over the existing /api/catalog list.
 export async function searchCatalogForSales({ q, limit = 25 } = {}) {

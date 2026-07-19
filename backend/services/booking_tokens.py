@@ -1,19 +1,17 @@
 """Signed tokens for self-service appointment links.
 
-Reschedule, cancel, and enrichment links all carry a JWT bound to a single
-appointment ID and a single purpose. Reschedule and cancel share the
-``RESCHEDULE_TOKEN_SECRET`` (the purpose claim differentiates them); enrichment
-uses its own secret so a leak of one surface doesn't compromise the other.
+Reschedule and cancel links carry a JWT bound to a single appointment ID
+and a single purpose; both share the ``RESCHEDULE_TOKEN_SECRET`` (the
+purpose claim differentiates them).
 
 G1 hardening:
 
-  - **Shorter, purpose-specific TTLs.** Previously 60d/60d/30d; now
-    30d/30d/14d **and** capped by the appointment's own `slot_start_at`
-    so a token cannot outlive the appointment it points at. Specifically:
+  - **Shorter, purpose-specific TTLs.** Previously 60d; now 30d **and**
+    capped by the appointment's own `slot_start_at` so a token cannot
+    outlive the appointment it points at. Specifically:
 
       reschedule: min(now + 30d, slot_start_at + 1d)  ← 1d grace for no-show
       cancel    : min(now + 30d, slot_start_at + 1d)  ← same
-      enrichment: min(now + 14d, slot_start_at)       ← must finish before slot
 
   - **Explicit revocation.** Each appointment carries
     `tokens_invalidated_at`. Cancel + reschedule call
@@ -31,33 +29,28 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from config.settings import (
-    ENRICHMENT_TOKEN_SECRET,
     PUBLIC_SITE_URL,
     RESCHEDULE_TOKEN_SECRET,
 )
 
 ALGORITHM = "HS256"
 
-Purpose = Literal["reschedule", "cancel", "enrichment"]
+Purpose = Literal["reschedule", "cancel"]
 
-# G1: tightened from 60/60/30 days. The slot-bound cap below usually
-# fires first for real bookings (most fits are within a few weeks),
-# so these are the upper bound for far-future appointments only.
+# G1: tightened from 60 days. The slot-bound cap below usually
+# fires first for real bookings (most appointments are within a few
+# weeks), so these are the upper bound for far-future appointments only.
 _DEFAULT_TTL_DAYS: dict[str, int] = {
     "reschedule": 30,
     "cancel": 30,
-    "enrichment": 14,
 }
 
 # G1: how far past `slot_start_at` each purpose remains valid.
 # Reschedule/cancel get +1 day so an admin can still process a
-# no-show via the customer-side link if needed. Enrichment expires
-# AT slot_start_at because filling profile data after attending
-# the appointment makes no sense.
+# no-show via the customer-side link if needed.
 _SLOT_BOUND_DAYS: dict[str, int] = {
     "reschedule": 1,
     "cancel": 1,
-    "enrichment": 0,
 }
 
 
@@ -66,8 +59,6 @@ class InvalidBookingToken(Exception):
 
 
 def _secret_for(purpose: Purpose) -> str:
-    if purpose == "enrichment":
-        return ENRICHMENT_TOKEN_SECRET
     return RESCHEDULE_TOKEN_SECRET
 
 
@@ -188,8 +179,3 @@ def reschedule_url(appointment) -> str:
 def cancel_url(appointment) -> str:
     return f"{PUBLIC_SITE_URL.rstrip('/')}/cancel/{mint_token(appointment, 'cancel')}"
 
-
-def enrichment_url(appointment) -> str:
-    """Tokenized Boutique Experience profile URL for post-booking emails."""
-    token = mint_token(appointment, "enrichment")
-    return f"{PUBLIC_SITE_URL.rstrip('/')}/fit-prep.html?token={token}"

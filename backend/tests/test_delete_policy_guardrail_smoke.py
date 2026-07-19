@@ -49,7 +49,6 @@ EXPECTED_ORM_DELETES: set[tuple[str, str]] = {
     ("api/routers/admin_booking_settings.py", "AppointmentBlackout"),
     ("services/notification_subscriber_service.py", "NotificationSubscriber"),
     # Special case — activity_log breadcrumb substitutes for soft-delete:
-    ("services/sales_tried_on.py", "AppointmentTriedOnItem"),
 }
 
 # (relative_path, table_name) for `DELETE FROM <table>` raw SQL.

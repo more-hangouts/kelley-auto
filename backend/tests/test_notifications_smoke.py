@@ -4,8 +4,8 @@ Walks through:
   1. Book an appointment via the public API → verify the right notification
      jobs were enqueued at the right due_at offsets.
   2. Run the worker once → confirmation + internal jobs flip to 'sent', the
-     enrichment + reminder jobs stay pending (their due_at is in the future).
-  3. Reschedule → old reminder/enrichment cancelled, new ones queued.
+     reminder job stays pending (its due_at is in the future).
+  3. Reschedule → old reminder cancelled, new ones queued.
   4. Cancel → cancellation email queued, pending jobs cancelled.
   5. Reminder for a cancelled appointment is skipped at dispatch time.
 """
@@ -42,7 +42,6 @@ from services import booking_service, notification_service
 from services.booking_tokens import cancel_url, reschedule_url
 from services.notification_templates import (
     render_booking_confirmation,
-    render_enrichment_invitation,
     render_reminder,
 )
 
@@ -150,69 +149,39 @@ try:
     jobs = _jobs_for(appt_id)
     kinds = sorted({j.kind for j in jobs})
     # Internal notification only fires when BOOKING_INTERNAL_NOTIFICATION_EMAILS is set.
-    expected = {"booking_confirmation", "enrichment_invitation"}
+    expected = {"booking_confirmation"}
     if "reminder" in {j.kind for j in jobs}:
         expected.add("reminder")
     assert expected.issubset(set(kinds)), f"missing kinds, got {kinds}"
+    # The Bella's-era Boutique Experience invite must no longer be scheduled.
+    assert "enrichment_invitation" not in kinds, kinds
     print(f"new-booking enqueue ok ({len(jobs)} jobs: {kinds})")
 
     confirm_job = next(j for j in jobs if j.kind == "booking_confirmation")
-    enrich_job = next(j for j in jobs if j.kind == "enrichment_invitation")
     now = datetime.now(timezone.utc)
     assert confirm_job.due_at <= now + timedelta(seconds=5), "confirmation should be due immediately"
-    assert enrich_job.due_at > now, "enrichment should be due in the future (T+2min)"
-    enrich_offset_min = (enrich_job.due_at - now).total_seconds() / 60
-    assert 1.5 <= enrich_offset_min <= 2.5, enrich_offset_min
-    print(f"due_at offsets ok (enrichment +{enrich_offset_min:.1f}min)")
+    print("due_at offsets ok")
 
     # -----------------------------------------------------------------
-    # Phase 7: template copy + token URL + conditional reminder CTA
+    # Template copy: dealership voice, no dress-shop remnants, working
+    # reschedule/cancel links.
     # -----------------------------------------------------------------
     db = SessionLocal()
     try:
         appt_for_render = db.get(Appointment, appt_id)
 
         confirm = render_booking_confirmation(appt_for_render)
-        assert "Complete your Boutique Experience Profile" in confirm.text, confirm.text
-        assert "Complete your Boutique Experience Profile" in confirm.html, "html missing CTA"
-        assert "/fit-prep.html?token=" in confirm.text, confirm.text
-
-        invite = render_enrichment_invitation(appt_for_render)
-        assert invite.subject == "Complete your Boutique Experience Profile", invite.subject
-        assert "/fit-prep.html?token=" in invite.text, invite.text
-
-        # Reminder when no profile is attached: CTA is present.
-        rem_open = render_reminder(appt_for_render)
-        assert "Complete your Boutique Experience Profile" in rem_open.text, rem_open.text
-        assert "Complete your Boutique Experience Profile" in rem_open.html
-
-        # Attach a complete profile and re-render: CTA disappears.
-        profile_row = AppointmentEnrichmentResponse(
-            appointment_id=appt_id,
-            source="post_booking_email",
-            bust_inches=36.5,
-            style_preference="ball_gown",
-            summary="phase 7 reminder smoke",
-            submitted_at=datetime.now(timezone.utc),
-        )
-        db.add(profile_row)
-        db.commit()
-        db.refresh(appt_for_render)
-
-        rem_closed = render_reminder(appt_for_render)
-        assert "Complete your Boutique Experience Profile" not in rem_closed.text, \
-            "reminder should drop the CTA when a profile is attached"
-        assert "Complete your Boutique Experience Profile" not in rem_closed.html
-
-        # Reminder still includes the slot/quick-prep block regardless.
-        assert "Quick prep" in rem_closed.html
-
-        # Clean up the synthetic profile row.
-        db.delete(profile_row)
-        db.commit()
+        rem = render_reminder(appt_for_render)
+        for rendered in (confirm, rem):
+            blob = (rendered.subject + rendered.text + rendered.html).lower()
+            for banned in ("boutique experience", "fit-prep", "dress", "gown", "fitting"):
+                assert banned not in blob, f"dress-shop remnant {banned!r} in email: {rendered.subject}"
+        assert "/reschedule/" in confirm.text, confirm.text
+        assert "/cancel/" in confirm.text, confirm.text
+        assert "Quick prep" in rem.html
     finally:
         db.close()
-    print("template copy + token URL + conditional reminder CTA ok")
+    print("template copy has no dress-shop remnants ok")
 
     # ---------------------------------------------------------------------
     # 2. Run worker once → immediate jobs sent, future ones still pending
@@ -229,7 +198,7 @@ try:
     pending = [j for j in jobs if j.status == "pending"]
     assert any(j.kind == "booking_confirmation" and j.status == "sent" for j in jobs), \
         "booking_confirmation should have flipped to sent"
-    assert all(j.status == "pending" for j in jobs if j.kind in ("enrichment_invitation", "reminder")), \
+    assert all(j.status == "pending" for j in jobs if j.kind == "reminder"), \
         "future-due jobs should still be pending"
     print(f"worker dispatch ok ({len(sent)} sent, {len(pending)} pending)")
 
@@ -359,23 +328,14 @@ finally:
 
 
 # ---------------------------------------------------------------------------
-# Phase 7 amendment: calculator-first + reschedule-after-completion cases
+# Legacy-row tolerance: Bella's-era quinceanera events with attached
+# enrichment (Boutique Experience) rows must not break the enqueue or
+# render paths, and a queued job of the retired `enrichment_invitation`
+# kind must be cancelled quietly by the dispatcher instead of crashing
+# or retry-failing the worker loop.
 # ---------------------------------------------------------------------------
-# These exercise the bug fix where:
-#  1) `enqueue_for_new_booking` must NOT schedule an enrichment_invitation
-#     when a profile is already attached (calculator-first path).
-#  2) `is_boutique_profile_attached` must return True for a newly
-#     rescheduled appointment whose original appointment carries the
-#     completed profile (cross-appointment, same crm_event_id).
-# Both go through the service/template layer directly to keep the
-# scenarios small and independent of slot availability.
 
 from sqlalchemy import text as _t
-from services.notification_templates import (
-    is_boutique_profile_attached,
-    render_booking_confirmation,
-    render_reminder,
-)
 from services.notification_service import enqueue_for_new_booking
 from database.models import Contact, Event, EventParticipant, EventStatusChangeEvent
 
@@ -449,32 +409,6 @@ def _seed_event_with_profile(prefix: str):
         db.close()
 
 
-def _seed_appt_on_event(event_id: int, contact_id: int, code: str, days: int):
-    db = SessionLocal()
-    try:
-        contact = db.get(Contact, contact_id)
-        appt = Appointment(
-            confirmation_code=code,
-            slot_start_at=datetime.now(timezone.utc) + timedelta(days=days),
-            slot_end_at=datetime.now(timezone.utc) + timedelta(days=days, hours=1),
-            slot_duration_minutes=60,
-            timezone="America/Chicago",
-            celebrant_first_name="PhaseSeven",
-            party_size_bucket="solo",
-            phone="(210) 555-0188",
-            phone_e164=contact.phone_e164,
-            email=contact.email,
-            status="confirmed",
-            contact_id=contact.id,
-            crm_event_id=event_id,
-            event_id=f"evt-{code}",
-        )
-        db.add(appt); db.commit(); db.refresh(appt)
-        return appt.id
-    finally:
-        db.close()
-
-
 def _delete_seed(contact_id: int, event_id: int):
     db = SessionLocal()
     try:
@@ -504,15 +438,13 @@ def _delete_seed(contact_id: int, event_id: int):
         db.close()
 
 
-# 1. Calculator-first booking: profile already attached at enqueue time.
-contact_id, event_id_1, appt_id_1, profile_id_1 = _seed_event_with_profile("calc-first")
+# 1. Legacy quinceanera event + attached enrichment row: booking enqueue
+#    still works and never schedules the retired invitation kind.
+contact_id, event_id_1, appt_id_1, profile_id_1 = _seed_event_with_profile("legacy-tolerance")
 try:
     db = SessionLocal()
     try:
         appt = db.get(Appointment, appt_id_1)
-        # Sanity: helper sees the attached profile.
-        assert is_boutique_profile_attached(appt) is True
-
         enqueue_for_new_booking(db, appt)
         db.commit()
 
@@ -523,66 +455,35 @@ try:
             .all()
         ]
         assert "enrichment_invitation" not in kinds, (
-            f"calculator-first booking should skip enrichment_invitation, "
+            f"enrichment_invitation is retired and must never be enqueued, "
             f"got jobs: {kinds}"
         )
         assert "booking_confirmation" in kinds, kinds
-        print(f"calculator-first skips invitation ok (jobs: {sorted(kinds)})")
+        print(f"legacy quinceanera event enqueue ok (jobs: {sorted(kinds)})")
 
-        # And the confirmation email itself drops the CTA.
-        confirm = render_booking_confirmation(appt)
-        assert "Complete your Boutique Experience Profile" not in confirm.text, \
-            "confirmation should drop the CTA when profile is attached"
-        assert "Complete your Boutique Experience Profile" not in confirm.html
-        print("confirmation drops CTA when attached ok")
+        # 2. A leftover queued job of the retired kind is cancelled quietly.
+        stale = NotificationJob(
+            kind="enrichment_invitation",
+            channel="email",
+            appointment_id=appt_id_1,
+            recipient=appt.email,
+            due_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            payload={},
+        )
+        db.add(stale)
+        db.commit()
+        stale_id = stale.id
+
+        notification_service.run_once(db)
+        db.expire_all()
+        stale = db.get(NotificationJob, stale_id)
+        assert stale.status == "cancelled", stale.status
+        assert "retired" in (stale.last_error or ""), stale.last_error
+        print("queued retired-kind job cancelled quietly ok")
     finally:
         db.close()
 finally:
     _delete_seed(contact_id, event_id_1)
-
-
-# 2. Reschedule after profile completion: new appt on same crm_event_id,
-#    profile lives on the original. Reminder for the new appt should still
-#    suppress the CTA.
-contact_id, event_id_2, original_appt_id, profile_id_2 = _seed_event_with_profile("reschedule")
-new_appt_id = _seed_appt_on_event(event_id_2, contact_id, "BX-P7NEW", days=5)
-try:
-    db = SessionLocal()
-    try:
-        new_appt = db.get(Appointment, new_appt_id)
-        assert new_appt.crm_event_id == event_id_2
-        # Helper must span crm_event_id, not just appointment_id.
-        assert is_boutique_profile_attached(new_appt) is True, (
-            "is_boutique_profile_attached should return True when a sibling "
-            "appointment on the same lead has a submitted profile"
-        )
-
-        rem = render_reminder(new_appt)
-        assert "Complete your Boutique Experience Profile" not in rem.text, (
-            "reminder for rescheduled appt should drop the CTA when the "
-            "lead already has a completed profile"
-        )
-        assert "Complete your Boutique Experience Profile" not in rem.html
-
-        # And the enqueue side also skips invitation for the rescheduled appt.
-        from services.notification_service import enqueue_for_reschedule
-        enqueue_for_reschedule(db, original_id=original_appt_id, new_appt=new_appt)
-        db.commit()
-        new_jobs = [
-            j.kind
-            for j in db.query(NotificationJob)
-            .filter(NotificationJob.appointment_id == new_appt_id)
-            .all()
-        ]
-        assert "enrichment_invitation" not in new_jobs, (
-            f"reschedule should skip enrichment_invitation when the lead "
-            f"already has a profile, got jobs: {new_jobs}"
-        )
-        print(f"reschedule-after-completion suppresses CTA + invite ok (jobs: {sorted(new_jobs)})")
-    finally:
-        db.close()
-finally:
-    _delete_seed(contact_id, event_id_2)
 
 
 print("\nnotifications smoke ok")
