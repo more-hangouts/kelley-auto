@@ -19,6 +19,7 @@ import PaletteIcon from '@mui/icons-material/Palette'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import FingerprintOutlinedIcon from '@mui/icons-material/FingerprintOutlined'
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined'
 import {
   DndContext,
   DragOverlay,
@@ -179,31 +180,33 @@ function CardBody({ card, dragging = false }) {
             sx={{ fontSize: 11, height: 22 }}
           />
         </Tooltip>
-        <Tooltip
-          title={
-            card.event_date
-              ? `Event on ${dayjs(card.event_date).format('MMM D, YYYY')}`
-              : 'Event date not set yet'
-          }
-        >
-          <Chip
-            size="small"
-            icon={<EventIcon sx={{ fontSize: 14 }} />}
-            label={card.event_date ? daysUntil(card.event_date) : 'TBD'}
-            variant="outlined"
-            sx={{
-              fontSize: 11,
-              height: 22,
-              ...(card.event_date
-                ? null
-                : {
-                    opacity: 0.5,
-                    color: 'text.secondary',
-                    borderStyle: 'dashed',
-                  }),
-            }}
-          />
-        </Tooltip>
+        {card.event_type === 'quinceanera' && (
+          <Tooltip
+            title={
+              card.event_date
+                ? `Event on ${dayjs(card.event_date).format('MMM D, YYYY')}`
+                : 'Event date not set yet'
+            }
+          >
+            <Chip
+              size="small"
+              icon={<EventIcon sx={{ fontSize: 14 }} />}
+              label={card.event_date ? daysUntil(card.event_date) : 'TBD'}
+              variant="outlined"
+              sx={{
+                fontSize: 11,
+                height: 22,
+                ...(card.event_date
+                  ? null
+                  : {
+                      opacity: 0.5,
+                      color: 'text.secondary',
+                      borderStyle: 'dashed',
+                    }),
+              }}
+            />
+          </Tooltip>
+        )}
         {card.vehicle && (
           <>
             {/* Vehicle name intentionally NOT chipped here — it already leads
@@ -230,6 +233,17 @@ function CardBody({ card, dragging = false }) {
                 />
               </Tooltip>
             )}
+            {card.vehicle.price_cents != null && (
+              <Tooltip title={`Asking price ${formatUSD(card.vehicle.price_cents)}`}>
+                <Chip
+                  size="small"
+                  icon={<LocalOfferOutlinedIcon sx={{ fontSize: 14 }} />}
+                  label={formatUSD(card.vehicle.price_cents)}
+                  variant="outlined"
+                  sx={{ fontSize: 11, height: 22 }}
+                />
+              </Tooltip>
+            )}
             {card.vehicle.vin && (
               <Tooltip title={`VIN ${card.vehicle.vin}`}>
                 <Chip
@@ -243,7 +257,7 @@ function CardBody({ card, dragging = false }) {
             )}
           </>
         )}
-        {card.court_size != null && (
+        {card.event_type === 'quinceanera' && card.court_size != null && (
           <Tooltip title="Court size">
             <Chip
               size="small"
@@ -254,7 +268,7 @@ function CardBody({ card, dragging = false }) {
             />
           </Tooltip>
         )}
-        {card.quince_theme && (
+        {card.event_type === 'quinceanera' && card.quince_theme && (
           <Tooltip title={card.quince_theme}>
             <Chip
               size="small"
