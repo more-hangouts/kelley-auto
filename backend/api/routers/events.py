@@ -58,6 +58,8 @@ class EventCreate(BaseModel):
 
     from_appointment_id: int | None = None
     primary_contact_id: int | None = None
+    # "quinceanera" stays accepted so legacy Bella's-era rows keep
+    # serializing/round-tripping; every new event defaults to vehicle_sale.
     event_type: Literal["quinceanera", "vehicle_sale"] = "vehicle_sale"
 
     event_name: str | None = Field(default=None, max_length=200)
@@ -163,12 +165,10 @@ class LinkedAppointmentEnrichment(BaseModel):
 
 
 class BoutiqueExperienceProfile(BaseModel):
-    """Full Boutique Experience profile, surfaced on event detail.
-
-    Covers the calculator path (measurements, computed sizing, free-text
-    preferences) plus identity (`source`, `submitted_at`). Survey-shape
-    preferences stay on `LinkedAppointmentEnrichment` for now to avoid
-    breaking the existing staff UI; Phase 6 can decide whether to merge.
+    """legacy Bella's-era rows: full Boutique Experience profile, surfaced
+    on event detail. The intake surfaces were removed with the dealership
+    conversion; this model only serializes historical enrichment rows so
+    old leads keep rendering.
     """
 
     profile_id: int
@@ -228,9 +228,9 @@ class LinkedAppointmentSummary(BaseModel):
     # belongs to. NULL = celebrant's appointment or unspecified.
     event_participant_id: int | None = None
     enrichment: LinkedAppointmentEnrichment | None
-    # Boutique Experience surface. `status` and `submitted_at` are the
-    # at-a-glance signal; `summary` is the customer-rendered staff display
-    # text; the structured object lives on full detail only.
+    # legacy Bella's-era rows: Boutique Experience surface. `status` and
+    # `submitted_at` are the at-a-glance signal; `summary` is the staff
+    # display text; the structured object lives on full detail only.
     boutique_experience_status: BoutiqueExperienceStatus
     boutique_experience_submitted_at: datetime | None
     boutique_experience_summary: str | None

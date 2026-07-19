@@ -1,7 +1,7 @@
 /* Customer-facing portal styles. Mobile-first, no JS framework, no
    external fonts beyond what the customer's browser ships with.
    Brand pulled from the admin theme so the page feels of-a-piece with
-   the rest of the boutique surface. */
+   the rest of the customer surface. */
 
 :root {
   --bg: #FAF4F6;

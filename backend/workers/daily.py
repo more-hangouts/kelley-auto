@@ -5,7 +5,7 @@ scheduled to fire once per local day in the configured shop timezone.
 The first tick fires shortly after process start so a fresh deploy
 catches up on any reminders the previous day's worker missed during
 downtime; subsequent ticks fire at ~02:30 local time when nobody is
-in the boutique.
+in the shop.
 
 Why in-process and not OS cron:
 

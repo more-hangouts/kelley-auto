@@ -115,7 +115,7 @@ def _render_invoice_sent(
         f"You can review the full invoice and the payment schedule here:\n"
         f"  {portal_url}\n\n"
         f"If you have questions about anything on the invoice, please reply "
-        f"to this email or call the boutique.\n\n"
+        f"to this email or call the dealership.\n\n"
         f"{signoff}\n"
     )
     html = (
@@ -128,7 +128,7 @@ def _render_invoice_sent(
         f"padding:12px 18px;border-radius:8px;text-decoration:none;"
         f"font-weight:600;\">View invoice {escape(number)}</a></p>"
         f"<p>If you have questions about anything on the invoice, please reply "
-        f"to this email or call the boutique.</p>"
+        f"to this email or call the dealership.</p>"
         f"<p>{escape(signoff)}</p>"
         f"</body></html>"
     )

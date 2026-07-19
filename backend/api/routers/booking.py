@@ -686,8 +686,9 @@ def post_cancel(
                 if reason
                 else "Customer cancelled via token"
             )
-            # Each workflow names its own cancel column — quinceañera uses
-            # 'cancelled', vehicle sales fall back to terminal 'lost'.
+            # Each workflow names its own cancel column — the legacy
+            # Bella's-era quinceañera workflow uses 'cancelled', vehicle
+            # sales fall back to terminal 'lost'.
             ev = db.get(Event, appt.crm_event_id)
             cancel_status = (
                 event_workflow.cancellation_status(ev.event_type)

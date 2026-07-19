@@ -88,7 +88,7 @@ def _open_in_punches(db: Session) -> list[StaffPunch]:
     """Return every user's most-recent non-void punch when it's a
     direction='in'. We pull the candidate set by joining users to
     their last non-void punch in Python because the per-user count
-    at boutique scale is single-digit; a window-function SQL query
+    at dealership scale is single-digit; a window-function SQL query
     here is overkill."""
     users = db.query(User).filter(User.role.in_(("sales", "user", "admin"))).all()
     open_punches: list[StaffPunch] = []

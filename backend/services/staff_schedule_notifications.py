@@ -58,7 +58,7 @@ def _serialize_shift(shift: dict) -> dict:
     return {
         "starts_at": shift["starts_at"].isoformat(),
         "ends_at": shift["ends_at"].isoformat(),
-        "title": shift.get("title") or "Boutique shift",
+        "title": shift.get("title") or "Floor shift",
         "location": shift.get("location") or "Kelley Autoplex",
         "notes": shift.get("notes"),
     }

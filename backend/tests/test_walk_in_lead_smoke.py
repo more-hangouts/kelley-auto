@@ -1,15 +1,15 @@
 """Smoke tests for the walk-in lead capture endpoint.
 
 The walk-in flow has multiple side effects in one transaction (contact
-+ placeholder appointment + enrichment + event + activity row), so
-the smoke verifies each side independently against the same POST.
++ placeholder appointment + event + activity row), so the smoke
+verifies each side independently against the same POST.
 
 Coverage:
 
   - Happy path — POST creates Contact + Appointment ('attended',
-    attended_at set) + enrichment row (legacy survey fields) + Event in
-    'lead' lane; appointment.crm_event_id links the event; event picks
-    up theme/court/budget from enrichment; activity row tagged
+    attended_at set) + Event in the first vehicle_sale lane;
+    appointment.crm_event_id links the event; event picks up
+    budget_range from the intake; activity row tagged
     'event.walk_in_created' anchored to the event id.
   - Phone dedupe — re-POST with the same phone but a new event:
     same contact_id, was_new_contact=False, fresh Event + Appointment.
@@ -171,7 +171,7 @@ def _cleanup(user_ids, contact_ids, event_ids, appt_ids):
 
 
 def _walk_in_payload(
-    *, phone: str, celebrant_first: str = "Sofia", theme: str = "Garden"
+    *, phone: str, celebrant_first: str = "Sofia"
 ) -> dict:
     return {
         "contact": {
@@ -189,12 +189,7 @@ def _walk_in_payload(
         },
         "enrichment": {
             "party_size_bucket": "3_4",
-            "court_size": 14,
-            "quince_theme": theme,
-            "quince_theme_colors": ["sage", "blush"],
             "budget_range": "$2k-$4k",
-            "dress_styles": ["ballgown"],
-            "colors": ["sage", "blush"],
             "notes": "Walked in around 3pm, has a 6-month-out date.",
         },
     }
@@ -217,7 +212,7 @@ def check_happy_path(headers, ids):
     assert body["was_new_contact"] is True
     assert body["contact"]["display_name"] == "Maria Garcia"
     assert body["contact"]["phone_e164"] is not None
-    assert body["event"]["status"] == "lead"
+    assert body["event"]["status"] == "new_lead"
     assert body["event"]["event_name"], body["event"]
     assert isinstance(body["appointment_id"], int)
 
@@ -243,32 +238,22 @@ def check_happy_path(headers, ids):
         assert appt.party_size_bucket == "3_4"
         assert (appt.raw_payload or {}).get("source") == "walk_in", appt.raw_payload
 
-        # Event carries enrichment fields pulled by promote_appointment_to_event.
+        # Event carries the intake budget via EventOverrides. The
+        # dress-era enrichment fields are gone: no theme/court on the
+        # event and no AppointmentEnrichmentResponse row at all.
         assert event is not None
-        assert event.status == "lead"
+        assert event.status == "new_lead"
         assert event.primary_contact_id == contact_id
-        assert event.court_size == 14, event.court_size
-        assert event.quince_theme == "Garden", event.quince_theme
+        assert event.court_size is None, event.court_size
+        assert event.quince_theme is None, event.quince_theme
         assert event.budget_range == "$2k-$4k", event.budget_range
 
-        # Enrichment row exists with the legacy survey fields the
-        # widget would have stored.
         enrich = (
             db.query(AppointmentEnrichmentResponse)
             .filter(AppointmentEnrichmentResponse.appointment_id == appt_id)
             .first()
         )
-        assert enrich is not None, "enrichment row missing"
-        assert enrich.quince_theme == "Garden"
-        assert enrich.court_size == 14
-        assert enrich.budget_range == "$2k-$4k"
-        assert enrich.dress_styles == ["ballgown"]
-        # source uses the existing 'manual_attach' enum value; the
-        # walk-in origin is preserved in raw_payload to avoid an
-        # enum-extending migration just for this feature.
-        assert enrich.source == "manual_attach", enrich.source
-        assert (enrich.raw_payload or {}).get("source") == "walk_in"
-        assert enrich.submitted_at is not None
+        assert enrich is None, "walk-in must no longer write enrichment rows"
 
         # Activity log row anchored to the new event id.
         activity = (
@@ -296,7 +281,7 @@ def check_phone_dedupes_contact(headers, ids):
 
     first = client.post(
         "/api/walk-in-leads",
-        json=_walk_in_payload(phone=phone, celebrant_first="Ana", theme="Forest"),
+        json=_walk_in_payload(phone=phone, celebrant_first="Ana"),
         headers=headers,
     )
     assert first.status_code == 201, first.text
@@ -307,7 +292,7 @@ def check_phone_dedupes_contact(headers, ids):
 
     second = client.post(
         "/api/walk-in-leads",
-        json=_walk_in_payload(phone=phone, celebrant_first="Lucia", theme="Sunset"),
+        json=_walk_in_payload(phone=phone, celebrant_first="Lucia"),
         headers=headers,
     )
     assert second.status_code == 201, second.text

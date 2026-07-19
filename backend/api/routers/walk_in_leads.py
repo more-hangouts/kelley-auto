@@ -58,13 +58,11 @@ class WalkInLeadEventPayload(BaseModel):
 
 
 class WalkInLeadEnrichmentPayload(BaseModel):
+    # Wire name "enrichment" kept for SPA compatibility; the Bella's-era
+    # dress-survey fields were removed with the dealership conversion
+    # (unknown extras from older SPA builds are ignored by pydantic).
     party_size_bucket: Literal["pair", "3_4", "5_plus"]
-    court_size: int | None = Field(default=None, ge=0, le=100)
-    quince_theme: str | None = Field(default=None, max_length=200)
-    quince_theme_colors: list[str] | None = None
     budget_range: str | None = Field(default=None, max_length=50)
-    dress_styles: list[str] | None = None
-    colors: list[str] | None = None
     notes: str | None = Field(default=None, max_length=4000)
 
 
@@ -137,12 +135,7 @@ def create_walk_in_lead(
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
-        court_size=payload.enrichment.court_size,
-        quince_theme=payload.enrichment.quince_theme,
-        quince_theme_colors=payload.enrichment.quince_theme_colors,
         budget_range=payload.enrichment.budget_range,
-        dress_styles=payload.enrichment.dress_styles,
-        colors=payload.enrichment.colors,
         notes=payload.enrichment.notes,
     )
 

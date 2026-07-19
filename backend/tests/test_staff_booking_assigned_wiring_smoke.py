@@ -484,12 +484,7 @@ def main() -> None:
             ),
             enrichment_in=WalkInEnrichmentInput(
                 party_size_bucket="pair",
-                court_size=None,
-                quince_theme=None,
-                quince_theme_colors=None,
                 budget_range=None,
-                dress_styles=None,
-                colors=None,
                 notes=None,
             ),
             assigned_user_id=sales_a_id,

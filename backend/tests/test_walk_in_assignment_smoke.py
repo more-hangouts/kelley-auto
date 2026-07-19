@@ -114,12 +114,7 @@ def _run_case(*, actor_user_id: int, assigned_user_id: int | None, tag: str):
         )
         enrichment_in = WalkInEnrichmentInput(
             party_size_bucket="pair",
-            court_size=None,
-            quince_theme=None,
-            quince_theme_colors=None,
             budget_range=None,
-            dress_styles=None,
-            colors=None,
             notes=None,
         )
         result = walk_in_service.create_walk_in_lead(

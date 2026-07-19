@@ -40,10 +40,8 @@ from services.email_transport import (
 # ─── Fixtures ──────────────────────────────────────────────────────────────
 #
 # Build SQLAlchemy model instances WITHOUT a session attached. The renderers
-# read attributes directly, and any helpers that call ``object_session(obj)``
-# already handle the None case (see services/notification_templates.py
-# :is_boutique_profile_attached). Stable values across runs so the email
-# copy diffs cleanly from one render to the next.
+# read attributes directly. Stable values across runs so the email copy
+# diffs cleanly from one render to the next.
 
 
 def _fake_appointment() -> Appointment:
@@ -167,7 +165,7 @@ def _fake_shift(*, day_offset: int = 1, hour: int = 15) -> dict:
         "starts_at": start,
         "ends_at": start + timedelta(hours=5),
         "title": "Stylist floor shift",
-        "location": "Bella's XV boutique",
+        "location": "Kelley Autoplex showroom",
         "notes": "Focus on consultation prep and floor coverage.",
     }
 
@@ -244,7 +242,7 @@ def _render_booking_no_show_followup() -> EmailMessagePayload:
     appt.no_show_at = datetime.now(timezone.utc)
     rendered = render_booking_no_show_followup(
         appt,
-        booking_url="https://shopbellasxv.com/book",
+        booking_url="https://kelleyautoplex.com/book",
     )
     return EmailMessagePayload(
         to=appt.email,
@@ -262,19 +260,6 @@ def _render_booking_reminder() -> EmailMessagePayload:
     appt.slot_start_at = datetime.now(timezone.utc) + timedelta(hours=24)
     appt.slot_end_at = appt.slot_start_at + timedelta(minutes=60)
     rendered = render_reminder(appt)
-    return EmailMessagePayload(
-        to=appt.email,
-        subject=rendered.subject,
-        text=rendered.text,
-        html=rendered.html,
-    )
-
-
-def _render_booking_enrichment_invitation() -> EmailMessagePayload:
-    from services.notification_templates import render_enrichment_invitation
-
-    appt = _fake_appointment()
-    rendered = render_enrichment_invitation(appt)
     return EmailMessagePayload(
         to=appt.email,
         subject=rendered.subject,
@@ -327,7 +312,7 @@ def _render_staff_booking_assigned() -> EmailMessagePayload:
     rendered = render_staff_booking_assigned(
         staff_user=user,
         appointment=appt,
-        admin_url=f"https://admin.shopbellasxv.com/appointments/{appt.id}",
+        admin_url=f"https://admin.kelleyautoplex.com/appointments/{appt.id}",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -350,7 +335,7 @@ def _render_staff_booking_rescheduled() -> EmailMessagePayload:
         staff_user=user,
         appointment=appt,
         previous_slot_start_at=previous_slot_start,
-        admin_url=f"https://admin.shopbellasxv.com/appointments/{appt.id}",
+        admin_url=f"https://admin.kelleyautoplex.com/appointments/{appt.id}",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -372,7 +357,7 @@ def _render_staff_booking_cancelled() -> EmailMessagePayload:
     rendered = render_staff_booking_cancelled(
         staff_user=user,
         appointment=appt,
-        admin_url=f"https://admin.shopbellasxv.com/appointments/{appt.id}",
+        admin_url=f"https://admin.kelleyautoplex.com/appointments/{appt.id}",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -398,10 +383,10 @@ def _render_admin_walk_in_lead_created() -> EmailMessagePayload:
         appointment=appt,
         contact=contact,
         notes="Looking for a princess silhouette in coral. Budget under $1500.",
-        admin_url=f"https://admin.shopbellasxv.com/contacts/{contact.id}",
+        admin_url=f"https://admin.kelleyautoplex.com/contacts/{contact.id}",
     )
     return EmailMessagePayload(
-        to="bookings@shopbellasxv.com",
+        to="bookings@kelleyautoplex.com",
         subject=rendered.subject,
         text=rendered.text,
         html=rendered.html,
@@ -414,7 +399,7 @@ def _render_admin_new_booking() -> EmailMessagePayload:
     appt = _fake_appointment()
     rendered = render_internal_new_booking(appt)
     return EmailMessagePayload(
-        to="bookings@shopbellasxv.com",
+        to="bookings@kelleyautoplex.com",
         subject=rendered.subject,
         text=rendered.text,
         html=rendered.html,
@@ -434,7 +419,7 @@ def _render_staff_quote_signed() -> EmailMessagePayload:
         customer_name="Maria Garcia",
         quote_total_cents=289500,
         signed_at=datetime.now(timezone.utc),
-        admin_url="https://admin.shopbellasxv.com/quotes/Q-2026-000087",
+        admin_url="https://admin.kelleyautoplex.com/quotes/Q-2026-000087",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -478,7 +463,7 @@ def _render_digest_staff_daily() -> EmailMessagePayload:
         digest_date=today,
         shift=shift,
         appointments=appts,
-        admin_url="https://admin.shopbellasxv.com/schedule/today",
+        admin_url="https://admin.kelleyautoplex.com/schedule/today",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -508,7 +493,7 @@ def _render_digest_staff_weekly() -> EmailMessagePayload:
         staff_user=user,
         week_start=week_start,
         shifts=shifts,
-        admin_url="https://admin.shopbellasxv.com/schedule",
+        admin_url="https://admin.kelleyautoplex.com/schedule",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -564,7 +549,7 @@ def _render_digest_admin_daily() -> EmailMessagePayload:
         pending_time_off_rows=pending_time_off_rows,
         missing_clock_out_rows=missing_clock_out_rows,
         abandoned_count=4,
-        admin_url="https://admin.shopbellasxv.com",
+        admin_url="https://admin.kelleyautoplex.com",
     )
     return EmailMessagePayload(
         to=admin.email,
@@ -618,7 +603,7 @@ def _render_staff_payment_received() -> EmailMessagePayload:
         invoice_number="INV-2026-000123",
         payment_number="PMT-2026-000123",
         received_at=datetime.now(timezone.utc),
-        admin_url="https://admin.shopbellasxv.com/payments/PMT-2026-000123",
+        admin_url="https://admin.kelleyautoplex.com/payments/PMT-2026-000123",
     )
     return EmailMessagePayload(
         to=user.email,
@@ -633,7 +618,7 @@ def _render_staff_pin_reset() -> EmailMessagePayload:
 
     user = _fake_staff_user()
     set_pin_url = (
-        "https://sales.shopbellasxv.com/set-pin/"
+        "https://sales.kelleyautoplex.com/set-pin/"
         "eyJhbGciOiJIUzI1NiJ9.demo-token-for-template-review"
     )
     rendered = render_pin_reset(staff_user=user, set_pin_url=set_pin_url)
@@ -653,7 +638,7 @@ def _render_payment_receipt() -> EmailMessagePayload:
     rendered = render_payment_receipt(
         contact=contact,
         payment=payment,
-        receipt_url="https://shopbellasxv.com/portal/payment/PMT-2026-000123",
+        receipt_url="https://kelleyautoplex.com/portal/payment/PMT-2026-000123",
     )
     return EmailMessagePayload(
         to=contact.email,
@@ -869,10 +854,10 @@ def _render_staff_welcome_sales() -> EmailMessagePayload:
 
     user = _fake_staff_user()  # role="sales"
     setup_url = (
-        "https://sales.shopbellasxv.com/set-pin/"
+        "https://sales.kelleyautoplex.com/set-pin/"
         "eyJhbGciOiJIUzI1NiJ9.demo-welcome-token-sales"
     )
-    portal_login_url = "https://sales.shopbellasxv.com"
+    portal_login_url = "https://sales.kelleyautoplex.com"
     rendered = render_welcome_new_user(
         staff_user=user,
         setup_url=setup_url,
@@ -913,7 +898,7 @@ def _render_admin_password_reset_request() -> EmailMessagePayload:
     user.email = "alex.rivera@example.com"
     user.username = "alex"
     reset_url = (
-        "https://admin.shopbellasxv.com/auth/password-reset/confirm"
+        "https://admin.kelleyautoplex.com/auth/password-reset/confirm"
         "?token=eyJhbGciOiJIUzI1NiJ9.demo-reset-token"
     )
     rendered = render_password_reset_request(user=user, reset_url=reset_url)
@@ -971,10 +956,10 @@ def _render_staff_welcome_admin() -> EmailMessagePayload:
     user.email = "alex.rivera@example.com"
     user.username = "alex"
     setup_url = (
-        "https://admin.shopbellasxv.com/auth/password-reset/confirm"
+        "https://admin.kelleyautoplex.com/auth/password-reset/confirm"
         "?token=eyJhbGciOiJIUzI1NiJ9.demo-welcome-token-admin"
     )
-    portal_login_url = "https://admin.shopbellasxv.com"
+    portal_login_url = "https://admin.kelleyautoplex.com"
     rendered = render_welcome_new_user(
         staff_user=user,
         setup_url=setup_url,
@@ -1008,11 +993,6 @@ REGISTRY: list[TestKind] = [
         kind="booking.reminder",
         audience="Customer (24h before appointment)",
         builder=_render_booking_reminder,
-    ),
-    TestKind(
-        kind="booking.enrichment_invitation",
-        audience="Customer (minutes after booking, profile prompt)",
-        builder=_render_booking_enrichment_invitation,
     ),
     TestKind(
         kind="booking.reschedule_confirmation",

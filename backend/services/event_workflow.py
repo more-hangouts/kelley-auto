@@ -17,6 +17,10 @@ class EventStatus:
     description: str = ""
 
 
+# legacy Bella's-era rows: the quinceanera workflow is retired for new
+# events (everything defaults to vehicle_sale), but existing rows still
+# reference these statuses, so the definition must stay for reads,
+# serialization, and status validation of historical events.
 QUINCEANERA_STATUSES: tuple[EventStatus, ...] = (
     EventStatus(
         code="lead",

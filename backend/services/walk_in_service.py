@@ -8,11 +8,11 @@ attribution.
 
 This service exists so the admin walk-in flow lands a row shape
 indistinguishable from a widget booking: a Contact, a placeholder
-Appointment (status='attended', attended_at=NOW), an optional
-``AppointmentEnrichmentResponse`` row, and a freshly-promoted Event
-in the ``lead`` lane with ``appointment.crm_event_id`` linked back.
-That keeps the kanban / pipeline / event tabs identical regardless
-of origin — they all expect appointment-backed events.
+Appointment (status='attended', attended_at=NOW), and a
+freshly-promoted Event in the first pipeline lane with
+``appointment.crm_event_id`` linked back. That keeps the kanban /
+pipeline / event tabs identical regardless of origin — they all
+expect appointment-backed events.
 
 Design notes:
 
@@ -20,12 +20,6 @@ Design notes:
     ``db.commit()``; this service stays at flush boundaries so a
     later failure rolls everything back together (no orphan contact
     with no event, no event with no audit row).
-  - **No legacy enrichment via upsert_profile_for_appointment.** That
-    helper takes a ``BoutiqueExperienceSubmission`` (measurements +
-    sizing + preferences). Walk-in enrichment is the older survey
-    shape (court_size, theme, budget, dress_styles, colors), so we
-    write the ``AppointmentEnrichmentResponse`` row directly here
-    rather than shoehorning two contracts into one helper.
   - **Phone is identity.** ``normalize_phone_e164`` returning ``None``
     is rejected as ``invalid_phone`` rather than silently weakening
     dedupe. Without phone normalization we'd let two leads with the
@@ -48,7 +42,6 @@ from sqlalchemy.orm import Session
 from config.settings import APP_TIMEZONE
 from database.models import (
     Appointment,
-    AppointmentEnrichmentResponse,
     BusinessProfile,
     Contact,
     Event,
@@ -89,13 +82,11 @@ class WalkInEventInput:
 
 @dataclass(frozen=True)
 class WalkInEnrichmentInput:
+    # Wire name "enrichment" kept for SPA compatibility; the Bella's-era
+    # dress-survey fields (court_size, theme, dress_styles, colors) were
+    # removed with the dealership conversion.
     party_size_bucket: str  # 'pair' | '3_4' | '5_plus'
-    court_size: int | None
-    quince_theme: str | None
-    quince_theme_colors: list[str] | None
     budget_range: str | None
-    dress_styles: list[str] | None
-    colors: list[str] | None
     notes: str | None
 
 
@@ -120,7 +111,7 @@ def create_walk_in_lead(
     enrichment_in: WalkInEnrichmentInput,
     assigned_user_id: int | None = None,
 ) -> WalkInLeadResult:
-    """Create Contact + placeholder Appointment + enrichment + Event in one tx.
+    """Create Contact + placeholder Appointment + Event in one tx.
 
     The caller owns the commit boundary. Every write below flushes;
     the route handler calls ``db.commit()`` on the way out and rolls
@@ -232,41 +223,9 @@ def create_walk_in_lead(
     db.add(appt)
     db.flush()
 
-    # ---- Enrichment row (legacy survey shape) ---------------------------
-    # Written directly rather than via upsert_profile_for_appointment,
-    # which expects the BoutiqueExperienceSubmission contract (sizing +
-    # measurements + preferences). The fields below are the older
-    # survey columns that the kanban / event card already render.
-    if _has_enrichment_signal(enrichment_in):
-        # source='manual_attach' is the only value in chk_aer_source
-        # that fits a staff-entered legacy survey (the other valid
-        # values describe customer-driven flows: pre_booking, the
-        # post-booking email link, the legacy enrichment survey, or a
-        # legacy_note backfill). The raw_payload preserves the
-        # walk-in origin for audits without needing a new enum value.
-        enrichment = AppointmentEnrichmentResponse(
-            appointment_id=appt.id,
-            dress_styles=list(enrichment_in.dress_styles or []),
-            colors=list(enrichment_in.colors or []),
-            budget_range=(enrichment_in.budget_range or None),
-            quince_theme=(enrichment_in.quince_theme or None),
-            quince_theme_colors=list(enrichment_in.quince_theme_colors or []),
-            court_size=enrichment_in.court_size,
-            inspiration_photos=[],
-            free_text=(enrichment_in.notes or None),
-            submitted_at=now_utc,
-            source="manual_attach",
-            raw_payload={"source": "walk_in"},
-        )
-        db.add(enrichment)
-        db.flush()
-
-    # ---- Promote: Appointment → Event (status='lead') -------------------
-    # promote_appointment_to_event reads the enrichment row we just
-    # flushed and pulls theme / court_size / budget onto the Event,
-    # which is exactly the shape the kanban card expects.
+    # ---- Promote: Appointment → Event (first pipeline lane) -------------
     # When a sales caller passes `assigned_user_id`, it wins over any
-    # `event_in.owner_user_id` so both fields agree on the stylist.
+    # `event_in.owner_user_id` so both fields agree on the rep.
     resolved_event_owner = (
         assigned_user_id
         if assigned_user_id is not None
@@ -280,6 +239,7 @@ def create_walk_in_lead(
             overrides=EventOverrides(
                 event_name=(event_in.event_name or None),
                 event_date=event_in.event_date,
+                budget_range=(enrichment_in.budget_range or None),
                 owner_user_id=resolved_event_owner,
             ),
             actor_user_id=actor_user_id,
@@ -415,21 +375,3 @@ def _has_usable_name(c: WalkInContactInput) -> bool:
         return True
     return False
 
-
-def _has_enrichment_signal(e: WalkInEnrichmentInput) -> bool:
-    """Skip the enrichment row when the form sent only party_size_bucket.
-
-    party_size_bucket already lives on the Appointment, so a row with
-    nothing else would just be dead weight.
-    """
-    return any(
-        (
-            e.court_size is not None,
-            bool((e.quince_theme or "").strip()),
-            bool(e.quince_theme_colors),
-            bool((e.budget_range or "").strip()),
-            bool(e.dress_styles),
-            bool(e.colors),
-            bool((e.notes or "").strip()),
-        )
-    )

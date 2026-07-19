@@ -369,7 +369,7 @@ def _today_appointments_for(
 ) -> list[Appointment]:
     """Appointments on this stylist's column today. We filter by
     ``assigned_user_id`` only — falling back to "any appointment today
-    in the boutique" would flood every stylist with the same list."""
+    in the shop" would flood every stylist with the same list."""
     day_start_utc, day_end_utc = _local_day_bounds_utc(digest_date)
     return (
         db.query(Appointment)

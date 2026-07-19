@@ -191,7 +191,7 @@ class BusinessProfilePatch(BaseModel):
     # Clock-in reliability slice C — trusted-network fallback.
     trusted_network_enabled: bool | None = None
     # Owner-managed list of trusted IPs/CIDRs. Cap at 32 entries to
-    # avoid pathological PATCH payloads; the boutique only needs the
+    # avoid pathological PATCH payloads; the dealership only needs the
     # shop's static public IP and maybe one or two CIDRs at most.
     trusted_clock_in_ips: list[str] | None = Field(default=None, max_length=32)
 

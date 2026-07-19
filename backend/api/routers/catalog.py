@@ -283,12 +283,11 @@ def list_catalog_items_route(
     group: str | None = Query(
         default=None,
         description=(
-            "UI category bucket: 'dress', 'accessory', 'addon', or "
-            "'vehicle'. "
-            "'dress' expands to the three gown enum values, 'accessory' "
-            "to the accessory enum value, 'addon' to 'service', and "
-            "'vehicle' to the vehicle enum value. Unknown values return "
-            "an empty list."
+            "UI category bucket: 'vehicle', 'accessory', 'addon', or the "
+            "legacy Bella's-era 'dress'. 'vehicle' expands to the vehicle "
+            "enum value, 'accessory' to the accessory enum value, 'addon' "
+            "to 'service', and 'dress' (legacy rows only) to the three "
+            "gown enum values. Unknown values return an empty list."
         ),
     ),
     limit: int = Query(default=100, ge=1, le=500),
@@ -532,7 +531,7 @@ def get_catalog_item_price_breakdown_route(
     db: Annotated[Session, Depends(get_db)],
     _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
 ) -> PriceBreakdownResponse:
-    """Price decomposition for the detail view: package vs dress-only and
+    """Price decomposition for the detail view: package vs base-item and
     what each removable package item is worth. Computed from wholesale via
     services.pricing but exposes only the derived prices."""
     item = _item_or_404(db.get(CatalogItem, catalog_item_id))

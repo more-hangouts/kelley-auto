@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from typing import Any
+
 
 from sqlalchemy import case, func, select, union
 from sqlalchemy.orm import Session
@@ -73,7 +73,7 @@ def promote_appointment_to_event(
     db: Session,
     *,
     appointment_id: int,
-    event_type: str = "quinceanera",
+    event_type: str = "vehicle_sale",
     overrides: EventOverrides | None = None,
     actor_user_id: int | None = None,
 ) -> Event:
@@ -106,12 +106,6 @@ def promote_appointment_to_event(
             "contact for appointment not found", code="contact_not_found"
         )
 
-    enrichment = db.execute(
-        select(AppointmentEnrichmentResponse).where(
-            AppointmentEnrichmentResponse.appointment_id == appointment_id
-        )
-    ).scalar_one_or_none()
-
     o = overrides or EventOverrides()
     celebrant_name = _appointment_celebrant_name(appt)
 
@@ -121,13 +115,10 @@ def promote_appointment_to_event(
         event_name=o.event_name
         or _default_event_name(contact, event_type, preferred_name=celebrant_name),
         event_date=o.event_date or appt.event_date,
-        court_size=o.court_size if o.court_size is not None else _enrichment_int(
-            enrichment, "court_size"
-        ),
-        quince_theme=o.quince_theme or _enrichment_str(enrichment, "quince_theme"),
-        quince_theme_colors=o.quince_theme_colors
-        or _enrichment_list(enrichment, "quince_theme_colors"),
-        budget_range=o.budget_range or _enrichment_str(enrichment, "budget_range"),
+        court_size=o.court_size,
+        quince_theme=o.quince_theme,
+        quince_theme_colors=o.quince_theme_colors or [],
+        budget_range=o.budget_range,
         notes=o.notes,
         owner_user_id=o.owner_user_id or actor_user_id,
         vehicle_catalog_item_id=o.vehicle_catalog_item_id,
@@ -155,7 +146,7 @@ def create_walk_in_event(
     db: Session,
     *,
     contact_id: int,
-    event_type: str = "quinceanera",
+    event_type: str = "vehicle_sale",
     overrides: EventOverrides | None = None,
     actor_user_id: int | None = None,
 ) -> Event:
@@ -208,31 +199,17 @@ def _seed_initial_event_state(
     participant_phone: str | None = None,
     participant_email: str | None = None,
 ) -> None:
-    """Initial audit row (+ a quinceañera participant for that workflow).
+    """Initial audit row for a freshly created event.
 
     Both promotion and walk-in creation rely on this so the data shape after
     creation is identical regardless of origin: a status_history entry
-    tracing back to ``null -> <initial status>``, and — for the boutique
-    workflow — the celebrant participant.
-
-    The quinceañera participant is seeded ONLY for ``event_type ==
-    'quinceanera'``. A vehicle_sale deal's buyer is the ``primary_contact``;
-    its car is linked via ``events.vehicle_catalog_item_id``, so a court-
-    style participant row would be meaningless (and would mislabel a buyer
-    with the 'quinceanera' role). The board query left-joins participants,
-    so a participant-less deal renders fine.
+    tracing back to ``null -> <initial status>``. A deal's buyer is the
+    ``primary_contact``; its car is linked via
+    ``events.vehicle_catalog_item_id``. (The old Bella's-era quinceañera
+    workflow auto-seeded a 'quinceanera' participant here; legacy rows still
+    carry those participants, and the board query left-joins participants so
+    both shapes render fine.)
     """
-    if event.event_type == "quinceanera":
-        db.add(
-            EventParticipant(
-                event_id=event.id,
-                contact_id=contact.id,
-                role="quinceanera",
-                display_name=participant_display_name or contact.display_name,
-                phone=participant_phone or contact.phone,
-                email=participant_email or contact.email,
-            )
-        )
     db.add(
         EventStatusChangeEvent(
             event_id=event.id,
@@ -517,7 +494,7 @@ class BoardColumn:
     cards: list[BoardCard]
 
 
-def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[BoardColumn]:
+def get_board_data(db: Session, *, event_type: str = "vehicle_sale") -> list[BoardColumn]:
     statuses: tuple[EventStatus, ...] = all_statuses(event_type)
 
     # Latest linked-appointment date per event (for "last contact" badge).
@@ -531,11 +508,10 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
         .subquery()
     )
 
-    # Per-event "Boutique Experience complete?" flag. The card is complete
-    # if any linked appointment has a profile row with submitted_at set.
-    # A reschedule keeps the original profile attached to the original
-    # appointment, so this aggregation naturally surfaces the latest
-    # completed profile across visits.
+    # legacy Bella's-era rows: per-event "Boutique Experience complete?"
+    # flag. Only historical appointments have enrichment rows (the intake
+    # surface is gone); kept so old quinceanera cards still serialize the
+    # boutique_experience_status field the SPA gates on.
     profile_subq = (
         select(
             Appointment.crm_event_id.label("event_id"),
@@ -763,29 +739,3 @@ def _appointment_celebrant_name(appt: Appointment) -> str | None:
     ]
     return " ".join(parts) if parts else None
 
-
-def _enrichment_int(
-    e: AppointmentEnrichmentResponse | None, attr: str
-) -> int | None:
-    if e is None:
-        return None
-    val = getattr(e, attr, None)
-    return int(val) if val is not None else None
-
-
-def _enrichment_str(
-    e: AppointmentEnrichmentResponse | None, attr: str
-) -> str | None:
-    if e is None:
-        return None
-    val = getattr(e, attr, None)
-    return str(val) if val else None
-
-
-def _enrichment_list(
-    e: AppointmentEnrichmentResponse | None, attr: str
-) -> list[Any]:
-    if e is None:
-        return []
-    val = getattr(e, attr, None)
-    return list(val) if val else []

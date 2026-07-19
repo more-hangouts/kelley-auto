@@ -36,6 +36,9 @@ router = APIRouter()
 # the widget produces today. If Kelley adds a "solo" stylist-only
 # walk-through case in the future, extend this Literal explicitly
 # rather than letting drift creep back in.
+# legacy Bella's-era rows: quince court roles stay accepted so historical
+# participants keep round-tripping through edit endpoints; new dealership
+# participants should use 'parent' / 'other'.
 ParticipantRole = Literal[
     "quinceanera", "dama", "chambelan", "parent", "other"
 ]

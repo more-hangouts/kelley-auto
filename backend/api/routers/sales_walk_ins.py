@@ -111,12 +111,7 @@ def create_sales_walk_in(
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
-        court_size=payload.enrichment.court_size,
-        quince_theme=payload.enrichment.quince_theme,
-        quince_theme_colors=payload.enrichment.quince_theme_colors,
         budget_range=payload.enrichment.budget_range,
-        dress_styles=payload.enrichment.dress_styles,
-        colors=payload.enrichment.colors,
         notes=payload.enrichment.notes,
     )
 

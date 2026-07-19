@@ -230,8 +230,9 @@ try:
     print("validator requires event_name on walk-in ok")
 
     # ----- promote lead -----
-    # event_type is passed explicitly: this module exercises the quinceañera
-    # workflow specifically, and the API default is now "vehicle_sale".
+    # event_type is passed explicitly: this module exercises the legacy
+    # Bella's-era quinceañera workflow to prove historical rows still
+    # create/list/serialize; the API default is now "vehicle_sale".
     resp = client.post(
         "/api/events",
         headers=auth,
@@ -243,10 +244,13 @@ try:
     assert event["status"] == "lead"
     assert event["event_type"] == "quinceanera"
     assert event["event_name"] == "Maria Garcia's Quince", event
-    assert event["court_size"] == 14, event
-    assert event["quince_theme"] == "Enchanted Garden", event
-    assert event["budget_range"] == "$1500-2500", event
-    assert event["quince_theme_colors"] == ["pink", "rose_gold", "ivory"], event
+    # The dress-era enrichment pull was removed with the dealership
+    # conversion: promotion no longer copies theme/court/budget from the
+    # legacy enrichment row onto the event.
+    assert event["court_size"] is None, event
+    assert event["quince_theme"] is None, event
+    assert event["budget_range"] is None, event
+    assert event["quince_theme_colors"] == [], event
     assert event["primary_contact"]["display_name"] == "Maria Garcia"
     assert event["event_date"] == "2026-09-15", event
     print(f"promote ok (event id={event_id})")
@@ -260,23 +264,21 @@ try:
         db.close()
     print("appointment.crm_event_id set ok")
 
-    # quinceañera participant created
+    # No participant is auto-seeded anymore (the quince court auto-
+    # participant was removed with the dealership conversion; the buyer
+    # is the primary_contact).
     db = SessionLocal()
     try:
         rows = db.execute(
             sql_text(
-                "SELECT role, display_name, contact_id "
-                "FROM event_participants WHERE event_id = :eid"
+                "SELECT role FROM event_participants WHERE event_id = :eid"
             ),
             {"eid": event_id},
         ).all()
-        assert len(rows) == 1, rows
-        assert rows[0].role == "quinceanera"
-        assert rows[0].display_name == "Maria Garcia"
-        assert rows[0].contact_id == contact_id
+        assert rows == [], rows
     finally:
         db.close()
-    print("quinceanera participant ok")
+    print("no auto-seeded participant ok")
 
     # ----- promotion uses appointment celebrant, not stale contact name -----
     db = SessionLocal()
@@ -318,23 +320,10 @@ try:
     )
     assert resp.status_code == 201, resp.text
     shared_phone_event = resp.json()
+    # Event naming still derives from the appointment's customer name,
+    # not the (shared-phone) contact's display name.
     assert shared_phone_event["event_name"] == "Chumba Casino's Quince"
     assert shared_phone_event["primary_contact"]["display_name"] == "Maria Garcia"
-
-    db = SessionLocal()
-    try:
-        rows = db.execute(
-            sql_text(
-                "SELECT display_name, email "
-                "FROM event_participants WHERE event_id = :eid"
-            ),
-            {"eid": shared_phone_event["id"]},
-        ).all()
-        assert len(rows) == 1, rows
-        assert rows[0].display_name == "Chumba Casino"
-        assert rows[0].email == "shared-phone-celebrant@example.com"
-    finally:
-        db.close()
     print("shared-phone appointment naming ok")
 
     # initial audit row

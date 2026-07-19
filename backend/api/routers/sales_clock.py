@@ -46,7 +46,7 @@ class PunchResponse(BaseModel):
     user_id: int
     direction: Literal["in", "out"]
     punched_at: datetime
-    # Boutique-local rendering of `punched_at`. The frontend renders
+    # Shop-local rendering of `punched_at`. The frontend renders
     # this directly so a punch at 11:30pm local on Saturday displays as
     # Saturday even when its UTC date is Sunday.
     punched_at_local: str
@@ -91,7 +91,7 @@ class StatusResponse(BaseModel):
     # deploy via PATCH /api/business-profile.
     attendance_gate_enabled: bool
     # Reliability slice C: per-request trusted-network state so the UI
-    # can show "Connected through boutique network" before the user
+    # can show "Connected through the dealership network" before the user
     # taps clock-in. `enabled` is the owner toggle; `detected` is the
     # current request's IP-match result.
     trusted_network_enabled: bool

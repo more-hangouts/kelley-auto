@@ -16,7 +16,8 @@ Result types:
     digits. Routes to the contact's most-recent appointment when one
     exists; contacts with no appointment are skipped (the sales portal
     has no contact detail page to drill into).
-  - event: matched against event name and quince theme. Routes to the
+  - event: matched against event name (and, for legacy Bella's-era
+    rows, the stored quince theme). Routes to the
     event's most-recent appointment when one exists; events with no
     appointment are skipped.
 
