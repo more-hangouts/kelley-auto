@@ -12,7 +12,9 @@ export function formatDownPayment(amount: number = DOWN_PAYMENT_BASE): string {
   return `$${amount.toLocaleString()}`;
 }
 
-/** e.g. "As low as $2,000 down" — the storefront's headline price line. */
+/** e.g. "Down Payment: $2,000" — the storefront's headline price line.
+ *  Stated definitively (not "as low as …") per dealer directive so the
+ *  buy-here-pay-here entry price reads as a firm number. */
 export function downPaymentHeadline(amount: number = DOWN_PAYMENT_BASE): string {
-  return `As low as ${formatDownPayment(amount)} down`;
+  return `Down Payment: ${formatDownPayment(amount)}`;
 }

@@ -11,6 +11,7 @@ const quickLinks = [
   { label: "Contact Us", href: "/contact-us" },
   { label: "Sitemap", href: "/sitemap" },
   { label: "Terms", href: "/terms-and-conditions" },
+  { label: "Privacy", href: "/privacy-policy" },
   { label: "Blog", href: "/blog" },
 ];
 const tags = [

@@ -12,7 +12,7 @@ export default async function Hero() {
     hero.subheadline ||
     "Choose from quality pre-owned vehicles you can trust. Get approved in minutes with buy here, pay here options.";
   const ctaHref = "/loan-application#application";
-  const headline = hero.headline || "Find the perfect car that fits your journey";
+  const headline = hero.headline || "No Credit Check\nNo Job, No Problem";
   const bgSrc = isMediaDoc(hero.bgImage) && hero.bgImage.url ? hero.bgImage.url : "/images/hero-bg.webp";
   const showCarImage = hero.showCarImage !== false;
   const carSrc = isMediaDoc(hero.carImage) && hero.carImage.url ? hero.carImage.url : null;
@@ -63,7 +63,9 @@ export default async function Hero() {
       {/* Bottom CTA */}
       <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col lg:flex-row items-start lg:items-end justify-between px-5 md:px-10 lg:px-20 pb-6 md:pb-8 lg:pb-12 gap-4 lg:gap-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-5">
-          <p className="max-w-[414px] text-sm md:text-base lg:text-xl leading-5 md:leading-7 lg:leading-[30px] text-white">
+          {/* Hidden on phones — the headline + CTA carry the message and the
+              paragraph crowds the small-screen hero. Shown from md up. */}
+          <p className="hidden md:block max-w-[414px] text-sm md:text-base lg:text-xl leading-5 md:leading-7 lg:leading-[30px] text-white">
             {subheadline}
           </p>
           <Link
@@ -89,7 +91,7 @@ export default async function Hero() {
             </svg>
           </Link>
         </div>
-        <p className="max-w-[300px] lg:max-w-[466px] font-[family-name:var(--font-bebas)] text-3xl md:text-5xl lg:text-[64px] leading-8 md:leading-[50px] lg:leading-[64px] text-white lg:text-right">
+        <p className="max-w-[300px] lg:max-w-[466px] whitespace-pre-line font-[family-name:var(--font-bebas)] text-3xl md:text-5xl lg:text-[64px] leading-8 md:leading-[50px] lg:leading-[64px] text-white lg:text-right">
           {headline}
         </p>
       </div>

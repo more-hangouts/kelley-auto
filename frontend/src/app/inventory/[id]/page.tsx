@@ -138,7 +138,7 @@ export default async function CarDetailPage({
                 Down Payment
               </p>
               <p className="mt-1 text-4xl font-bold text-primary">
-                As low as {formatDownPayment()}
+                {formatDownPayment()}
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-500">
                 Buy here, pay here · no credit check
