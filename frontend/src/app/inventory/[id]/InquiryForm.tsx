@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { submitLead } from "@/lib/publicApi";
 import { getTrackingContext, track } from "@/lib/analytics";
+import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
 
 const FORM_TYPE = "vehicle_inquiry";
 
@@ -203,6 +204,9 @@ export default function InquiryForm({
   const [hasDriversLicense, setHasDriversLicense] = useState(false);
   const [driversLicenseState, setDriversLicenseState] = useState("");
   const [slot, setSlot] = useState<number | null>(null);
+  // A2P 10DLC: SMS consent — never pre-checked and never required to submit
+  // (consent may not be a condition of service). Recorded server-side.
+  const [smsConsent, setSmsConsent] = useState(false);
 
   // Analytics: opened when the customer expands the form; started once they
   // advance past the first step. Both fire at most once per mount.
@@ -241,6 +245,9 @@ export default function InquiryForm({
     // The vehicle is captured structurally (vehicleId) and the requested time
     // below becomes a real pending appointment — not a note. PII stays in the
     // discrete encrypted fields, never folded into a message.
+    // Captured once so the browser Pixel `Lead` below fires with the SAME
+    // event_id the backend sends via CAPI — Meta dedups the pair.
+    const tracking = getTrackingContext();
     const result = await submitLead({
       name: `${firstName} ${lastName}`.trim(),
       email,
@@ -256,11 +263,16 @@ export default function InquiryForm({
       hasDriverLicense: hasDriversLicense,
       driverLicenseState:
         driversLicenseState.trim().toUpperCase() || undefined,
+      smsConsent,
       // Attribution: ties this lead to the visitor's browsing journey.
-      tracking: getTrackingContext(),
+      tracking,
     });
-    if (result.ok) setSent(true);
-    else setError(result.message || "Something went wrong. Please call us.");
+    if (result.ok) {
+      setSent(true);
+      fbqTrack("Lead", vehicleContentParams({ vehicleId }), tracking.event_id);
+    } else {
+      setError(result.message || "Something went wrong. Please call us.");
+    }
     setLoading(false);
   }
 
@@ -548,6 +560,39 @@ export default function InquiryForm({
                       </button>
                     ))}
                   </div>
+                  <label className="flex items-start gap-3 text-xs leading-5 text-neutral-500">
+                    <input
+                      type="checkbox"
+                      checked={smsConsent}
+                      onChange={(e) => setSmsConsent(e.target.checked)}
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                    />
+                    <span>
+                      Optional: By checking this box, I agree to receive calls
+                      and text messages from Kelley Autoplex about my inquiry at
+                      the phone number provided, including via automated
+                      technology. Consent is not a condition of any purchase or
+                      service — you may submit this form without checking this
+                      box. Msg frequency varies. Msg &amp; data rates may apply.
+                      Reply STOP to opt out, HELP for help. See our{" "}
+                      <a
+                        href="/privacy-policy"
+                        target="_blank"
+                        className="font-medium text-primary underline"
+                      >
+                        Privacy Policy
+                      </a>{" "}
+                      and{" "}
+                      <a
+                        href="/terms-and-conditions"
+                        target="_blank"
+                        className="font-medium text-primary underline"
+                      >
+                        Terms
+                      </a>
+                      .
+                    </span>
+                  </label>
                   {error && (
                     <p className="text-xs text-red-500">{error}</p>
                   )}

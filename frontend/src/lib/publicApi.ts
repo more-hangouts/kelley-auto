@@ -144,6 +144,10 @@ export interface LeadInput {
   addressCity?: string;
   addressState?: string;
   addressZip?: string;
+  // A2P 10DLC: the customer actively checked the OPTIONAL SMS-consent box.
+  // Never a submit gate — a lead without it still goes through, it just
+  // can't be texted.
+  smsConsent?: boolean;
   // First-party analytics identity + Meta attribution cookies. Pseudonymous
   // ids/cookies — NOT application PII. Populated from getTrackingContext().
   tracking?: {
@@ -152,6 +156,9 @@ export interface LeadInput {
     event_id?: string;
     fbp?: string;
     fbc?: string;
+    fbclid?: string;
+    gclid?: string;
+    msclkid?: string;
     landing_page?: string;
     referrer?: string;
   };
@@ -248,6 +255,9 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
   if (input.preferredHour !== undefined && input.preferredHour !== null)
     body.preferred_hour = input.preferredHour;
   if (input.sourcePage) body.source_page = input.sourcePage;
+  // Sent explicitly (not truthy-gated) so an unchecked box is a recorded
+  // "no consent", not an absent field.
+  body.sms_consent = Boolean(input.smsConsent);
 
   // Vehicle ref: explicit listingCode wins; otherwise a numeric id links by
   // id and any other token links by code. A ref the backend can't resolve
@@ -290,6 +300,9 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
     if (t.event_id) body.event_id = t.event_id;
     if (t.fbp) body.fbp = t.fbp;
     if (t.fbc) body.fbc = t.fbc;
+    if (t.fbclid) body.fbclid = t.fbclid;
+    if (t.gclid) body.gclid = t.gclid;
+    if (t.msclkid) body.msclkid = t.msclkid;
     if (t.landing_page) body.landing_page = t.landing_page;
     if (t.referrer) body.referrer = t.referrer;
   }

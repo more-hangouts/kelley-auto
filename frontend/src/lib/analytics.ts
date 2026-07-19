@@ -19,6 +19,7 @@ const VID_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 const SID_MAX_AGE = 60 * 30; // 30-minute sliding session
 const LANDING_KEY = "ka_landing"; // sessionStorage: first page of the visit
 const REFERRER_KEY = "ka_referrer"; // sessionStorage: external referrer
+const CLICK_IDS_KEY = "ka_clids"; // sessionStorage: ad click ids for the visit
 
 export type StorefrontEventName =
   | "page_view"
@@ -35,12 +36,21 @@ export interface Utm {
   content?: string;
 }
 
+export interface ClickIds {
+  fbclid?: string;
+  gclid?: string;
+  msclkid?: string;
+}
+
 export interface TrackingContext {
   ka_vid?: string;
   ka_sid?: string;
   event_id?: string;
   fbp?: string;
   fbc?: string;
+  fbclid?: string;
+  gclid?: string;
+  msclkid?: string;
   landing_page?: string;
   referrer?: string;
   utm?: Utm;
@@ -119,6 +129,42 @@ function readUtm(): Utm {
   return utm;
 }
 
+/**
+ * Ad click ids (fbclid/gclid/msclkid) from the current URL, pinned in
+ * sessionStorage for the visit. A UTM-less paid click still carries one of
+ * these, so the backend can attribute it (fbclid→facebook, gclid→google,
+ * msclkid→bing) instead of logging "(direct)". A fresh tagged landing
+ * overwrites the pin — a new ad click is a new touch.
+ */
+function clickIds(): ClickIds {
+  if (!isBrowser()) return {};
+  let pinned: ClickIds = {};
+  try {
+    pinned = JSON.parse(
+      window.sessionStorage.getItem(CLICK_IDS_KEY) || "{}"
+    ) as ClickIds;
+  } catch {
+    pinned = {};
+  }
+  const p = new URLSearchParams(window.location.search);
+  const fresh: ClickIds = {};
+  const fbclid = p.get("fbclid");
+  const gclid = p.get("gclid");
+  const msclkid = p.get("msclkid");
+  if (fbclid) fresh.fbclid = fbclid;
+  if (gclid) fresh.gclid = gclid;
+  if (msclkid) fresh.msclkid = msclkid;
+  if (Object.keys(fresh).length) {
+    try {
+      window.sessionStorage.setItem(CLICK_IDS_KEY, JSON.stringify(fresh));
+    } catch {
+      /* sessionStorage may be blocked; the URL params still went out */
+    }
+    return fresh;
+  }
+  return pinned;
+}
+
 /** Landing page + external referrer, captured once and pinned for the visit. */
 function sessionOrigin(): { landing?: string; referrer?: string } {
   if (!isBrowser()) return {};
@@ -156,12 +202,14 @@ export function getTrackingContext(): TrackingContext {
   const sid = ensureSession();
   const { landing, referrer } = sessionOrigin();
   const utm = readUtm();
+  const clids = clickIds();
   const ctx: TrackingContext = {
     ka_vid: vid,
     ka_sid: sid,
     event_id: newId(),
     fbp: readCookie("_fbp"),
     fbc: readCookie("_fbc"),
+    ...clids,
     landing_page: landing,
     referrer,
   };
@@ -196,6 +244,10 @@ export function track(
       landing_page: landing,
     };
     if (opts.eventId) body.event_id = opts.eventId;
+    const clids = clickIds();
+    if (clids.fbclid) body.fbclid = clids.fbclid;
+    if (clids.gclid) body.gclid = clids.gclid;
+    if (clids.msclkid) body.msclkid = clids.msclkid;
     if (utm.source) body.utm_source = utm.source;
     if (utm.medium) body.utm_medium = utm.medium;
     if (utm.campaign) body.utm_campaign = utm.campaign;

@@ -21,6 +21,7 @@ import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline'
 import QueryStatsOutlinedIcon from '@mui/icons-material/QueryStatsOutlined'
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -54,6 +55,7 @@ const NAV_ITEMS = [
   { to: '/contacts', label: 'Contacts', icon: PeopleOutlineIcon },
   { to: '/inventory', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
   { to: '/sales-activity', label: 'Rep activity', icon: QueryStatsOutlinedIcon },
+  { to: '/analytics', label: 'Analytics', icon: InsightsOutlinedIcon },
   { to: '/settings', label: 'Settings', icon: SettingsOutlinedIcon },
 ]
 

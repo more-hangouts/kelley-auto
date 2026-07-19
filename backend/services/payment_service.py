@@ -37,7 +37,7 @@ from database.models import (
     RefundEvent,
     User,
 )
-from services import activity_log
+from services import activity_log, storefront_analytics_service
 from services.email_transport import send_rendered_safely
 
 
@@ -244,6 +244,30 @@ def record_payment(
                 "amount_cents": int(payment.amount_cents),
                 "method": payment.method,
             },
+        )
+
+    # Analytics milestone: credit each deal's allocated dollars back to the
+    # marketing channel that first produced the lead (first-touch inherited
+    # from lead_attribution). Idempotent per (payment, deal); best-effort —
+    # can never fail the payment. Refunds/voids are not netted back out here;
+    # the analytics dashboard is directional, the books live in invoices.
+    for ev_id, applied in db.execute(
+        sql_text(
+            "SELECT i.event_id, SUM(pa.applied_cents) "
+            "FROM payment_allocations pa "
+            "JOIN invoices i ON i.id = pa.invoice_id "
+            "WHERE pa.payment_id = :pid AND i.event_id IS NOT NULL "
+            "GROUP BY i.event_id"
+        ),
+        {"pid": payment.id},
+    ).all():
+        storefront_analytics_service.record_milestone(
+            db,
+            event_name="payment_received",
+            crm_event_id=int(ev_id),
+            amount_cents=int(applied),
+            dedupe_key=f"payment:{payment.id}:deal:{ev_id}",
+            metadata={"payment_id": payment.id, "method": payment.method},
         )
 
     _send_payment_received_emails(

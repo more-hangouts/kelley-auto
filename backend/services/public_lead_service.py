@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -42,6 +42,7 @@ from services import (
     contact_service,
     event_service,
     lead_application_service,
+    meta_capi_service,
     public_inventory_service,
     storefront_analytics_service,
 )
@@ -350,6 +351,9 @@ class LeadInput:
     driver_license_state: str | None = None
     has_driver_license: bool | None = None
     address: dict[str, str] | None = None
+    # A2P 10DLC: the customer actively checked the optional SMS-consent box.
+    # Recorded on the contact (sms_consent_at/_source); never a submit gate.
+    sms_consent: bool = False
 
 
 def _application_input_from_lead(lead: LeadInput) -> ApplicationInput:
@@ -396,6 +400,37 @@ def _compose_notes(lead: LeadInput, *, ref_requested_but_unlinked: bool) -> str 
     return "\n".join(lines) or None
 
 
+def _enqueue_meta_lead(
+    db: Session,
+    *,
+    crm_event_id: int,
+    lead: LeadInput,
+    vehicle,
+    ctx: TrackingContext,
+) -> None:
+    """Queue the Meta CAPI ``Lead`` twin of this conversion (sender is gated
+    by META_CAPI_ENABLED; until then rows just accumulate). Only approved
+    matching identifiers leave here — name/email/phone (hashed downstream)
+    and ad cookies. Never DOB/DL/address/message."""
+    label = None
+    if vehicle is not None:
+        label = (
+            " ".join(str(x) for x in (vehicle.year, vehicle.make, vehicle.model) if x)
+            or None
+        )
+    meta_capi_service.enqueue_lead_conversion(
+        db,
+        crm_event_id=crm_event_id,
+        name=lead.name,
+        email=lead.email,
+        phone=lead.phone,
+        ctx=ctx,
+        vehicle_listing_code=vehicle.public_code if vehicle is not None else None,
+        vehicle_label=label,
+        vehicle_price_cents=vehicle.unit_price_cents if vehicle is not None else None,
+    )
+
+
 def submit_public_lead(
     db: Session, lead: LeadInput, *, tracking: TrackingContext | None = None
 ) -> Event:
@@ -427,6 +462,14 @@ def submit_public_lead(
         first_name=first,
         last_name=last,
     )
+
+    # A2P 10DLC: record express written consent when the customer checked the
+    # optional box. First consent wins (the timestamp is the legal record);
+    # a prior STOP is NOT cleared here — opt-out stands until the customer
+    # texts START themselves.
+    if lead.sms_consent and contact.sms_consent_at is None:
+        contact.sms_consent_at = datetime.now(timezone.utc)
+        contact.sms_consent_source = f"web_form:{lead.source_page or 'unknown'}"[:200]
 
     vehicle = (
         public_inventory_service.resolve_linkable_vehicle(db, lead.vehicle_ref)
@@ -493,6 +536,9 @@ def submit_public_lead(
             storefront_analytics_service.attach_lead_attribution(
                 db, crm_event_id=existing.id, ctx=tracking
             )
+            _enqueue_meta_lead(
+                db, crm_event_id=existing.id, lead=lead, vehicle=vehicle, ctx=tracking
+            )
         _create_requested_appointment(db, contact=contact, event=existing, lead=lead)
         _send_customer_confirmation(
             db, contact=contact, vehicle=vehicle, deal_id=existing.id
@@ -552,6 +598,9 @@ def submit_public_lead(
     if tracking is not None:
         storefront_analytics_service.attach_lead_attribution(
             db, crm_event_id=event.id, ctx=tracking
+        )
+        _enqueue_meta_lead(
+            db, crm_event_id=event.id, lead=lead, vehicle=vehicle, ctx=tracking
         )
     _create_requested_appointment(db, contact=contact, event=event, lead=lead)
     _send_customer_confirmation(

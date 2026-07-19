@@ -19,7 +19,7 @@ import asyncio
 import logging
 
 from database.connection import SessionLocal
-from services import no_show_cron, shift_request_expiry_cron
+from services import meta_capi_service, no_show_cron, shift_request_expiry_cron
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +49,9 @@ def _tick() -> None:
     for tick_fn in (
         no_show_cron.tick,
         shift_request_expiry_cron.tick,
+        # Meta CAPI retry sweep — re-delivers queued/failed ad conversion
+        # events. No-op until META_CAPI_ENABLED + credentials are set.
+        meta_capi_service.tick,
     ):
         db = SessionLocal()
         try:

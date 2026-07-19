@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 import { track } from "@/lib/analytics";
+import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
 
 /**
  * Fires a first-party `vehicle_view` beacon once when a vehicle detail page
- * mounts. Server component renders it with the vehicle's public identifiers +
- * non-sensitive commerce fields (year/make/model/price) — the same shape a
- * future Meta `ViewContent` event will use. Renders nothing.
+ * mounts, plus the Meta Pixel `ViewContent` twin (no-op when the Pixel isn't
+ * configured) so Meta can build viewed-this-car retargeting audiences.
+ * Renders nothing.
  */
 export default function VehicleViewTracker({
   vehicleId,
@@ -34,6 +35,10 @@ export default function VehicleViewTracker({
       vehicle: { vehicleId, listingCode: listingCode ?? undefined },
       metadata,
     });
+    fbqTrack(
+      "ViewContent",
+      vehicleContentParams({ listingCode, vehicleId, year, make, model, priceCents })
+    );
   }, [vehicleId, listingCode, year, make, model, priceCents]);
 
   return null;

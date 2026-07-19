@@ -25,6 +25,7 @@ import ContactDetail from './pages/ContactDetail'
 import Contacts from './pages/Contacts'
 import Dashboard from './pages/Dashboard'
 import SalesActivity from './pages/SalesActivity'
+import StorefrontAnalytics from './pages/StorefrontAnalytics'
 import EventDetailLayout from './pages/event/EventDetailLayout'
 import Activity from './pages/event/tabs/Activity'
 import Documents from './pages/event/tabs/Documents'
@@ -109,6 +110,7 @@ export default function App() {
                 <Route path="contacts" element={<Contacts />} />
                 <Route path="contacts/:contactId" element={<ContactDetail />} />
                 <Route path="sales-activity" element={<SalesActivity />} />
+                <Route path="analytics" element={<StorefrontAnalytics />} />
                 <Route path="invoices" element={<InvoicesGlobal />} />
                 <Route path="inventory" element={<AdminVehicles />} />
                 <Route path="products" element={<AdminCatalog />} />

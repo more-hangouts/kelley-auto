@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
@@ -35,6 +35,7 @@ from database.connection import get_db
 from services import booking_service
 from services import business_profile_service
 from services import document_storage
+from services import meta_capi_service
 from services import public_inventory_service as inventory
 from services import public_lead_service
 from services import storefront_analytics_service
@@ -232,6 +233,10 @@ class PublicLeadRequest(BaseModel):
     address_city: str | None = Field(default=None, max_length=120)
     address_state: str | None = Field(default=None, max_length=2)
     address_zip: str | None = Field(default=None, max_length=12)
+    # A2P 10DLC: True only when the customer actively checked the OPTIONAL
+    # SMS-consent box (never pre-checked, never required to submit). Stamped
+    # onto the contact as sms_consent_at/_source; outbound SMS is gated on it.
+    sms_consent: bool = False
     # Honeypot — must stay empty. A bot that fills it gets a normal-looking
     # acknowledgement and no record is written.
     company_website: str | None = Field(default=None, max_length=200)
@@ -246,6 +251,11 @@ class PublicLeadRequest(BaseModel):
     event_id: str | None = Field(default=None, max_length=64)
     fbp: str | None = Field(default=None, max_length=255)
     fbc: str | None = Field(default=None, max_length=255)
+    # Ad click ids captured on the landing URL. These let a UTM-less paid
+    # click still attribute (fbclid→facebook, gclid→google, msclkid→bing).
+    fbclid: str | None = Field(default=None, max_length=255)
+    gclid: str | None = Field(default=None, max_length=255)
+    msclkid: str | None = Field(default=None, max_length=255)
     landing_page: str | None = Field(default=None, max_length=1000)
     referrer: str | None = Field(default=None, max_length=1000)
 
@@ -297,6 +307,9 @@ class PublicLeadRequest(BaseModel):
             utm=self.utm(),
             fbp=(self.fbp or None),
             fbc=(self.fbc or None),
+            fbclid=(self.fbclid or None),
+            gclid=(self.gclid or None),
+            msclkid=(self.msclkid or None),
             listing_code=(self.listing_code or None),
             vehicle_id=self.vehicle_id,
         )
@@ -333,6 +346,7 @@ _LEAD_ACK = PublicLeadResponse(ok=True, message="Thanks, we received your reques
 def submit_lead(
     payload: PublicLeadRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
 ) -> PublicLeadResponse:
     """Public lead intake. Creates or appends to a vehicle_sale deal and
@@ -372,14 +386,25 @@ def submit_lead(
         driver_license_state=payload.driver_license_state,
         has_driver_license=payload.has_driver_license,
         address=payload.address(),
+        sms_consent=payload.sms_consent,
     )
+    # Request context rides on the tracking payload for Meta CAPI matching
+    # (client IP + UA are required unhashed for web events). The analytics
+    # tables themselves still only ever store a hashed IP.
+    tracking = payload.tracking()
+    tracking.client_ip = _client_ip(request)
+    tracking.user_agent = request.headers.get("user-agent")
+
     try:
-        public_lead_service.submit_public_lead(db, lead, tracking=payload.tracking())
+        public_lead_service.submit_public_lead(db, lead, tracking=tracking)
     except PublicLeadError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=exc.code) from exc
 
     db.commit()
+    # Fast path: push the queued CAPI event to Meta right after the response
+    # goes out (no-op until META_CAPI_ENABLED + credentials are configured).
+    background_tasks.add_task(meta_capi_service.flush_queue)
     return _LEAD_ACK
 
 
@@ -405,9 +430,20 @@ class TrackEventRequest(BaseModel):
     utm_campaign: str | None = Field(default=None, max_length=120)
     utm_term: str | None = Field(default=None, max_length=120)
     utm_content: str | None = Field(default=None, max_length=120)
+    fbclid: str | None = Field(default=None, max_length=255)
+    gclid: str | None = Field(default=None, max_length=255)
+    msclkid: str | None = Field(default=None, max_length=255)
     listing_code: str | None = Field(default=None, max_length=40)
     vehicle_id: int | None = None
     metadata: dict[str, Any] | None = None
+
+    def click_ids(self) -> dict[str, str]:
+        pairs = {
+            "fbclid": self.fbclid,
+            "gclid": self.gclid,
+            "msclkid": self.msclkid,
+        }
+        return {k: v for k, v in pairs.items() if v}
 
     def utm(self) -> dict[str, str]:
         pairs = {
@@ -450,6 +486,12 @@ def track_event(
     if not settings.STOREFRONT_ANALYTICS_ENABLED:
         return _TRACK_ACK
 
+    # Crawlers, link-preview renderers, and Meta's ad-review fetches get the
+    # same friendly ack and no row — stored, they'd masquerade as shoppers.
+    user_agent = request.headers.get("user-agent")
+    if storefront_analytics_service.is_bot_user_agent(user_agent):
+        return _TRACK_ACK
+
     ip_hash = booking_service.hash_ip(_client_ip(request))
     try:
         storefront_analytics_service.record_event(
@@ -461,11 +503,12 @@ def track_event(
             path=payload.path,
             referrer=payload.referrer,
             utm=payload.utm(),
+            click_ids=payload.click_ids(),
             listing_code=payload.listing_code,
             vehicle_id=payload.vehicle_id,
             metadata=payload.metadata,
             landing_page=payload.landing_page,
-            user_agent=request.headers.get("user-agent"),
+            user_agent=user_agent,
             ip_hash=ip_hash,
         )
         db.commit()

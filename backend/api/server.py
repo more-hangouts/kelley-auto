@@ -283,6 +283,11 @@ app.include_router(
     tags=["dashboard"],
 )
 app.include_router(
+    admin_storefront_analytics_router.router,
+    prefix="/api/admin/storefront-analytics",
+    tags=["storefront-analytics"],
+)
+app.include_router(
     catalog_router.router,
     prefix="/api/catalog",
     tags=["catalog"],

@@ -5,6 +5,7 @@ import { getSiteSettings } from "@/lib/api";
 import { SITE_URL } from "@/lib/site";
 import ChatWidget from "./components/ChatWidget";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import MetaPixel from "./components/MetaPixel";
 import PageViewTracker from "./components/PageViewTracker";
 
 const inter = Inter({
@@ -65,6 +66,7 @@ export default async function RootLayout({
         {children}
         <PageViewTracker />
         <GoogleAnalytics />
+        <MetaPixel />
         <ChatWidget />
       </body>
     </html>

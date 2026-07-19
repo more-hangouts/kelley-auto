@@ -250,6 +250,16 @@ def _cleanup(user_id: int, baseline_seq: int) -> None:
                     ),
                     {"event_ids": event_ids},
                 )
+                # Queued Meta CAPI events for these test leads must not
+                # survive — they'd deliver to the real dataset the moment
+                # META_CAPI_ENABLED flips on.
+                db.execute(
+                    sql_text(
+                        "DELETE FROM ad_conversion_events "
+                        "WHERE lead_event_id = ANY(:event_ids)"
+                    ),
+                    {"event_ids": event_ids},
+                )
             db.execute(
                 sql_text("DELETE FROM events WHERE primary_contact_id = ANY(:ids)"),
                 {"ids": ids},

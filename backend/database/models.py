@@ -484,6 +484,11 @@ class StorefrontEvent(Base):
     vehicle_catalog_item_id = Column(
         Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
     )
+    # Normalized channel (migration 096), derived at write time via the
+    # UTM → click-id → referrer priority ladder. NULL = honestly unknown.
+    source = Column(String(120))
+    medium = Column(String(120))
+    click_id = Column(String(255))
     # `metadata` is reserved on the declarative Base, so the attribute is
     # `event_metadata` while the column stays `metadata`.
     event_metadata = Column("metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb"))
@@ -513,6 +518,10 @@ class LeadAttribution(Base):
     referrer = Column(Text)
     fbp = Column(String(255))
     fbc = Column(String(255))
+    # Normalized channel (migration 096) — the deal's first-touch source.
+    source = Column(String(120))
+    medium = Column(String(120))
+    click_id = Column(String(255))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
 
 
