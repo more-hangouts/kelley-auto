@@ -10,7 +10,7 @@ services behind a reverse proxy with automatic HTTPS.
 |---|---|---|
 | `kelleyautoplex.com`, `www.` | Public storefront | Next.js `next start` → `127.0.0.1:3000` (`kelley-public.service`) |
 | `api.kelleyautoplex.com` | FastAPI (`/api/*`, incl. `/api/public/media/*` photos) | uvicorn → `127.0.0.1:8000` (`kelley-backend.service`) |
-| `admin.kelleyautoplex.com` | Admin SPA (static) | Caddy `file_server` from `backend/frontend/dist` |
+| `admin.kelleyautoplex.com` | Admin SPA (static) | Caddy `file_server` from `apps/admin/dist` |
 | `sales.kelleyautoplex.com` *(optional)* | Sales surface (same dist, self-routes by host) | Caddy `file_server` |
 
 Postgres (`:5432`) and Redis (`:6379`) stay local (Day-0 baseline). Uploaded
@@ -86,9 +86,9 @@ sudo ufw enable        # ensure SSH (22) is allowed FIRST or you'll lock out
 
 | Template (repo) | Install to | Notes |
 |---|---|---|
-| `deploy/env/backend.prod.env` | merge into `/opt/kelley/backend/.env` | overrides only; fill `SMTP_PASSWORD` (Resend key) |
-| `deploy/env/public.env.production` | `/opt/kelley/frontend/.env.production` | `NEXT_PUBLIC_*` baked at build |
-| `deploy/env/admin.env.production` | `/opt/kelley/backend/frontend/.env.production` | `VITE_API_URL` MUST end in `/api` |
+| `deploy/env/backend.prod.env` | merge into `/opt/kelley/apps/api/.env` | overrides only; fill `SMTP_PASSWORD` (Resend key) |
+| `deploy/env/public.env.production` | `/opt/kelley/apps/storefront/.env.production` | `NEXT_PUBLIC_*` baked at build |
+| `deploy/env/admin.env.production` | `/opt/kelley/apps/admin/.env.production` | `VITE_API_URL` MUST end in `/api` |
 
 Resend: create an API key + verify the sending domain, then set
 `SMTP_PASSWORD` and `SMTP_FROM_EMAIL`. Leaving `SMTP_HOST` empty keeps the
