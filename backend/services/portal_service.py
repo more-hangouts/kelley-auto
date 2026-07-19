@@ -236,7 +236,7 @@ def _portal_business(db: Session) -> PortalBusiness:
         # missing in some misconfigured environment. Fall back to a
         # minimal stub rather than 500ing the customer.
         return PortalBusiness(
-            legal_name="Bella's XV",
+            legal_name="Kelley Autoplex",
             address_line1=None,
             address_line2=None,
             city=None,

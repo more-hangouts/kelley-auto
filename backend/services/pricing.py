@@ -1,4 +1,4 @@
-"""Bella's dress pricing logic — the single source of truth for turning a
+"""Kelley Autoplex pricing logic — the single source of truth for turning a
 wholesale cost into a retail price.
 
 Two callers share this module so the math lives in exactly one place:

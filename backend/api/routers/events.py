@@ -17,7 +17,11 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from database.auth import require_admin_scope, require_any_scope
+from database.auth import (
+    require_admin_scope,
+    require_any_scope,
+    require_lead_application_pii,
+)
 from database.connection import get_db
 from database.models import (
     Appointment,
@@ -30,7 +34,13 @@ from database.models import (
     Quote,
     User,
 )
-from services import activity_log, booking_service, event_service
+from services import (
+    activity_log,
+    booking_service,
+    event_service,
+    lead_application_service,
+    storefront_analytics_service,
+)
 from services.event_service import EventOverrides, EventServiceError
 from services.event_workflow import all_statuses
 
@@ -48,7 +58,7 @@ class EventCreate(BaseModel):
 
     from_appointment_id: int | None = None
     primary_contact_id: int | None = None
-    event_type: Literal["quinceanera", "vehicle_sale"] = "quinceanera"
+    event_type: Literal["quinceanera", "vehicle_sale"] = "vehicle_sale"
 
     event_name: str | None = Field(default=None, max_length=200)
     event_date: date | None = None
@@ -279,9 +289,19 @@ class VehicleCardSummary(BaseModel):
     year: int | None
     make: str | None
     model: str | None
+    trim: str | None = None
     vin: str | None
+    stock_number: str | None = None
     vehicle_status: str | None
     mileage: int | None
+    price_cents: int | None = None
+    exterior_color: str | None = None
+    body_type: str | None = None
+    drivetrain: str | None = None
+    transmission: str | None = None
+    fuel_type: str | None = None
+    condition: str | None = None
+    carfax_url: str | None = None
 
 
 class BoardCardResponse(BaseModel):
@@ -395,7 +415,7 @@ def patch_status(
 def get_board(
     db: Annotated[Session, Depends(get_db)],
     _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
-    event_type: str = Query(default="quinceanera"),
+    event_type: str = Query(default="vehicle_sale"),
 ) -> BoardResponse:
     try:
         columns = event_service.get_board_data(db, event_type=event_type)
@@ -437,9 +457,19 @@ def get_board(
                             year=c.vehicle_year,
                             make=c.vehicle_make,
                             model=c.vehicle_model,
+                            trim=c.vehicle_trim,
                             vin=c.vehicle_vin,
+                            stock_number=c.vehicle_stock_number,
                             vehicle_status=c.vehicle_status,
                             mileage=c.vehicle_mileage,
+                            price_cents=c.vehicle_price_cents,
+                            exterior_color=c.vehicle_exterior_color,
+                            body_type=c.vehicle_body_type,
+                            drivetrain=c.vehicle_drivetrain,
+                            transmission=c.vehicle_transmission,
+                            fuel_type=c.vehicle_fuel_type,
+                            condition=c.vehicle_condition,
+                            carfax_url=c.vehicle_carfax_url,
                         )
                         if c.vehicle_id is not None
                         else None,
@@ -450,6 +480,60 @@ def get_board(
             for col in columns
         ],
     )
+
+
+class ApplicationDetailResponse(BaseModel):
+    """Decrypted BHPH application PII. Returned ONLY by the permission-gated,
+    audited endpoint below — never embedded in the normal event payload."""
+
+    event_id: int
+    contact_id: int
+    date_of_birth: str | None = None
+    driver_license_number: str | None = None
+    ssn: str | None = None
+    address: dict | None = None
+    driver_license_state: str | None = None
+    has_driver_license: bool | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@router.get("/{event_id}/application", response_model=ApplicationDetailResponse)
+def get_event_application(
+    event_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_lead_application_pii)],
+) -> ApplicationDetailResponse:
+    """Decrypted BHPH application PII for a deal. Gated on admin scope AND the
+    ``lead_applications:read_sensitive`` permission; every successful read is
+    audit-logged (``application.pii_viewed``) with the viewing user's id."""
+    event = db.get(Event, event_id)
+    if event is None or event.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="event_not_found")
+
+    data = lead_application_service.get_application_decrypted(
+        db, event_id=event_id, actor_user_id=user.id
+    )
+    if data is None:
+        raise HTTPException(status_code=404, detail="application_not_found")
+    db.commit()  # persist the pii_viewed audit row
+    return ApplicationDetailResponse(**data)
+
+
+@router.get("/{event_id}/journey")
+def get_event_journey(
+    event_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+) -> dict:
+    """Read-only first-party browsing journey for a deal (source/UTM, session,
+    vehicles viewed, path to conversion). Same audience as the deal itself
+    (admin or sales). Carries NO encrypted BHPH application fields — only
+    first-party behavioral analytics."""
+    event = db.get(Event, event_id)
+    if event is None or event.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="event_not_found")
+    return storefront_analytics_service.get_lead_journey(db, crm_event_id=event_id)
 
 
 @router.get("/{event_id}", response_model=EventDetailResponse)

@@ -22,7 +22,10 @@ import AttendanceReview from './pages/AttendanceReview'
 import BookingWidgetSettings from './pages/BookingWidgetSettings'
 import BusinessProfile from './pages/BusinessProfile'
 import ContactDetail from './pages/ContactDetail'
+import Contacts from './pages/Contacts'
 import Dashboard from './pages/Dashboard'
+import SalesActivity from './pages/SalesActivity'
+import StorefrontAnalytics from './pages/StorefrontAnalytics'
 import EventDetailLayout from './pages/event/EventDetailLayout'
 import Activity from './pages/event/tabs/Activity'
 import Documents from './pages/event/tabs/Documents'
@@ -37,6 +40,8 @@ import RecycleBin from './pages/RecycleBin'
 import SalesStaffSchedule from './pages/SalesStaffSchedule'
 import SalesStaffSettings from './pages/SalesStaffSettings'
 import Settings from './pages/Settings'
+import NotificationSubscribers from './pages/NotificationSubscribers'
+import Inbox from './pages/Inbox'
 import StaffManagementLayout from './pages/StaffManagementLayout'
 import StaffScheduleLayout from './pages/StaffScheduleLayout'
 import theme from './theme'
@@ -55,7 +60,7 @@ function LegacyStaffScheduleRedirect() {
 export default function App() {
   // The sales surface is its own React app — its own auth context,
   // its own routes, its own token storage key. Mounted on hostname
-  // match so `admin.shopbellasxv.com` and `sales.shopbellasxv.com`
+  // match so `admin.kelleyautoplex.com` and `sales.kelleyautoplex.com`
   // get the right tree without sharing routers or providers.
   if (isSalesSubdomain()) {
     return <SalesApp />
@@ -78,14 +83,16 @@ export default function App() {
                 }
               >
                 <Route index element={<Dashboard />} />
-                <Route path="pipeline" element={<Pipeline />} />
+                {/* Deals is the single vehicle-sale board. The old quinceañera
+                    pipeline was retired — keep the URL working for bookmarks. */}
+                <Route path="pipeline" element={<Navigate to="/sales" replace />} />
                 <Route
                   path="sales"
                   element={
                     <Pipeline
                       eventType="vehicle_sale"
-                      title="Vehicle Deals"
-                      subtitleNoun="Vehicle sale deals"
+                      title="Deals"
+                      subtitleNoun="Vehicle deals"
                     />
                   }
                 />
@@ -98,8 +105,12 @@ export default function App() {
                   <Route path="payments" element={<Payments />} />
                   <Route path="activity" element={<Activity />} />
                 </Route>
+                <Route path="inbox" element={<Inbox />} />
                 <Route path="calendar" element={<AppointmentsCalendar />} />
+                <Route path="contacts" element={<Contacts />} />
                 <Route path="contacts/:contactId" element={<ContactDetail />} />
+                <Route path="sales-activity" element={<SalesActivity />} />
+                <Route path="analytics" element={<StorefrontAnalytics />} />
                 <Route path="invoices" element={<InvoicesGlobal />} />
                 <Route path="inventory" element={<AdminVehicles />} />
                 <Route path="products" element={<AdminCatalog />} />
@@ -107,6 +118,7 @@ export default function App() {
                 <Route path="settings/widget" element={<BookingWidgetSettings />} />
                 <Route path="settings/recycle-bin" element={<RecycleBin />} />
                 <Route path="settings/business-profile" element={<BusinessProfile />} />
+                <Route path="settings/notifications" element={<NotificationSubscribers />} />
                 {/* Legacy URLs — Products moved to top-level nav, Widget settings
                     moved under Settings. Keep old bookmarks/links working. */}
                 <Route

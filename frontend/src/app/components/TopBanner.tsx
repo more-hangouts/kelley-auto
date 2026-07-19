@@ -23,7 +23,7 @@ export default async function TopBanner() {
           />
         </svg>
         {telHref ? (
-          <a href={telHref} className="hover:text-primary transition-colors">
+          <a href={telHref} className="hover:text-primary-light transition-colors">
             {phone}
           </a>
         ) : (
@@ -34,14 +34,14 @@ export default async function TopBanner() {
       {/* Center — promo message */}
       <div className="flex items-center gap-4 md:gap-6">
         <p className="text-xs md:text-sm">
-          <span className="font-semibold text-primary">{bannerLabel}</span>
+          <span className="font-semibold text-primary-light">{bannerLabel}</span>
           {" — "}
           {bannerText}
         </p>
         <span className="hidden md:inline text-neutral-400">|</span>
         <Link
-          href="/shop"
-          className="hidden md:inline underline text-xs md:text-sm hover:text-primary transition-colors"
+          href="/cars-for-sale"
+          className="hidden md:inline underline text-xs md:text-sm hover:text-primary-light transition-colors"
         >
           View Inventory
         </Link>

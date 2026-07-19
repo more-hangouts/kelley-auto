@@ -38,11 +38,15 @@ import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined'
 
 import {
   createVehicle,
+  decodeVin,
   listVehicles,
+  scanVin,
   updateVehicle,
   uploadVehiclePhoto,
 } from '../services/api'
 import { formatDollars, formatUSD, parseDollars } from '../utils/money'
+import { mediaSrc } from '../utils/mediaUrl'
+import VehiclePhotoManager from '../components/VehiclePhotoManager'
 
 // Admin vehicle inventory, mounted at /inventory (top-level nav).
 //
@@ -93,7 +97,13 @@ const ERROR_MESSAGES = {
   unit_price_cents_negative: 'Price must be a non-negative amount.',
   unit_price_cents_invalid: 'Price must be a valid amount.',
   catalog_field_required: 'A required field is missing.',
-  image_urls_invalid: 'Photo URLs must be a list of text values.',
+  image_urls_invalid: 'Photo URLs must be http(s) links or Kelley-uploaded vehicle photos.',
+  vehicle_photo_empty: 'That photo file is empty.',
+  vehicle_photo_too_large: 'Photo is too large.',
+  vehicle_photo_unsupported_type: 'Photos must be JPG, PNG, or WebP images.',
+  vehicle_photo_invalid_image: 'That file could not be decoded as an image.',
+  vehicle_photo_too_small: 'Photo is too small for a vehicle listing.',
+  vehicle_photo_insufficient_storage: 'Server storage is too low for photo uploads.',
 }
 
 function extractApiError(err) {
@@ -116,6 +126,8 @@ function extractApiError(err) {
 
 const MAX_VEHICLE_YEAR = new Date().getFullYear() + 1
 const MIN_VEHICLE_YEAR = 1980
+const VEHICLE_PHOTO_MAX_MB = Number(import.meta.env.VITE_VEHICLE_PHOTO_MAX_MB || 10)
+const VEHICLE_PHOTO_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 const DEFAULT_FORM = {
   stock_number: '',
@@ -178,11 +190,52 @@ function parseIntField(value) {
   return { value: Number(trimmed), ok: true }
 }
 
+// Downscale a captured VIN photo before uploading for OCR. A phone shoots
+// ~12 MP (3–4 MB); shrinking the long edge to ~2000px (~200–400 KB) makes
+// the upload leg fast on cellular without hurting VIN legibility (the
+// server caps resolution again before Tesseract). Falls back to the
+// original file on any failure so scanning never breaks.
+function downscaleForScan(file, maxEdge = 2000) {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const longest = Math.max(img.width, img.height)
+        if (longest <= maxEdge) {
+          resolve(file)
+          return
+        }
+        const scale = maxEdge / longest
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(
+          (blob) =>
+            resolve(blob ? new File([blob], 'vin-scan.jpg', { type: 'image/jpeg' }) : file),
+          'image/jpeg',
+          0.9,
+        )
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(file)
+      }
+      img.src = url
+    } catch {
+      resolve(file)
+    }
+  })
+}
+
 // Build the create/patch body from the form, validating client-side first
 // so the obvious mistakes never round-trip. Returns { body } or { error }.
 function buildPayload(form, { isEdit }) {
+  // Stock number is optional — staff shouldn't have to invent one. When
+  // left blank, the server auto-assigns it from the vehicle's public code.
   const stock = form.stock_number.trim()
-  if (!stock) return { error: 'Stock number is required.' }
 
   const exterior = form.exterior_color.trim()
   if (!exterior) return { error: 'Exterior color is required.' }
@@ -217,7 +270,7 @@ function buildPayload(form, { isEdit }) {
   const features = form.features.map((f) => f.trim()).filter(Boolean)
 
   const body = {
-    stock_number: stock,
+    stock_number: stock || null,
     exterior_color: exterior,
     vin: vin || null,
     year: yearRes.value,
@@ -253,20 +306,7 @@ function buildPayload(form, { isEdit }) {
   return { body }
 }
 
-// Editor for an ordered list of free-text strings (photo URLs, features).
-// `reorder` adds up/down controls and flags the first item as the public
-// thumbnail — order is meaningful for image_urls (first = public thumb).
-const PHOTO_API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-
-// Stored vehicle photos are origin-relative (`/api/public/media/...`) so the
-// DB stays host-independent. Build an absolute src for <img> previews in the
-// admin (a different origin from the API); external URLs pass through.
-function photoSrc(url) {
-  if (!url) return ''
-  if (/^https?:\/\//.test(url)) return url
-  return `${PHOTO_API_ORIGIN}${url}`
-}
-
+// Editor for an ordered list of free-text strings (used for features).
 function StringListEditor({ label, values, onChange, placeholder, helperText, reorder }) {
   const update = (idx, val) => {
     const next = [...values]
@@ -406,6 +446,12 @@ export default function AdminVehicles() {
   const [actionError, setActionError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  // Create-mode photos: held locally (blob previews) until the vehicle is
+  // saved, then uploaded in order. Each item is {id, file, preview}.
+  const [stagedPhotos, setStagedPhotos] = useState([])
+  const [decoding, setDecoding] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [decodeFeedback, setDecodeFeedback] = useState(null) // {severity, message}
 
   async function refresh() {
     setLoadError(null)
@@ -495,10 +541,21 @@ export default function AdminVehicles() {
     }
   }
 
+  // Revoke any staged blob previews and clear them. Called whenever the
+  // dialog opens fresh or closes so object URLs never leak.
+  function clearStagedPhotos() {
+    setStagedPhotos((prev) => {
+      prev.forEach((s) => s.preview && URL.revokeObjectURL(s.preview))
+      return []
+    })
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(DEFAULT_FORM)
     setActionError(null)
+    setDecodeFeedback(null)
+    clearStagedPhotos()
     setDialogOpen(true)
   }
 
@@ -506,7 +563,132 @@ export default function AdminVehicles() {
     setEditing(row)
     setForm(formFromRow(row))
     setActionError(null)
+    setDecodeFeedback(null)
+    clearStagedPhotos()
     setDialogOpen(true)
+  }
+
+  function closeDialog() {
+    clearStagedPhotos()
+    setDialogOpen(false)
+  }
+
+  // vPIC-backed decode: normalize + validate + prefill EMPTY fields only
+  // (never clobbers what staff already typed). Check-digit mismatch and
+  // duplicate VINs surface as non-blocking warnings before save.
+  const DECODE_FIELDS = [
+    'year',
+    'make',
+    'model',
+    'trim',
+    'body_type',
+    'fuel_type',
+    'transmission',
+    'drivetrain',
+  ]
+
+  // Apply a resolved VIN (from Decode or Scan — same shape) to the form:
+  // set the normalized VIN and prefill EMPTY fields only. Returns the
+  // feedback banner {severity, message} for the caller to display.
+  function applyVinResult(res) {
+    const next = { ...form, vin: res.vin } // normalized (uppercase)
+    const filled = []
+    for (const key of DECODE_FIELDS) {
+      const val = res.decoded?.[key]
+      const already = String(form[key] ?? '').trim()
+      if (val != null && String(val).length && !already) {
+        next[key] = String(val)
+        filled.push(key)
+      }
+    }
+    setForm(next)
+
+    const parts = []
+    if (filled.length) {
+      parts.push(`Filled ${filled.length} field${filled.length === 1 ? '' : 's'} from NHTSA.`)
+    } else if (!res.error) {
+      parts.push('NHTSA had no new details to add.')
+    }
+    if (res.error === 'decode_unavailable') {
+      parts.push('NHTSA lookup is unavailable right now — enter details manually.')
+    } else if (res.error === 'no_result') {
+      parts.push('NHTSA has no record for this VIN — enter details manually.')
+    }
+    let severity = res.error ? 'warning' : 'success'
+    if (!res.check_digit_ok) {
+      parts.push('⚠ VIN check digit doesn’t match — double-check for a typo.')
+      severity = 'warning'
+    }
+    if (
+      res.existing_vehicle_id &&
+      (!editing || editing.id !== res.existing_vehicle_id)
+    ) {
+      parts.push(`This VIN is already in inventory (vehicle #${res.existing_vehicle_id}).`)
+      severity = 'warning'
+    }
+    return { severity, message: parts.join(' ') }
+  }
+
+  async function handleDecodeVin() {
+    const raw = (form.vin || '').trim()
+    if (!raw || decoding) return
+    setDecoding(true)
+    setDecodeFeedback(null)
+    try {
+      const res = await decodeVin(raw)
+      setDecodeFeedback(applyVinResult(res))
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      const msg =
+        (detail && typeof detail === 'object' && detail.message) ||
+        'Could not decode this VIN.'
+      setDecodeFeedback({ severity: 'error', message: msg })
+    } finally {
+      setDecoding(false)
+    }
+  }
+
+  // "Scan VIN": OCR a photo of the door-jamb sticker / dashboard plate.
+  // The server returns only checksum-valid reads, so a hit is trustworthy;
+  // staff still eyeball the prefilled VIN against the sticker before save.
+  async function handleScanVin(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file || scanning) return
+    if (!VEHICLE_PHOTO_ALLOWED_TYPES.has(file.type)) {
+      setDecodeFeedback({ severity: 'error', message: 'Photo must be a JPG, PNG, or WebP image.' })
+      return
+    }
+    if (file.size > VEHICLE_PHOTO_MAX_MB * 1024 * 1024) {
+      setDecodeFeedback({ severity: 'error', message: `Photo is too large (max ${VEHICLE_PHOTO_MAX_MB} MB).` })
+      return
+    }
+    setScanning(true)
+    setDecodeFeedback(null)
+    try {
+      // Shrink before upload so the slow leg (multi-MB upload over
+      // cellular) isn't what makes scanning feel slow.
+      const scanFile = await downscaleForScan(file)
+      const res = await scanVin(scanFile)
+      if (!res.found || !res.best) {
+        setDecodeFeedback({
+          severity: 'warning',
+          message:
+            'No VIN detected in that photo. Try a clearer, straight-on shot of the door-jamb sticker or dashboard plate.',
+        })
+        return
+      }
+      const fb = applyVinResult(res.best)
+      setDecodeFeedback({ ...fb, message: `Scanned VIN ${res.best.vin}. ${fb.message}` })
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      const msg =
+        (detail && typeof detail === 'object' && detail.message) ||
+        'Could not read that photo.'
+      setDecodeFeedback({ severity: 'error', message: msg })
+    } finally {
+      setScanning(false)
+    }
   }
 
   async function handleSave() {
@@ -521,9 +703,32 @@ export default function AdminVehicles() {
       if (editing) {
         await updateVehicle(editing.id, body)
       } else {
-        await createVehicle(body)
+        const created = await createVehicle(body)
+        // Upload staged photos in order so the first stays the cover. A
+        // per-file failure is non-fatal: the vehicle already exists, so we
+        // surface which photos didn't upload and let staff retry via edit.
+        if (stagedPhotos.length && created?.id) {
+          const failed = []
+          for (const sp of stagedPhotos) {
+            try {
+              await uploadVehiclePhoto(created.id, sp.file)
+            } catch {
+              failed.push(sp.file.name)
+            }
+          }
+          if (failed.length) {
+            setActionError(
+              `Vehicle saved, but ${failed.length} photo${failed.length === 1 ? '' : 's'} ` +
+                `didn’t upload (${failed.join(', ')}). Open the vehicle to add them again.`,
+            )
+            clearStagedPhotos()
+            setSaving(false)
+            refresh()
+            return
+          }
+        }
       }
-      setDialogOpen(false)
+      closeDialog()
       refresh()
     } catch (err) {
       setActionError(extractApiError(err))
@@ -540,6 +745,16 @@ export default function AdminVehicles() {
     e.target.value = '' // allow re-selecting the same file
     if (!files.length || !editing) return
     setActionError(null)
+    const badType = files.find((file) => !VEHICLE_PHOTO_ALLOWED_TYPES.has(file.type))
+    if (badType) {
+      setActionError(`${badType.name} is not a supported photo type. Use JPG, PNG, or WebP.`)
+      return
+    }
+    const tooLarge = files.find((file) => file.size > VEHICLE_PHOTO_MAX_MB * 1024 * 1024)
+    if (tooLarge) {
+      setActionError(`${tooLarge.name} is larger than ${VEHICLE_PHOTO_MAX_MB} MB.`)
+      return
+    }
     setUploadingPhoto(true)
     try {
       let latest = null
@@ -699,18 +914,17 @@ export default function AdminVehicles() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 {filteredRows.length} {filteredRows.length === 1 ? 'vehicle' : 'vehicles'}.
               </Typography>
-              <TableContainer sx={{ maxHeight: 'calc(100vh - 360px)' }}>
+              <TableContainer>
                 <Table
                   size="small"
-                  stickyHeader
                   sx={{
                     '& .MuiTableHead-root .MuiTableCell-root': {
                       fontWeight: 700,
                       fontSize: '0.7rem',
                       letterSpacing: '0.05em',
                       textTransform: 'uppercase',
-                      color: 'text.primary',
-                      bgcolor: 'grey.100',
+                      color: 'text.secondary',
+                      bgcolor: 'background.default',
                       borderBottom: '2px solid',
                       borderColor: 'divider',
                       py: 1.25,
@@ -754,8 +968,8 @@ export default function AdminVehicles() {
                                 width: 44,
                                 height: 58,
                                 borderRadius: 1,
-                                bgcolor: 'grey.100',
-                                backgroundImage: thumb ? `url(${thumb})` : 'none',
+                                bgcolor: 'action.hover',
+                                backgroundImage: thumb ? `url(${mediaSrc(thumb)})` : 'none',
                                 backgroundPosition: 'center',
                                 backgroundSize: 'cover',
                                 backgroundRepeat: 'no-repeat',
@@ -829,7 +1043,7 @@ export default function AdminVehicles() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="md" fullWidth>
         <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 0.5 }}>
@@ -840,21 +1054,53 @@ export default function AdminVehicles() {
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Stock number"
+                label="Stock number (optional)"
                 value={form.stock_number}
                 onChange={(e) => setForm({ ...form, stock_number: e.target.value })}
-                required
-                helperText="Internal stock number staff use to find the car."
+                helperText="Leave blank to auto-assign from the vehicle's code."
                 sx={{ flex: 1 }}
               />
-              <TextField
-                label="VIN"
-                value={form.vin}
-                onChange={(e) => setForm({ ...form, vin: e.target.value })}
-                helperText="17 characters. Leave blank if not captured yet."
-                sx={{ flex: 1 }}
-              />
+              <Stack direction="row" spacing={1} sx={{ flex: 1 }} alignItems="flex-start">
+                <TextField
+                  label="VIN"
+                  value={form.vin}
+                  onChange={(e) => setForm({ ...form, vin: e.target.value })}
+                  helperText="17 characters, or scan the door-jamb sticker."
+                  sx={{ flex: 1 }}
+                />
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleDecodeVin}
+                    disabled={decoding || scanning || !(form.vin || '').trim()}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    {decoding ? 'Decoding…' : 'Decode VIN'}
+                  </Button>
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<PhotoCameraOutlinedIcon />}
+                    disabled={decoding || scanning}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    {scanning ? 'Scanning…' : 'Scan VIN'}
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="environment"
+                      onChange={handleScanVin}
+                    />
+                  </Button>
+                </Stack>
+              </Stack>
             </Stack>
+            {decodeFeedback && (
+              <Alert severity={decodeFeedback.severity} onClose={() => setDecodeFeedback(null)}>
+                {decodeFeedback.message}
+              </Alert>
+            )}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth sx={{ flex: 1 }}>
                 <InputLabel>Status</InputLabel>
@@ -1018,86 +1264,16 @@ export default function AdminVehicles() {
             <Typography variant="subtitle2" color="text.secondary">
               Media
             </Typography>
-            <Box>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{ mb: 1 }}
-              >
-                <Typography variant="subtitle2">Photos</Typography>
-                <Button
-                  component="label"
-                  size="small"
-                  variant="outlined"
-                  startIcon={<PhotoCameraOutlinedIcon />}
-                  disabled={!editing || uploadingPhoto}
-                >
-                  {uploadingPhoto ? 'Uploading…' : 'Upload'}
-                  <input
-                    hidden
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    onChange={handlePhotoUpload}
-                  />
-                </Button>
-              </Stack>
-              {!editing && (
-                <Typography variant="caption" color="text.secondary">
-                  Save the vehicle first, then re-open it to upload photos.
-                </Typography>
-              )}
-              {form.image_urls.length > 0 && (
-                <Stack
-                  direction="row"
-                  sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}
-                >
-                  {form.image_urls.map((u, idx) => (
-                    <Box
-                      key={idx}
-                      sx={{ position: 'relative', width: 84, height: 84 }}
-                    >
-                      <Box
-                        component="img"
-                        src={photoSrc(u)}
-                        alt={`Photo ${idx + 1}`}
-                        sx={{
-                          width: 84,
-                          height: 84,
-                          objectFit: 'cover',
-                          borderRadius: 1,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          bgcolor: 'action.hover',
-                        }}
-                      />
-                      {idx === 0 && (
-                        <Chip
-                          size="small"
-                          label="Thumb"
-                          color="primary"
-                          sx={{
-                            position: 'absolute',
-                            bottom: 2,
-                            left: 2,
-                            height: 18,
-                            fontSize: 10,
-                          }}
-                        />
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Box>
-            <StringListEditor
-              label="Photo URLs"
-              values={form.image_urls}
+            <VehiclePhotoManager
+              mode={editing ? 'edit' : 'create'}
+              urls={form.image_urls}
               onChange={(image_urls) => setForm({ ...form, image_urls })}
-              placeholder="https://…/photo.jpg"
-              helperText="Uploaded photos appear here. The first is the public thumbnail — use the arrows to reorder. You can also paste external URLs."
-              reorder
+              staged={stagedPhotos}
+              onStagedChange={setStagedPhotos}
+              onUpload={handlePhotoUpload}
+              uploading={uploadingPhoto}
+              maxMb={VEHICLE_PHOTO_MAX_MB}
+              onError={(msg) => setActionError(msg)}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
@@ -1116,7 +1292,7 @@ export default function AdminVehicles() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} disabled={saving}>
+          <Button onClick={closeDialog} disabled={saving}>
             Cancel
           </Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>

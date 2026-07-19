@@ -87,7 +87,7 @@ def _contact_recipient(contact: Contact) -> str | None:
 
 
 def _shop_name(business: BusinessProfileView | None) -> str:
-    return (business.legal_name if business else None) or "Bella's XV"
+    return (business.legal_name if business else None) or "Kelley Autoplex"
 
 
 def _shop_signoff(business: BusinessProfileView | None) -> str:

@@ -317,7 +317,7 @@ try:
     # ----- special_order stays disabled until a staff UI exists -----
     resp = client.get(
         "/api/search",
-        params={"q": "BVX", "types": "special_order"},
+        params={"q": "KAP", "types": "special_order"},
         headers=auth,
     )
     assert resp.status_code == 400, resp.text

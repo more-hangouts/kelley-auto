@@ -7,13 +7,22 @@ can swap to Jinja and keep the same render-at-send shape.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from html import escape
+from pathlib import Path
+from urllib.parse import urlparse
 
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm.session import object_session
 
-from config.settings import APP_TIMEZONE, SMTP_FROM_EMAIL, WIDGET_PUBLIC_BASE_URL
+from config.settings import (
+    APP_TIMEZONE,
+    PUBLIC_SITE_URL,
+    SMTP_FROM_EMAIL,
+    WIDGET_PUBLIC_BASE_URL,
+)
 from database.models import Appointment, AppointmentEnrichmentResponse
 from services.booking_service import format_confirmation_code
 from services.booking_tokens import cancel_url, enrichment_url, reschedule_url
@@ -31,8 +40,8 @@ _PARTY_LABEL = {
     "3_4": "3-4 of us",
     "5_plus": "5 or more",
 }
-_BOUTIQUE_ADDRESS = "7723 Guilbeau Rd #101, San Antonio, TX 78250"
-_BOUTIQUE_PHONE = "(210) 670-5845"
+_BOUTIQUE_ADDRESS = "5803 San Pedro Ave, San Antonio, TX 78212"
+_BOUTIQUE_PHONE = "(210) 251-3644"
 
 _BE_INTRO = (
     "Help us prepare dresses in your size, style, and budget before you arrive."
@@ -76,6 +85,134 @@ class RenderedEmail:
     subject: str
     text: str
     html: str
+
+
+# ---------------------------------------------------------------------------
+# Customer lead-confirmation email (MJML-designed)
+# ---------------------------------------------------------------------------
+# The HTML body is authored in templates/emails/lead_confirmation.mjml and
+# compiled (once, via the mjml CLI) to lead_confirmation.html, which keeps the
+# {{ jinja }} placeholders. We render that compiled file at send time — MJML is
+# the design tool, Jinja does the variable fill. Autoescape guards the customer
+# name against HTML injection.
+_EMAIL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "emails"
+_email_jinja = Environment(
+    loader=FileSystemLoader(str(_EMAIL_TEMPLATE_DIR)),
+    autoescape=select_autoescape(["html"]),
+)
+
+
+def _first_name(full_name: str | None) -> str:
+    parts = (full_name or "").strip().split()
+    return parts[0] if parts else "there"
+
+
+def _tel_href(phone: str | None) -> str:
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) == 10:
+        return f"+1{digits}"
+    if len(digits) == 11 and digits.startswith("1"):
+        return f"+{digits}"
+    return digits
+
+
+def _one_line_address(profile) -> str:
+    if profile is None:
+        return ""
+    bits = [
+        getattr(profile, "address_line1", None),
+        getattr(profile, "city", None),
+        " ".join(
+            b
+            for b in (
+                getattr(profile, "state", None),
+                getattr(profile, "postal_code", None),
+            )
+            if b
+        ).strip()
+        or None,
+    ]
+    return ", ".join(b for b in bits if b)
+
+
+def render_lead_confirmation(
+    *,
+    customer_name: str | None,
+    vehicle_label: str | None,
+    profile,
+    site_url: str | None = None,
+) -> RenderedEmail:
+    """Customer-facing confirmation for a submitted public lead. ``profile`` is
+    the BusinessProfile row (or None); ``vehicle_label`` is a pre-built
+    "YEAR MAKE MODEL" string (or None for a general inquiry)."""
+    business_name = (
+        (getattr(profile, "display_name", None) or getattr(profile, "legal_name", None))
+        if profile is not None
+        else None
+    ) or "Kelley Autoplex"
+    business_phone = (
+        getattr(profile, "phone", None) if profile is not None else None
+    ) or ""
+    site_url = (site_url or PUBLIC_SITE_URL or "").rstrip("/")
+    site_host = urlparse(site_url).netloc or "our website"
+    browse_url = f"{site_url}/cars-for-sale" if site_url else ""
+
+    greeting_name = _first_name(customer_name)
+    if vehicle_label:
+        interest_line = (
+            f"You reached out about the {vehicle_label} — great pick. "
+            "We'll help you get behind the wheel."
+        )
+    else:
+        interest_line = (
+            "Thanks for reaching out about our inventory. "
+            "We'll help you find the right vehicle."
+        )
+    body_line = (
+        "A member of our team will contact you shortly to get you approved — "
+        "no credit check required. Have any questions ready and we'll take care "
+        "of the rest."
+    )
+    address = _one_line_address(profile)
+    footer_address = f" · {address}" if address else ""
+
+    ctx = {
+        "business_name": business_name,
+        "greeting_name": greeting_name,
+        "interest_line": interest_line,
+        "body_line": body_line,
+        "business_phone": business_phone or "us",
+        "phone_tel": _tel_href(business_phone),
+        "browse_url": browse_url or site_url,
+        "site_host": site_host,
+        "footer_address": footer_address,
+        "preheader": f"{business_name} received your request — we'll be in touch shortly.",
+        "current_year": datetime.now().year,
+    }
+    html = _email_jinja.get_template("lead_confirmation.html").render(**ctx)
+
+    text_lines = [
+        f"Thanks, {greeting_name} — we got your request!",
+        "",
+        interest_line,
+        body_line,
+        "",
+    ]
+    if browse_url or site_url:
+        text_lines.append(f"Browse our inventory: {browse_url or site_url}")
+    if business_phone:
+        text_lines.append(f"Call us: {business_phone}")
+    text_lines += [
+        "",
+        f"{business_name}{footer_address}",
+        f"You're receiving this because you submitted a request at {site_host}.",
+    ]
+
+    return RenderedEmail(
+        subject=f"We got your request — {business_name}",
+        text="\n".join(text_lines),
+        html=html,
+    )
 
 
 def _format_slot(appt: Appointment) -> str:
@@ -165,7 +302,7 @@ def _arrival_tips(appt: Appointment) -> list[str]:
 def _appointment_details(appt: Appointment) -> list[tuple[str, str]]:
     return [
         ("When", f"{_format_slot(appt)} ({APP_TIMEZONE})"),
-        ("Where", f"Bella's XV boutique, {_BOUTIQUE_ADDRESS}"),
+        ("Where", f"Kelley Autoplex, {_BOUTIQUE_ADDRESS}"),
         ("Party", _party_label(appt)),
         ("Event date", _format_event_date(appt)),
         ("Confirmation", format_confirmation_code(appt.confirmation_code)),
@@ -221,9 +358,11 @@ def _journey_summary(appt: Appointment) -> str:
 
 
 def _html_button(label: str, href: str, *, secondary: bool = False) -> str:
-    bg = "#FFFFFF" if secondary else "#A7616F"
-    color = "#A7616F" if secondary else "#FFFFFF"
-    border = "1px solid #E8D8DD" if secondary else "1px solid #A7616F"
+    # Kelley brand: gold primary CTA with dark ink text; neutral-outline
+    # secondary. Dark text on gold reads with strong contrast in every client.
+    bg = "#FFFFFF" if secondary else "#E8C46A"
+    color = "#14181F"
+    border = "1px solid #D7DBE0" if secondary else "1px solid #D9B255"
     return (
         f"<a href=\"{escape(href)}\" style=\"display:inline-block; "
         f"background:{bg}; color:{color}; border:{border}; padding:12px 18px; "
@@ -234,16 +373,16 @@ def _html_button(label: str, href: str, *, secondary: bool = False) -> str:
 
 def _details_table(rows: list[tuple[str, str]]) -> str:
     body = "".join(
-        f"<tr><td style=\"padding:10px 12px; color:#7A6A6F; font-size:13px; "
-        f"border-bottom:1px solid #F1E7EA; width:34%;\">{escape(label)}</td>"
-        f"<td style=\"padding:10px 12px; border-bottom:1px solid #F1E7EA;\">"
+        f"<tr><td style=\"padding:10px 12px; color:#6B7280; font-size:13px; "
+        f"border-bottom:1px solid #EDEFF2; width:34%;\">{escape(label)}</td>"
+        f"<td style=\"padding:10px 12px; border-bottom:1px solid #EDEFF2;\">"
         f"{escape(value)}</td></tr>"
         for label, value in rows
     )
     return (
         "<table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" "
-        "style=\"width:100%; border-collapse:collapse; background:#FFF8FA; "
-        "border:1px solid #F1E1E5; border-radius:10px; overflow:hidden;\">"
+        "style=\"width:100%; border-collapse:collapse; background:#F8F9FB; "
+        "border:1px solid #E6E8EC; border-radius:10px; overflow:hidden;\">"
         f"{body}</table>"
     )
 
@@ -260,18 +399,18 @@ def _wrap_html(body_html: str, *, preheader: str = "") -> str:
         else ""
     )
     return f"""<!doctype html>
-<html><body style="margin:0; padding:0; background:#FAF4F6; font-family:-apple-system, Segoe UI, sans-serif; color:#2A1B1F; line-height:1.5;">
+<html><body style="margin:0; padding:0; background:#F4F5F7; font-family:-apple-system, Segoe UI, sans-serif; color:#22262D; line-height:1.5;">
 {hidden_preheader}
 <div style="max-width:620px; margin:0 auto; padding:28px 16px;">
-<div style="background:#FFFFFF; border:1px solid #F0E2E6; border-radius:16px; overflow:hidden;">
-<div style="background:#FFFFFF; padding:28px 24px 12px 24px; text-align:center; border-bottom:1px solid #F1E1E5;">
-<img src="cid:bellas-logo" alt="Bella's XV" width="220" style="display:inline-block; max-width:220px; width:220px; height:auto; border:0; outline:none; text-decoration:none;">
+<div style="background:#FFFFFF; border:1px solid #E6E8EC; border-radius:16px; overflow:hidden;">
+<div style="background:#FFFFFF; padding:28px 24px 12px 24px; text-align:center; border-bottom:1px solid #E6E8EC;">
+<img src="cid:kelley-logo" alt="Kelley Autoplex" width="220" style="display:inline-block; max-width:220px; width:220px; height:auto; border:0; outline:none; text-decoration:none;">
 </div>
 <div style="padding:24px;">
 {body_html}
 </div>
 </div>
-<p style="color:#7A6A6F; font-size:12px; text-align:center;">Bella's XV · {_BOUTIQUE_ADDRESS} · {_BOUTIQUE_PHONE}</p>
+<p style="color:#6B7280; font-size:12px; text-align:center;">Kelley Autoplex · {_BOUTIQUE_ADDRESS} · {_BOUTIQUE_PHONE}</p>
 </div>
 </body></html>"""
 
@@ -310,12 +449,12 @@ def render_booking_confirmation(appt: Appointment) -> RenderedEmail:
         else ""
     )
 
-    subject = f"You're booked at Bella's XV — {slot}"
+    subject = f"You're booked at Kelley Autoplex — {slot}"
     text = (
         f"Hi {name},\n\n"
         f"Your initial consultation is confirmed.\n\n"
         f"  When: {slot} ({APP_TIMEZONE})\n"
-        f"  Where: Bella's XV boutique, {_BOUTIQUE_ADDRESS}\n"
+        f"  Where: Kelley Autoplex, {_BOUTIQUE_ADDRESS}\n"
         f"  Party: {party}\n"
         f"  Event date: {event_date}\n"
         f"  Confirmation: {format_confirmation_code(appt.confirmation_code)}\n\n"
@@ -326,10 +465,10 @@ def render_booking_confirmation(appt: Appointment) -> RenderedEmail:
         f"Need to change your time? Reschedule: {resched}\n"
         f"Need to cancel? {cancel}\n\n"
         f"We can't wait to meet you.\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">You're booked.</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">You're booked.</h1>"
         f"<p>Hi {escape(name)}, your initial consultation is confirmed.</p>"
         + _details_table(_appointment_details(appt))
         + profile_html
@@ -353,7 +492,7 @@ def render_booking_confirmation(appt: Appointment) -> RenderedEmail:
 
 def render_booking_thank_you(appt: Appointment) -> RenderedEmail:
     name = _customer_name(appt)
-    subject = "Thank you for visiting Bella's XV"
+    subject = "Thank you for visiting Kelley Autoplex"
     value_line = (
         f"We noted today's visit at {_format_money(appt.purchase_value_cents)}."
         if appt.purchase_value_cents
@@ -361,23 +500,23 @@ def render_booking_thank_you(appt: Appointment) -> RenderedEmail:
     )
     text = (
         f"Hi {name},\n\n"
-        f"Thank you for spending time with us at Bella's XV.\n\n"
+        f"Thank you for spending time with us at Kelley Autoplex.\n\n"
         f"{value_line}\n\n"
         f"If you have questions about anything you tried on, reply to this "
-        f"email or call the boutique. We are happy to help with next steps.\n\n"
-        f"The Bella's XV team\n"
+        f"email or call the dealership. We are happy to help with next steps.\n\n"
+        f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Thank you for visiting</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Thank you for visiting</h1>"
         f"<p>Hi {escape(name)}, thank you for spending time with us at "
-        f"Bella's XV.</p>"
+        f"Kelley Autoplex.</p>"
         f"<p>{escape(value_line)}</p>"
         f"<p>If you have questions about anything you tried on, reply to "
-        f"this email or call the boutique. We are happy to help with next "
+        f"this email or call the dealership. We are happy to help with next "
         f"steps.</p>"
-        f"<p>The Bella's XV team</p>",
-        preheader="Thank you for visiting Bella's XV.",
+        f"<p>The Kelley Autoplex team</p>",
+        preheader="Thank you for visiting Kelley Autoplex.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -395,29 +534,29 @@ def render_booking_no_show_followup(
     name = _customer_name(appt)
     slot = _format_slot(appt)
     link = (booking_url or WIDGET_PUBLIC_BASE_URL or "").rstrip("/")
-    subject = "We missed you at Bella's XV"
+    subject = "We missed you at Kelley Autoplex"
     text = (
         f"Hi {name},\n\n"
-        f"We missed you for your Bella's XV consultation on {slot}.\n\n"
+        f"We missed you for your Kelley Autoplex consultation on {slot}.\n\n"
         f"If life got busy, you can book a new time here:\n"
         f"    {link}\n\n"
-        f"You can also reply to this email or call the boutique and we will "
+        f"You can also reply to this email or call the dealership and we will "
         f"help find a better time.\n\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">We missed you</h1>"
-        f"<p>Hi {escape(name)}, we missed you for your Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">We missed you</h1>"
+        f"<p>Hi {escape(name)}, we missed you for your Kelley Autoplex "
         f"consultation on {escape(slot)}.</p>"
         f"<p>If life got busy, you can book a new time when you're ready.</p>"
         f"<p style=\"margin-top:22px;\">"
         + _html_button("Book a new time", link)
         + "</p>"
-        f"<p>You can also reply to this email or call the boutique and we "
+        f"<p>You can also reply to this email or call the dealership and we "
         f"will help find a better time.</p>"
-        f"<p>The Bella's XV team</p>",
-        preheader="We missed you at your Bella's XV consultation.",
+        f"<p>The Kelley Autoplex team</p>",
+        preheader="We missed you at your Kelley Autoplex consultation.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -449,7 +588,7 @@ def render_payment_receipt(
     )
     applied = _format_money(payment.applied_cents)
     unapplied = _format_money(payment.unapplied_cents)
-    subject = f"Payment received at Bella's XV: {amount}"
+    subject = f"Payment received at Kelley Autoplex: {amount}"
 
     allocation_line = (
         f"We applied {applied} to your invoice balance."
@@ -478,7 +617,7 @@ def render_payment_receipt(
             else ""
         )
         + f"Thank you.\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
     receipt_button = (
         f"<p style=\"margin-top:22px;\">{_html_button('View receipt', receipt_url)}</p>"
@@ -486,14 +625,14 @@ def render_payment_receipt(
         else ""
     )
     reference_html = (
-        f"<p style=\"color:#7A6A6F; font-size:13px;\">Reference: "
+        f"<p style=\"color:#6B7280; font-size:13px;\">Reference: "
         f"{escape(payment.transaction_reference)}</p>"
         if payment.transaction_reference
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Payment received</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Payment received</h1>"
         f"<p>Hi {escape(name)}, we received your {escape(method.lower())} "
         f"payment of <strong>{escape(amount)}</strong> on {escape(paid_on)}.</p>"
         + _details_table(
@@ -509,7 +648,7 @@ def render_payment_receipt(
         + reference_html
         + receipt_button
         + f"<p>Thank you.</p>",
-        preheader=f"We received your Bella's XV payment of {amount}.",
+        preheader=f"We received your Kelley Autoplex payment of {amount}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -544,7 +683,7 @@ def render_internal_new_booking(appt: Appointment) -> RenderedEmail:
         f"  Bot suspected: {'yes' if appt.bot_suspected else 'no'}\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; margin-top:0;\">New booking</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; margin-top:0;\">New booking</h1>"
         + _details_table(
             [
                 ("Quinceanera", name),
@@ -594,15 +733,15 @@ def render_enrichment_invitation(appt: Appointment) -> RenderedEmail:
         f"{_BE_INTRO}\n\n"
         f"  {link}\n\n"
         f"This is optional. Your appointment is already confirmed either way.\n\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">{escape(_BE_CTA_LABEL)}</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">{escape(_BE_CTA_LABEL)}</h1>"
         f"<p>Hi {escape(name)}, we can't wait to meet you on {escape(slot)}.</p>"
         f"<p>{escape(timing)}</p>"
         f"<p>{escape(_BE_INTRO)}</p>"
         f"<p>{_html_button(_BE_CTA_LABEL, link)}</p>"
-        f"<p style=\"color:#7A6A6F; font-size:13px;\">Optional. Your appointment is already confirmed.</p>"
+        f"<p style=\"color:#6B7280; font-size:13px;\">Optional. Your appointment is already confirmed.</p>"
         ,
         preheader=f"{_BE_INTRO}",
     )
@@ -623,7 +762,7 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
     tips = _arrival_tips(appt)[:3]
     needs_profile = not is_boutique_profile_attached(appt)
 
-    subject = f"See you tomorrow at Bella's XV — {slot}"
+    subject = f"See you tomorrow at Kelley Autoplex — {slot}"
 
     profile_text = (
         f"\nOne thing to do before you arrive:\n"
@@ -636,7 +775,7 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
     text = (
         f"Hi {name},\n\n"
         f"Quick reminder: your fitting is {slot} ({APP_TIMEZONE}).\n\n"
-        f"  Bella's XV boutique, {_BOUTIQUE_ADDRESS}\n"
+        f"  Kelley Autoplex, {_BOUTIQUE_ADDRESS}\n"
         f"  Confirmation: {format_confirmation_code(appt.confirmation_code)}\n\n"
         f"Quick prep:\n"
         + "".join(f"  - {tip}\n" for tip in tips)
@@ -644,7 +783,7 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
         + "\n"
         f"Need to change your time? {resched}\n"
         f"Can't make it? {cancel}\n\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
 
     profile_html = (
@@ -655,7 +794,7 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">See you tomorrow</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">See you tomorrow</h1>"
         f"<p>Hi {escape(name)}, just a reminder that your fitting is <strong>{escape(slot)}</strong>.</p>"
         + _details_table(_appointment_details(appt))
         + f"<h2 style=\"font-size:18px; margin-top:24px;\">Quick prep</h2>"
@@ -666,7 +805,7 @@ def render_reminder(appt: Appointment) -> RenderedEmail:
         + _html_button("Cancel", cancel, secondary=True)
         + "</p>"
         ,
-        preheader=f"Reminder: your Bella's XV fitting is {slot}.",
+        preheader=f"Reminder: your Kelley Autoplex fitting is {slot}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -680,18 +819,18 @@ def render_cancellation_confirmation(appt: Appointment) -> RenderedEmail:
     name = _customer_name(appt)
     slot = _format_slot(appt)
 
-    subject = f"Your Bella's XV appointment is cancelled — {slot}"
+    subject = f"Your Kelley Autoplex appointment is cancelled — {slot}"
     text = (
         f"Hi {name},\n\n"
         f"Your appointment for {slot} has been cancelled.\n\n"
         f"If you'd like to rebook, our calendar is at "
-        f"https://shopbellasxv.com/#book.\n\n"
-        f"— The Bella's XV team\n"
+        f"https://www.kelleyautoplex.com/#book.\n\n"
+        f"— The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; margin-top:0;\">Cancelled</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; margin-top:0;\">Cancelled</h1>"
         f"<p>Hi {escape(name)}, your appointment for <strong>{escape(slot)}</strong> has been cancelled.</p>"
-        f"<p>{_html_button('Find another time', 'https://shopbellasxv.com/#book')}</p>"
+        f"<p>{_html_button('Find another time', 'https://www.kelleyautoplex.com/#book')}</p>"
         ,
         preheader=f"Your appointment for {slot} has been cancelled.",
     )
@@ -709,23 +848,23 @@ def render_reschedule_confirmation(appt: Appointment) -> RenderedEmail:
     resched = reschedule_url(appt)
     cancel = cancel_url(appt)
 
-    subject = f"Your Bella's XV appointment is now {slot}"
+    subject = f"Your Kelley Autoplex appointment is now {slot}"
     text = (
         f"Hi {name},\n\n"
         f"Your appointment has been rescheduled to {slot} ({APP_TIMEZONE}).\n\n"
-        f"  Bella's XV boutique — 7723 Guilbeau Rd #101, San Antonio, TX 78250\n"
+        f"  Kelley Autoplex — 5803 San Pedro Ave, San Antonio, TX 78212\n"
         f"  Confirmation: {format_confirmation_code(appt.confirmation_code)}\n\n"
         f"Need to change again? {resched}\n"
         f"Need to cancel? {cancel}\n\n"
-        f"— The Bella's XV team\n"
+        f"— The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">Rescheduled</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">Rescheduled</h1>"
         f"<p>Hi {escape(name)}, your appointment is now <strong>{escape(slot)}</strong>.</p>"
         + _details_table(_appointment_details(appt))
         + f"<p>{_html_button('Reschedule again', resched)}{_html_button('Cancel', cancel, secondary=True)}</p>"
         ,
-        preheader=f"Your Bella's XV appointment moved to {slot}.",
+        preheader=f"Your Kelley Autoplex appointment moved to {slot}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -739,7 +878,7 @@ def render_sms_confirmation(appt: Appointment) -> SmsMessagePayload:
     return SmsMessagePayload(
         to=appt.phone_e164 or appt.phone,
         body=(
-            f"Bella's XV: You're booked for {_format_slot(appt)}. "
+            f"Kelley Autoplex: You're booked for {_format_slot(appt)}. "
             f"Confirmation {format_confirmation_code(appt.confirmation_code)}. Reply STOP to opt out."
         ),
     )
@@ -749,7 +888,7 @@ def render_sms_reminder(appt: Appointment) -> SmsMessagePayload:
     return SmsMessagePayload(
         to=appt.phone_e164 or appt.phone,
         body=(
-            f"Bella's XV: see you tomorrow at {_format_slot(appt)}. "
+            f"Kelley Autoplex: see you tomorrow at {_format_slot(appt)}. "
             f"7723 Guilbeau Rd #101. Reply STOP to opt out."
         ),
     )
@@ -837,11 +976,11 @@ def _format_schedule_week(week_start: date) -> str:
 
 
 def _shift_title(shift: dict) -> str:
-    return (shift.get("title") or shift.get("role") or "Boutique shift").strip()
+    return (shift.get("title") or shift.get("role") or "Shift").strip()
 
 
 def _shift_location(shift: dict) -> str:
-    return (shift.get("location") or "Bella's XV boutique").strip()
+    return (shift.get("location") or "Kelley Autoplex").strip()
 
 
 def _shift_notes(shift: dict) -> str:
@@ -870,7 +1009,7 @@ def render_schedule_published(
     week = _format_schedule_week(week_start)
     count = len(shifts)
     shift_word = "shift" if count == 1 else "shifts"
-    subject = f"Your Bella's XV schedule for {week}"
+    subject = f"Your Kelley Autoplex schedule for {week}"
     shift_lines = "\n".join(
         f"  - {_format_shift_window(s['starts_at'], s['ends_at'])}: "
         f"{_shift_title(s)} at {_shift_location(s)}"
@@ -879,15 +1018,15 @@ def render_schedule_published(
     )
     text = (
         f"Hi {name},\n\n"
-        f"Your Bella's XV schedule for {week} was published with "
+        f"Your Kelley Autoplex schedule for {week} was published with "
         f"{count} {shift_word}.\n\n"
         f"{shift_lines or '  - No shifts scheduled this week.'}\n\n"
-        f"If something looks off, let the boutique owner know.\n"
+        f"If something looks off, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your schedule was published</h1>"
-        f"<p>Hi {escape(name)}, your Bella's XV schedule for "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your schedule was published</h1>"
+        f"<p>Hi {escape(name)}, your Kelley Autoplex schedule for "
         f"<strong>{escape(week)}</strong> was published with {count} "
         f"{escape(shift_word)}.</p>"
         + (
@@ -895,8 +1034,8 @@ def render_schedule_published(
             if shifts
             else "<p>No shifts scheduled this week.</p>"
         )
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If something looks off, let the boutique owner know.</p>",
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If something looks off, let the owner know.</p>",
         preheader=f"Your schedule for {week} is ready.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -908,20 +1047,20 @@ def render_shift_added(*, staff_user, shift: dict) -> RenderedEmail:
     title = _shift_title(shift)
     location = _shift_location(shift)
     notes = _shift_notes(shift)
-    subject = f"New Bella's XV shift: {window}"
+    subject = f"New Kelley Autoplex shift: {window}"
     text = (
         f"Hi {name},\n\n"
-        f"A shift was added to your Bella's XV schedule.\n\n"
+        f"A shift was added to your Kelley Autoplex schedule.\n\n"
         f"  When: {window}\n"
         f"  Shift: {title}\n"
         f"  Where: {location}\n"
         + (f"  Note: {notes}\n" if notes else "")
-        + "\nIf this does not look right, let the boutique owner know.\n"
+        + "\nIf this does not look right, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Shift added</h1>"
-        f"<p>Hi {escape(name)}, a shift was added to your Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Shift added</h1>"
+        f"<p>Hi {escape(name)}, a shift was added to your Kelley Autoplex "
         f"schedule.</p>"
         + _details_table(
             [
@@ -931,8 +1070,8 @@ def render_shift_added(*, staff_user, shift: dict) -> RenderedEmail:
             ]
             + ([("Note", notes)] if notes else [])
         )
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If this does not look right, let the boutique owner know.</p>",
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If this does not look right, let the owner know.</p>",
         preheader=f"New shift added for {window}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -947,10 +1086,10 @@ def render_shift_edited(
     name = staff_user.full_name or staff_user.username
     old_window = _format_shift_window(old_shift["starts_at"], old_shift["ends_at"])
     new_window = _format_shift_window(new_shift["starts_at"], new_shift["ends_at"])
-    subject = f"Your Bella's XV shift was updated"
+    subject = f"Your Kelley Autoplex shift was updated"
     text = (
         f"Hi {name},\n\n"
-        f"One of your Bella's XV shifts was updated.\n\n"
+        f"One of your Kelley Autoplex shifts was updated.\n\n"
         f"  Previous: {old_window}, {_shift_title(old_shift)} at "
         f"{_shift_location(old_shift)}\n"
         f"  Updated:  {new_window}, {_shift_title(new_shift)} at "
@@ -960,12 +1099,12 @@ def render_shift_edited(
             if _shift_notes(new_shift)
             else ""
         )
-        + "\nIf this does not look right, let the boutique owner know.\n"
+        + "\nIf this does not look right, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Shift updated</h1>"
-        f"<p>Hi {escape(name)}, one of your Bella's XV shifts was updated.</p>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Shift updated</h1>"
+        f"<p>Hi {escape(name)}, one of your Kelley Autoplex shifts was updated.</p>"
         + _details_table(
             [
                 ("Previous", f"{old_window}, {_shift_title(old_shift)}"),
@@ -974,8 +1113,8 @@ def render_shift_edited(
             ]
             + ([("Note", _shift_notes(new_shift))] if _shift_notes(new_shift) else [])
         )
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If this does not look right, let the boutique owner know.</p>",
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If this does not look right, let the owner know.</p>",
         preheader=f"Your shift changed to {new_window}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -985,17 +1124,17 @@ def render_shift_deleted(*, staff_user, shift: dict) -> RenderedEmail:
     name = staff_user.full_name or staff_user.username
     window = _format_shift_window(shift["starts_at"], shift["ends_at"])
     title = _shift_title(shift)
-    subject = f"Shift removed from your Bella's XV schedule"
+    subject = f"Shift removed from your Kelley Autoplex schedule"
     text = (
         f"Hi {name},\n\n"
-        f"A shift was removed from your Bella's XV schedule.\n\n"
+        f"A shift was removed from your Kelley Autoplex schedule.\n\n"
         f"  Removed: {window}, {title} at {_shift_location(shift)}\n\n"
-        f"If you were expecting to work this shift, let the boutique owner know.\n"
+        f"If you were expecting to work this shift, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Shift removed</h1>"
-        f"<p>Hi {escape(name)}, a shift was removed from your Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Shift removed</h1>"
+        f"<p>Hi {escape(name)}, a shift was removed from your Kelley Autoplex "
         f"schedule.</p>"
         + _details_table(
             [
@@ -1004,8 +1143,8 @@ def render_shift_deleted(*, staff_user, shift: dict) -> RenderedEmail:
                 ("Where", _shift_location(shift)),
             ]
         )
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If you were expecting to work this shift, let the boutique owner know.</p>",
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If you were expecting to work this shift, let the owner know.</p>",
         preheader=f"Shift removed: {window}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -1041,15 +1180,15 @@ def render_staff_simple_notice(
             if detail_rows
             else ""
         )
-        + "\nIf this does not look right, let the boutique owner know.\n"
+        + "\nIf this does not look right, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">{escape(headline)}</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">{escape(headline)}</h1>"
         f"<p>Hi {escape(name)}, {escape(message)}</p>"
         + (_details_table(detail_rows) if detail_rows else "")
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If this does not look right, let the boutique owner know.</p>",
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If this does not look right, let the owner know.</p>",
         preheader=preheader or message,
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -1069,20 +1208,20 @@ def render_staff_missing_clock_out(
     name = staff_user.full_name or staff_user.username
     shift_window = _format_shift_window(shift["starts_at"], shift["ends_at"])
     clock_in = _schedule_local(clocked_in_at).strftime("%a, %b %-d at %-I:%M %p")
-    subject = "Missing clock-out on your Bella's XV shift"
+    subject = "Missing clock-out on your Kelley Autoplex shift"
     text = (
         f"Hi {name},\n\n"
-        f"We have you clocked in for your Bella's XV shift, but we do not "
+        f"We have you clocked in for your Kelley Autoplex shift, but we do not "
         f"have a matching clock-out.\n\n"
         f"  Shift: {shift_window}\n"
         f"  Clocked in: {clock_in}\n\n"
-        f"Please open the sales portal or talk with the boutique owner so "
+        f"Please open the sales portal or talk with the owner so "
         f"your hours can be corrected.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Missing clock-out</h1>"
-        f"<p>Hi {escape(name)}, we have you clocked in for your Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Missing clock-out</h1>"
+        f"<p>Hi {escape(name)}, we have you clocked in for your Kelley Autoplex "
         f"shift, but we do not have a matching clock-out.</p>"
         + _details_table(
             [
@@ -1090,8 +1229,8 @@ def render_staff_missing_clock_out(
                 ("Clocked in", clock_in),
             ]
         )
-        + f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"Please open the sales portal or talk with the boutique owner so "
+        + f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"Please open the sales portal or talk with the owner so "
         f"your hours can be corrected.</p>",
         preheader="Your shift is missing a clock-out.",
     )
@@ -1115,8 +1254,8 @@ def render_admin_missing_clock_out(
         f"Open Attendance Review to confirm or correct the hours.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Missing clock-out</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Missing clock-out</h1>"
         f"<p>{escape(name)} has a shift flagged for missing clock-out.</p>"
         + _details_table(
             [
@@ -1208,7 +1347,7 @@ def render_time_off_requested_to_owner(
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">New time-off request</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">New time-off request</h1>"
         f"<p>{escape(name)} filed a time-off request for <strong>{escape(window)}</strong>.</p>"
         + safe_reason
         + "<p>Open the admin time-off queue to approve or deny.</p>",
@@ -1254,7 +1393,7 @@ def render_time_off_decided_to_staff(
         f"<p><strong>Note:</strong> {escape(notes)}</p>" if notes else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; color:#A7616F; margin-top:0;\">Time-off {escape(verb)}</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; color:#14181F; margin-top:0;\">Time-off {escape(verb)}</h1>"
         f"<p>Hi {escape(name)}, {escape(decided_by_name)} {escape(verb)} your request for "
         f"<strong>{escape(window)}</strong>.</p>"
         f"<p>{escape(body_text)}</p>"
@@ -1289,14 +1428,14 @@ def render_time_off_amended_to_staff(
         f"  Previous: {old_window}\n"
         f"  Updated:  {new_window}\n"
         + (f"\nNote: {notes}\n" if notes else "")
-        + "\nThe request is still pending until the boutique owner approves or denies it.\n"
+        + "\nThe request is still pending until the owner approves or denies it.\n"
     )
     safe_notes = (
         f"<p><strong>Note:</strong> {escape(notes)}</p>" if notes else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Time-off request updated</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Time-off request updated</h1>"
         f"<p>Hi {escape(name)}, {escape(amended_by_name)} updated the "
         f"dates or times on your time-off request.</p>"
         + _details_table(
@@ -1306,7 +1445,7 @@ def render_time_off_amended_to_staff(
             ]
         )
         + safe_notes
-        + "<p>The request is still pending until the boutique owner approves "
+        + "<p>The request is still pending until the owner approves "
         "or denies it.</p>",
         preheader="Your time-off request was updated.",
     )
@@ -1329,27 +1468,27 @@ def render_pin_reset(
     ttl_minutes: int = 30,
 ) -> RenderedEmail:
     name = staff_user.full_name or staff_user.username
-    subject = "Your Bella's XV PIN was reset"
+    subject = "Your Kelley Autoplex PIN was reset"
     text = (
         f"Hi {name},\n\n"
         f"An admin just reset the PIN you use to clock in at "
-        f"Bella's XV. To pick a new one, open this link within the "
+        f"Kelley Autoplex. To pick a new one, open this link within the "
         f"next {ttl_minutes} minutes:\n\n"
         f"    {set_pin_url}\n\n"
         f"If you didn't ask for this and weren't expecting it, "
-        f"let the boutique owner know right away.\n"
+        f"let the owner know right away.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your PIN was reset</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your PIN was reset</h1>"
         f"<p>Hi {escape(name)}, an admin just reset the PIN you use to "
         f"clock in. Pick a new one within the next {ttl_minutes} minutes.</p>"
         f"<p style=\"margin-top:22px;\">"
         + _html_button("Set a new PIN", set_pin_url)
         + "</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
         f"If you didn't ask for this and weren't expecting it, "
-        f"let the boutique owner know right away.</p>",
+        f"let the owner know right away.</p>",
         preheader="Your sales-portal PIN was reset.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -1372,11 +1511,11 @@ def render_password_reset_request(
     boutique chrome shared with every other transactional message.
     """
     name = user.full_name or user.username
-    subject = "Reset your Bella's XV admin password"
+    subject = "Reset your Kelley Autoplex admin password"
     text = (
         f"Hi {name},\n\n"
         f"We received a request to reset the password for your "
-        f"Bella's XV admin account ({user.email}).\n\n"
+        f"Kelley Autoplex admin account ({user.email}).\n\n"
         f"To set a new password, open this link within the next "
         f"{ttl_minutes} minutes:\n\n"
         f"    {reset_url}\n\n"
@@ -1384,20 +1523,20 @@ def render_password_reset_request(
         f"Your password will stay the same.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Reset your password</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Reset your password</h1>"
         f"<p>Hi {escape(name)}, we received a request to reset the "
-        f"password for your Bella's XV admin account "
+        f"password for your Kelley Autoplex admin account "
         f"(<code>{escape(user.email)}</code>).</p>"
         f"<p style=\"margin-top:22px;\">"
         + _html_button("Set a new password", reset_url)
         + "</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
         f"This link is good for the next {ttl_minutes} minutes.</p>"
-        f"<p style=\"color:#7A6A6F; font-size:13px;\">"
+        f"<p style=\"color:#6B7280; font-size:13px;\">"
         f"If you didn't request a reset, you can ignore this email. "
         f"Your password will stay the same.</p>",
-        preheader="Reset your Bella's XV admin password.",
+        preheader="Reset your Kelley Autoplex admin password.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1422,27 +1561,27 @@ def render_password_changed(
         local = changed_at
     when = local.strftime("%A, %B %-d at %-I:%M %p")
 
-    subject = "Your Bella's XV password was changed"
+    subject = "Your Kelley Autoplex password was changed"
     text = (
         f"Hi {name},\n\n"
-        f"The password for your Bella's XV admin account "
+        f"The password for your Kelley Autoplex admin account "
         f"({user.email}) was just changed on {when} ({APP_TIMEZONE}).\n\n"
         f"If you made this change, you can ignore this email.\n\n"
-        f"If you didn't, contact the boutique owner right away to "
+        f"If you didn't, contact the owner right away to "
         f"reset your account.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Password changed</h1>"
-        f"<p>Hi {escape(name)}, the password for your Bella's XV admin "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Password changed</h1>"
+        f"<p>Hi {escape(name)}, the password for your Kelley Autoplex admin "
         f"account (<code>{escape(user.email)}</code>) was just "
         f"changed on <strong>{escape(when)}</strong> ({APP_TIMEZONE}).</p>"
         f"<p style=\"margin-top:22px;\">If you made this change, you "
         f"can ignore this email.</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If you didn't, contact the boutique owner right away to "
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If you didn't, contact the owner right away to "
         f"reset your account.</p>",
-        preheader="Confirmation that your Bella's XV password was just changed.",
+        preheader="Confirmation that your Kelley Autoplex password was just changed.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1470,37 +1609,37 @@ def render_welcome_new_user(
     action_verb = "clock in" if is_sales else "log in"
     portal_label = "sales portal" if is_sales else "admin app"
 
-    subject = "Welcome to Bella's XV"
+    subject = "Welcome to Kelley Autoplex"
     text = (
         f"Hi {name},\n\n"
-        f"An account was created for you at Bella's XV. To finish "
+        f"An account was created for you at Kelley Autoplex. To finish "
         f"setting up, pick a {credential} you can use to {action_verb}:\n\n"
         f"    {setup_url}\n\n"
         f"This link is good for the next {ttl_hours} hours. After that, "
-        f"ask the boutique owner to send a fresh one.\n\n"
+        f"ask the owner to send a fresh one.\n\n"
         f"Once your {credential} is set, you can {action_verb} at:\n"
         f"    {portal_login_url}\n\n"
         f"Welcome to the team.\n"
-        f"The Bella's XV team\n"
+        f"The Kelley Autoplex team\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Welcome to Bella's XV</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Welcome to Kelley Autoplex</h1>"
         f"<p>Hi {escape(name)}, an account was created for you on the "
         f"{escape(portal_label)}. To finish setting up, pick a "
         f"{escape(credential)} you can use to {escape(action_verb)}.</p>"
         f"<p style=\"margin-top:22px;\">"
         + _html_button(f"Set your {credential}", setup_url)
         + "</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
         f"This link is good for the next {ttl_hours} hours. After that, "
-        f"ask the boutique owner to send a fresh one.</p>"
+        f"ask the owner to send a fresh one.</p>"
         f"<p style=\"margin-top:22px;\">Once your {escape(credential)} "
         f"is set, you can {escape(action_verb)} at "
-        f"<a href=\"{escape(portal_login_url)}\" style=\"color:#A7616F;\">"
+        f"<a href=\"{escape(portal_login_url)}\" style=\"color:#14181F;\">"
         f"{escape(portal_login_url)}</a>.</p>"
         f"<p style=\"margin-top:22px;\">Welcome to the team.</p>",
-        preheader=f"Set your Bella's XV {credential} to get started.",
+        preheader=f"Set your Kelley Autoplex {credential} to get started.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1519,25 +1658,25 @@ def render_account_locked(
         local = locked_until
     unlock_time = local.strftime("%-I:%M %p")
 
-    subject = "Your Bella's XV PIN is temporarily locked"
+    subject = "Your Kelley Autoplex PIN is temporarily locked"
     text = (
         f"Hi {name},\n\n"
         f"Too many incorrect PIN attempts temporarily locked your "
-        f"Bella's XV sales portal sign-in.\n\n"
+        f"Kelley Autoplex sales portal sign-in.\n\n"
         f"You can try again around {unlock_time} ({APP_TIMEZONE}), "
-        f"or ask the boutique owner to unlock your account sooner.\n\n"
-        f"If this wasn't you, let the boutique owner know right away.\n"
+        f"or ask the owner to unlock your account sooner.\n\n"
+        f"If this wasn't you, let the owner know right away.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your PIN is temporarily locked</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your PIN is temporarily locked</h1>"
         f"<p>Hi {escape(name)}, too many incorrect PIN attempts temporarily "
-        f"locked your Bella's XV sales portal sign-in.</p>"
+        f"locked your Kelley Autoplex sales portal sign-in.</p>"
         f"<p style=\"margin-top:22px;\">You can try again around "
         f"<strong>{escape(unlock_time)}</strong> ({APP_TIMEZONE}), or ask "
-        f"the boutique owner to unlock your account sooner.</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If this wasn't you, let the boutique owner know right away.</p>",
+        f"the owner to unlock your account sooner.</p>"
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If this wasn't you, let the owner know right away.</p>",
         preheader="Your sales-portal PIN is temporarily locked.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
@@ -1561,25 +1700,25 @@ def render_role_changed(
     new_label = (new_role or "none").replace("_", " ").title()
     portal_label = "sales portal" if new_role == "sales" else "admin app"
 
-    subject = "Your Bella's XV access was updated"
+    subject = "Your Kelley Autoplex access was updated"
     text = (
         f"Hi {name},\n\n"
-        f"{actor} updated your Bella's XV access from {old_label} "
+        f"{actor} updated your Kelley Autoplex access from {old_label} "
         f"to {new_label}.\n\n"
         f"Use the {portal_label} the next time you sign in. If this "
-        f"change doesn't look right, let the boutique owner know.\n"
+        f"change doesn't look right, let the owner know.\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your access was updated</h1>"
-        f"<p>Hi {escape(name)}, {escape(actor)} updated your Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your access was updated</h1>"
+        f"<p>Hi {escape(name)}, {escape(actor)} updated your Kelley Autoplex "
         f"access from <strong>{escape(old_label)}</strong> to "
         f"<strong>{escape(new_label)}</strong>.</p>"
         f"<p style=\"margin-top:22px;\">Use the {escape(portal_label)} "
         f"the next time you sign in.</p>"
-        f"<p style=\"margin-top:22px; color:#7A6A6F; font-size:13px;\">"
-        f"If this change doesn't look right, let the boutique owner know.</p>",
-        preheader="Your Bella's XV access was updated.",
+        f"<p style=\"margin-top:22px; color:#6B7280; font-size:13px;\">"
+        f"If this change doesn't look right, let the owner know.</p>",
+        preheader="Your Kelley Autoplex access was updated.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1628,8 +1767,8 @@ def render_staff_booking_assigned(
         f"    {admin_url}\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">New booking on your calendar</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">New booking on your calendar</h1>"
         f"<p>Hi {escape(name)}, a new booking landed on your column.</p>"
         + _details_table(_staff_booking_details(appointment))
         + f"<p style=\"margin-top:22px;\">"
@@ -1676,8 +1815,8 @@ def render_staff_booking_rescheduled(
         f"    {admin_url}\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Appointment moved</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Appointment moved</h1>"
         f"<p>Hi {escape(name)}, the {escape(customer)} appointment moved "
         f"on your calendar.</p>"
         + _details_table(
@@ -1729,8 +1868,8 @@ def render_staff_booking_cancelled(
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Appointment cancelled</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Appointment cancelled</h1>"
         f"<p>Hi {escape(name)}, the <strong>{escape(slot)}</strong> "
         f"appointment for {escape(customer)} was cancelled. That slot is "
         f"now open on your calendar.</p>"
@@ -1784,7 +1923,7 @@ def render_staff_daily_digest(
     else:
         shift_line = "No shift scheduled"
 
-    subject = f"Your day at Bella's XV: {date_label}"
+    subject = f"Your day at Kelley Autoplex: {date_label}"
 
     appt_lines_text = "\n".join(
         f"  - {_format_appt_time(a)}: "
@@ -1793,7 +1932,7 @@ def render_staff_daily_digest(
     )
     text = (
         f"Hi {name},\n\n"
-        f"Here's your day at Bella's XV for {date_label}.\n\n"
+        f"Here's your day at Kelley Autoplex for {date_label}.\n\n"
         f"  Shift: {shift_line}\n"
         f"  Appointments: {appt_count} {appt_word}\n"
         + (f"\n{appt_lines_text}\n" if appointments else "")
@@ -1818,8 +1957,8 @@ def render_staff_daily_digest(
     )
 
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your day at the boutique</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your day at the dealership</h1>"
         f"<p>Hi {escape(name)}, here's what's on your calendar for "
         f"<strong>{escape(date_label)}</strong>.</p>"
         + _details_table(
@@ -1832,7 +1971,7 @@ def render_staff_daily_digest(
         + f"<p style=\"margin-top:22px;\">"
         + _html_button("Open your column", admin_url)
         + "</p>",
-        preheader=f"Your day at Bella's XV: {appt_count} {appt_word}.",
+        preheader=f"Your day at Kelley Autoplex: {appt_count} {appt_word}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1853,7 +1992,7 @@ def render_staff_weekly_digest(
     week = _format_schedule_week(week_start)
     count = len(shifts)
     shift_word = "shift" if count == 1 else "shifts"
-    subject = f"Your week at Bella's XV: {week}"
+    subject = f"Your week at Kelley Autoplex: {week}"
 
     shift_lines = "\n".join(
         f"  - {_format_shift_window(s['starts_at'], s['ends_at'])}: "
@@ -1862,15 +2001,15 @@ def render_staff_weekly_digest(
     )
     text = (
         f"Hi {name},\n\n"
-        f"Here's your week at Bella's XV ({week}). "
+        f"Here's your week at Kelley Autoplex ({week}). "
         f"You have {count} {shift_word} on the schedule.\n\n"
         f"{shift_lines or '  - No shifts scheduled this week.'}\n\n"
         f"Open your schedule:\n    {admin_url}\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Your week ahead</h1>"
-        f"<p>Hi {escape(name)}, here's your week at Bella's XV "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Your week ahead</h1>"
+        f"<p>Hi {escape(name)}, here's your week at Kelley Autoplex "
         f"(<strong>{escape(week)}</strong>). You have {count} "
         f"{escape(shift_word)} on the schedule.</p>"
         + (
@@ -1881,7 +2020,7 @@ def render_staff_weekly_digest(
         + f"<p style=\"margin-top:22px;\">"
         + _html_button("Open your schedule", admin_url)
         + "</p>",
-        preheader=f"Your Bella's XV week: {count} {shift_word}.",
+        preheader=f"Your Kelley Autoplex week: {count} {shift_word}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -1913,7 +2052,7 @@ def render_admin_daily_digest(
     missing_count = len(missing_clock_out_rows)
     in_store_count = len(in_store_rows)
 
-    subject = f"Bella's XV daily digest: {date_label}"
+    subject = f"Kelley Autoplex daily digest: {date_label}"
 
     summary_rows = [
         ("New bookings", str(new_count)),
@@ -1956,7 +2095,7 @@ def render_admin_daily_digest(
 
     text = (
         f"Hi {name},\n\n"
-        f"Here's the boutique on {date_label}.\n\n"
+        f"Here's the dealership on {date_label}.\n\n"
         f"  New bookings: {new_count}\n"
         f"  Quotes signed in-store: {in_store_count}\n"
         f"  Time-off awaiting decision: {time_off_count}\n"
@@ -2002,16 +2141,16 @@ def render_admin_daily_digest(
         )
 
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
         f"margin-top:0;\">Daily digest</h1>"
-        f"<p>Hi {escape(name)}, here's the boutique on "
+        f"<p>Hi {escape(name)}, here's the dealership on "
         f"<strong>{escape(date_label)}</strong>.</p>"
         + _details_table(summary_rows)
         + "".join(html_sections)
         + f"<p style=\"margin-top:22px;\">"
         + _html_button("Open admin", admin_url)
         + "</p>",
-        preheader=f"Bella's XV daily digest for {date_label}.",
+        preheader=f"Kelley Autoplex daily digest for {date_label}.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 
@@ -2047,8 +2186,8 @@ def render_staff_quote_signed(
         f"Open the quote in admin:\n    {admin_url}\n"
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Quote signed</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Quote signed</h1>"
         f"<p>Hi {escape(name)}, <strong>{escape(customer_name)}</strong> "
         f"just signed quote <strong>{escape(quote_number)}</strong>.</p>"
         + _details_table(
@@ -2115,8 +2254,8 @@ def render_staff_payment_received(
         rows.append(("Receipt", payment_number))
     rows.append(("Received", f"{when} ({APP_TIMEZONE})"))
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
-        f"color:#A7616F; margin-top:0;\">Payment received</h1>"
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
+        f"color:#14181F; margin-top:0;\">Payment received</h1>"
         f"<p>Hi {escape(name)}, a payment of <strong>{escape(amount)}</strong> "
         f"was just recorded from <strong>{escape(customer_name)}</strong>.</p>"
         + _details_table(rows)
@@ -2135,12 +2274,18 @@ def render_public_lead_notification(
     vehicle,
     payload: dict,
     admin_url: str,
+    has_application: bool = False,
 ) -> RenderedEmail:
     """Staff alert when a customer submits a lead on the public storefront.
     ``is_new`` distinguishes a brand-new deal from a follow-up appended to an
     existing open deal. ``vehicle`` is the linked CatalogItem or None (a
     general inquiry). ``payload`` is the activity payload built by
-    public_lead_service (message/preferred/source_page/utm/listing code)."""
+    public_lead_service (message/preferred/source_page/utm/listing code).
+
+    ``has_application``: a BHPH application with sensitive PII (DOB, driver's
+    license, address) was attached. When True the email says so and links to
+    the CRM but includes NO PII — and the free-text message is suppressed,
+    since that is where the storefront historically concatenated PII."""
     name = (
         contact.display_name
         or " ".join(filter(None, [contact.first_name, contact.last_name])).strip()
@@ -2184,29 +2329,53 @@ def render_public_lead_notification(
         rows.append(("Source page", source_page))
     if utm_label:
         rows.append(("Campaign", utm_label))
+    if has_application:
+        rows.append(("BHPH application", "Submitted — view securely in the CRM"))
 
     lead_line = (
         "A customer submitted a new inquiry from the website."
         if is_new
         else "A customer sent a follow-up on an existing open deal."
     )
+    # Suppress the free-text message whenever an application is attached: that
+    # field is where the storefront concatenated DOB/DL/address, and this email
+    # must never carry that PII. The structured fields are already excluded by
+    # construction (they go straight to the encrypted table, not the payload).
+    show_message = bool(message) and not has_application
+    application_note = (
+        "A BHPH credit application (date of birth, driver's license, home "
+        "address) was submitted. Those details are stored securely — open the "
+        "deal in the CRM to view them.\n"
+        if has_application
+        else ""
+    )
     text = (
         f"{lead_line}\n\n"
         + "".join(f"  {label}: {value}\n" for label, value in rows)
-        + (f"  Message: {message}\n" if message else "")
+        + (f"  Message: {message}\n" if show_message else "")
+        + (f"\n{application_note}" if application_note else "")
         + f"\nOpen the deal in admin:\n    {admin_url}\n"
     )
     message_html = (
         f'<p style="margin-top:12px;"><strong>Message:</strong> '
         f"{escape(message)}</p>"
-        if message
+        if show_message
+        else ""
+    )
+    application_html = (
+        '<p style="margin-top:12px; padding:10px 14px; background:#FBF6EA; '
+        'border-radius:4px;">🔒 A <strong>BHPH credit application</strong> '
+        "(date of birth, driver's license, home address) was submitted. Those "
+        "details are stored securely — open the deal in the CRM to view them.</p>"
+        if has_application
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
         f'margin-top:0;">{escape(kind)} vehicle lead</h1>'
         f"<p>{escape(lead_line)}</p>"
         + _details_table(rows)
+        + application_html
         + message_html
         + '<p style="margin-top:22px;">'
         + _html_button("Open the deal", admin_url)
@@ -2259,7 +2428,7 @@ def render_admin_walk_in_lead_created(
         else ""
     )
     html = _wrap_html(
-        f"<h1 style=\"font-family:'Playfair Display', Georgia, serif; "
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
         f"margin-top:0;\">New walk-in lead</h1>"
         f"<p><strong>{escape(actor)}</strong> just logged a walk-in lead.</p>"
         + _details_table(

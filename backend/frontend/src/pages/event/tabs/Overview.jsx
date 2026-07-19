@@ -24,6 +24,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
+import LeadJourneyPanel from './LeadJourneyPanel'
 import AddParticipantDialog from '../../../components/AddParticipantDialog'
 import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
 import ContactEditDialog from '../../../components/ContactEditDialog'
@@ -77,6 +78,42 @@ function KV({ label, value }) {
       <Typography variant="body2" sx={{ flex: 1 }}>
         {value || '—'}
       </Typography>
+    </Stack>
+  )
+}
+
+// Notes come in as newline-joined lines (e.g. the auto-composed lead intake),
+// which collapse into a run-on when rendered as one string. Split them back
+// out: a single line stays inline, multiple lines become a tidy bullet list.
+function NotesBlock({ notes }) {
+  const lines = (notes || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  return (
+    <Stack direction="row" spacing={2} sx={{ py: 0.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ minWidth: 130, fontWeight: 500 }}
+      >
+        Notes
+      </Typography>
+      <Box sx={{ flex: 1 }}>
+        {lines.length === 0 ? (
+          <Typography variant="body2">—</Typography>
+        ) : lines.length === 1 ? (
+          <Typography variant="body2">{lines[0]}</Typography>
+        ) : (
+          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {lines.map((l, i) => (
+              <Typography key={i} component="li" variant="body2" sx={{ mb: 0.25 }}>
+                {l}
+              </Typography>
+            ))}
+          </Box>
+        )}
+      </Box>
     </Stack>
   )
 }
@@ -286,7 +323,9 @@ function BookingDetail({ appointment: a, eventId, participants }) {
         }}
       />
 
-      <KV label="Party size" value={PARTY_LABEL[a.party_size_bucket] || a.party_size_bucket} />
+      {a.party_size_bucket !== 'solo' && (
+        <KV label="Party size" value={PARTY_LABEL[a.party_size_bucket] || a.party_size_bucket} />
+      )}
       <KV label="Phone" value={a.phone_e164 || a.phone} />
       <KV label="Email" value={a.email} />
       {a.customer_note && <KV label="Customer note" value={a.customer_note} />}
@@ -662,7 +701,7 @@ function describeParticipantArchiveError(err) {
   const detail = err?.response?.data?.detail
   const code = detail?.code
   if (code === 'archive_blocked') {
-    return 'This participant cannot be archived — they back an active financial record or are the sole quinceañera.'
+    return 'This participant cannot be archived — they back an active financial record or are the sole primary buyer.'
   }
   if (code === 'participant_not_found') {
     return 'This participant no longer exists. Reload and try again.'
@@ -702,15 +741,28 @@ export default function Overview() {
 
   return (
     <Box>
-      <Section title="Event">
-        <KV label="Event date" value={event.event_date ? formatDateTime(event.event_date) : '—'} />
-        <KV label="Court size" value={event.court_size ?? '—'} />
-        <KV label="Theme" value={event.quince_theme} />
-        <KV
-          label="Theme colors"
-          value={(event.quince_theme_colors || []).join(', ') || '—'}
-        />
-        <KV label="Budget range" value={event.budget_range} />
+      <Section title={event.event_type === 'vehicle_sale' ? 'Deal' : 'Event'}>
+        {/* Quinceañera-era fields are noise on a vehicle deal (always empty),
+            so they only render for non-vehicle events. Event date shows on a
+            vehicle deal only when it's actually set. */}
+        {event.event_type !== 'vehicle_sale' && (
+          <>
+            <KV
+              label="Event date"
+              value={event.event_date ? formatDateTime(event.event_date) : '—'}
+            />
+            <KV label="Court size" value={event.court_size ?? '—'} />
+            <KV label="Theme" value={event.quince_theme} />
+            <KV
+              label="Theme colors"
+              value={(event.quince_theme_colors || []).join(', ') || '—'}
+            />
+            <KV label="Budget range" value={event.budget_range} />
+          </>
+        )}
+        {event.event_type === 'vehicle_sale' && event.event_date && (
+          <KV label="Event date" value={formatDateTime(event.event_date)} />
+        )}
         <Stack direction="row" spacing={2} sx={{ py: 0.5, alignItems: 'center' }}>
           <Typography
             variant="caption"
@@ -730,7 +782,7 @@ export default function Overview() {
             Change
           </Button>
         </Stack>
-        <KV label="Notes" value={event.notes} />
+        <NotesBlock notes={event.notes} />
       </Section>
 
       <Section title="Primary contact">
@@ -761,6 +813,10 @@ export default function Overview() {
           </Typography>
         )}
       </Section>
+
+      {event.event_type === 'vehicle_sale' && (
+        <LeadJourneyPanel eventId={event.id} />
+      )}
 
       <ContactEditDialog
         open={editContactOpen}

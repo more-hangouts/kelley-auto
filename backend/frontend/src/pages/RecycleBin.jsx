@@ -66,7 +66,7 @@ function describeRestoreError(err) {
     return 'Another live contact already has this phone. Archive that contact or change its phone first.'
   }
   if (code === 'quinceanera_slot_taken') {
-    return 'Another active quinceañera already occupies this event.'
+    return 'Another active primary buyer already occupies this deal.'
   }
   if (code === 'contact_not_found' || code === 'event_not_found'
       || code === 'participant_not_found' || code === 'special_order_not_found') {

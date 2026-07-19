@@ -61,10 +61,10 @@ NAP_PATCH = {
     "address_line2": None,
     "city": "San Antonio",
     "state": "TX",
-    "postal_code": "78023",
+    "postal_code": "78212",
     "country": "US",
-    "phone": "(210) 767-2408",
-    "email": "chaserkelley@gmail.com",
+    "phone": "(210) 251-3644",
+    "email": "sales@kelleyautoplex.com",
     "website": "https://www.kelleyautoplex.com",
     "business_hours": {
         "timezone": "America/Chicago",

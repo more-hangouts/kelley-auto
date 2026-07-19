@@ -276,7 +276,7 @@ def create_walk_in_lead(
         event = event_service.promote_appointment_to_event(
             db,
             appointment_id=appt.id,
-            event_type="quinceanera",
+            event_type="vehicle_sale",
             overrides=EventOverrides(
                 event_name=(event_in.event_name or None),
                 event_date=event_in.event_date,

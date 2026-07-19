@@ -17,7 +17,7 @@ import {
 
 import { salesListAppointmentsToday } from '../services/api'
 
-const MINE_TOGGLE_KEY = 'bellas_xv_sales_today_mine'
+const MINE_TOGGLE_KEY = 'kelley_sales_today_mine'
 
 const STATUS_COLORS = {
   confirmed: 'primary',
@@ -41,9 +41,8 @@ function formatLocalTime(iso, tz) {
 }
 
 function partySizeLabel(bucket) {
+  if (bucket === 'solo') return null
   switch (bucket) {
-    case 'solo':
-      return 'Solo'
     case 'pair':
     case '2_3':
       return 'Small group'
@@ -196,9 +195,13 @@ export default function AppointmentsToday({ refreshKey = 0 }) {
                           '(no name)'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" noWrap>
-                        {fullName(appt.parent_first_name, appt.parent_last_name) ||
-                          'Parent unknown'}{' '}
-                        · {partySizeLabel(appt.party_size_bucket)}
+                        {[
+                          fullName(appt.parent_first_name, appt.parent_last_name) ||
+                            null,
+                          partySizeLabel(appt.party_size_bucket),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || 'Vehicle appointment'}
                       </Typography>
                       {enrichmentLine(appt.enrichment_summary) && (
                         <Typography

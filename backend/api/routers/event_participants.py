@@ -28,12 +28,12 @@ from services.event_participants import EventParticipantError
 router = APIRouter()
 
 
-# Phase 6 audit: the booking widget today (widgets/bellas-booking-widget.js)
+# Phase 6 audit: the booking widget today (widgets/kelley-booking-widget.js)
 # only emits these three values for `party_size`. The legacy values
 # (`solo`, `2_3`, `4_plus`) remain in the DB CHECK constraint on
 # appointments for historical rows, but we deliberately do NOT accept
 # them here — new participant rows should use the canonical vocabulary
-# the widget produces today. If Bellas adds a "solo" stylist-only
+# the widget produces today. If Kelley adds a "solo" stylist-only
 # walk-through case in the future, extend this Literal explicitly
 # rather than letting drift creep back in.
 ParticipantRole = Literal[

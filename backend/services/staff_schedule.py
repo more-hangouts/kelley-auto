@@ -103,7 +103,7 @@ def _entry_to_shift_dict(e: StaffScheduleEntry) -> dict:
         "starts_at": e.starts_at_local,
         "ends_at": e.ends_at_local,
         "title": "Boutique shift",
-        "location": "Bella's XV boutique",
+        "location": "Kelley Autoplex",
         "notes": (e.manager_notes or "").strip() or None,
     }
 
@@ -1877,7 +1877,7 @@ def resend_published_week(
                     "starts_at": e.starts_at_local.isoformat(),
                     "ends_at": e.ends_at_local.isoformat(),
                     "title": "Boutique shift",
-                    "location": "Bella's XV boutique",
+                    "location": "Kelley Autoplex",
                     "notes": (e.manager_notes or "").strip() or None,
                 }
                 for e in user_entries
@@ -2546,7 +2546,7 @@ def list_team_published_schedule(
     stylist-facing team-schedule view.
 
     This is the sales surface — what shows up at
-    `sales.shopbellasxv.com/schedule` under the "Team" tab. The
+    `sales.kelleyautoplex.com/schedule` under the "Team" tab. The
     returned dicts deliberately carry **only** the columns coworkers
     are allowed to see:
 

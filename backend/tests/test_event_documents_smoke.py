@@ -82,7 +82,8 @@ def _seed_event():
         db.flush()
         event = Event(
             primary_contact_id=contact.id,
-            event_type="quinceanera",
+            event_type="vehicle_sale",
+            status="new_lead",
             event_name="Docs Smoke Event",
         )
         db.add(event)

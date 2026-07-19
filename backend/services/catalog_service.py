@@ -7,7 +7,7 @@ identifier semantics:
     staff types into search/admin/reorder views. Never returned from
     public/customer-facing endpoints.
 
-  - `public_code`: opaque Bellas-only code (`BVX-NNNNN`) minted here
+  - `public_code`: opaque customer-facing code (`KAP-NNNNN`) minted here
     under a `SELECT ... FOR UPDATE` row lock on the `numbering_state`
     singleton, the same row that already serializes invoice/quote/payment
     numbering. Vendor identity is intentionally not encoded; one global
@@ -30,7 +30,9 @@ from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
+from urllib.parse import urlparse
 
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import case, func, or_
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
@@ -38,6 +40,7 @@ from sqlalchemy.orm import Session
 from config.settings import PUBLIC_API_BASE_URL, VEHICLE_PHOTO_MAX_MB
 from database.models import CatalogItem
 from services import document_storage
+from services import vin as vin_util
 from services.upload_validation import (
     HEAD_BYTES_NEEDED,
     UploadValidationError,
@@ -75,7 +78,12 @@ class CatalogItemInput:
     that try to set it are bypassing the obfuscation contract.
     """
 
-    internal_sku: str
+    # Nullable for vehicle rows: when both internal_sku and stock_number
+    # are blank, create_catalog_item derives them from the minted
+    # public_code. Non-vehicle rows still require it (enforced by the API).
+    # No default (keeps dataclass field order valid); every caller passes
+    # it explicitly via the router's to_input / the importer.
+    internal_sku: str | None
     color: str
     category: str
     designer: str | None = None
@@ -175,7 +183,7 @@ def staff_sku(item: CatalogItem) -> str:
 
 
 def customer_sku(item: CatalogItem) -> str:
-    """Public BVX code for customer surfaces. Safe to render anywhere
+    """Public KAP code for customer surfaces. Safe to render anywhere
     customer-facing."""
     return item.public_code
 
@@ -399,7 +407,7 @@ class CustomerLineView:
     re-deriving from the row.
 
     Fields:
-        public_code: BVX-NNNNN for catalog-backed lines; ``None`` for
+        public_code: KAP-NNNNN for catalog-backed lines; ``None`` for
             non-catalog and legacy lines so the renderer hides the
             SKU column on those rows.
         display_text: customer-safe one-liner. For catalog-backed
@@ -505,7 +513,7 @@ def customer_line_description(
 def _assign_catalog_public_code(db: Session) -> str:
     """Allocate the next public code under a row-level lock on
     `numbering_state.catalog_public_code_seq`. Format is
-    `BVX-{seq:05d}`.
+    `KAP-{seq:05d}`.
 
     No year reset: catalog public codes are stable identifiers and
     remain valid for the lifetime of the catalog row, even past year
@@ -530,7 +538,7 @@ def _assign_catalog_public_code(db: Session) -> str:
         ),
         {"s": new_seq},
     )
-    return f"BVX-{new_seq:05d}"
+    return f"KAP-{new_seq:05d}"
 
 
 # ---------------------------------------------------------------------------
@@ -571,13 +579,17 @@ def validate_vehicle_fields(values: dict[str, Any]) -> None:
     closes the check-then-insert race a Python pre-check would leave open.
     """
     if values.get("vin") not in (None, ""):
-        vin = values["vin"]
-        if not isinstance(vin, str) or len(vin.strip()) != VIN_LENGTH:
+        # Normalize in place (uppercase, strip separators) then structurally
+        # validate. Writing the normalized value back means both create and
+        # update persist the canonical uppercase VIN, so the existing
+        # partial-unique index on `vin` becomes effectively case-insensitive
+        # (`1hg…` and `1HG…` can no longer both be stored).
+        try:
+            values["vin"] = vin_util.normalize_vin(values["vin"])
+        except vin_util.VinError as exc:
             raise CatalogServiceError(
-                f"vin must be {VIN_LENGTH} characters when present",
-                code="vehicle_vin_invalid",
-                field="vin",
-            )
+                str(exc), code=exc.code, field="vin"
+            ) from exc
 
     if values.get("year") is not None:
         year = values["year"]
@@ -647,6 +659,9 @@ _PHOTO_CT_TO_EXT = {
 }
 _VEHICLE_MEDIA_PREFIX = "vehicles"
 _VEHICLE_PHOTO_MAX_BYTES = VEHICLE_PHOTO_MAX_MB * 1024 * 1024
+_VEHICLE_PHOTO_MAX_DIMENSION = 2400
+_VEHICLE_PHOTO_MIN_LONG_EDGE = 320
+_VEHICLE_PHOTO_MIN_SHORT_EDGE = 200
 
 
 def _photo_extension(filename: str, content_type: str) -> str:
@@ -661,6 +676,135 @@ def _photo_extension(filename: str, content_type: str) -> str:
         "unsupported photo type — allowed: jpg, png, webp",
         code="vehicle_photo_unsupported_type",
     )
+
+
+def _process_vehicle_photo(body: bytes, ext: str) -> tuple[bytes, str]:
+    """Decode, orient, resize, and metadata-strip an uploaded vehicle photo.
+
+    The public storefront needs consistent, browser-friendly files; staff
+    uploads often come straight from phones with huge dimensions and EXIF
+    orientation. Keep the original format where practical so existing URL
+    suffix expectations stay stable, but rewrite the bytes through Pillow so
+    metadata is stripped and oversized images are capped.
+    """
+    try:
+        with Image.open(BytesIO(body)) as img:
+            img = ImageOps.exif_transpose(img)
+            width, height = img.size
+            long_edge = max(width, height)
+            short_edge = min(width, height)
+            if (
+                long_edge < _VEHICLE_PHOTO_MIN_LONG_EDGE
+                or short_edge < _VEHICLE_PHOTO_MIN_SHORT_EDGE
+            ):
+                raise CatalogServiceError(
+                    "photo dimensions are too small",
+                    code="vehicle_photo_too_small",
+                    min_long_edge=_VEHICLE_PHOTO_MIN_LONG_EDGE,
+                    min_short_edge=_VEHICLE_PHOTO_MIN_SHORT_EDGE,
+                )
+            if long_edge > _VEHICLE_PHOTO_MAX_DIMENSION:
+                img.thumbnail(
+                    (_VEHICLE_PHOTO_MAX_DIMENSION, _VEHICLE_PHOTO_MAX_DIMENSION),
+                    Image.Resampling.LANCZOS,
+                )
+
+            out = BytesIO()
+            normalized_ext = "jpg" if ext == "jpeg" else ext
+            if normalized_ext == "jpg":
+                if img.mode not in ("RGB", "L"):
+                    bg = Image.new("RGB", img.size, "white")
+                    if img.mode in ("RGBA", "LA"):
+                        bg.paste(img, mask=img.getchannel("A"))
+                    else:
+                        bg.paste(img.convert("RGB"))
+                    img = bg
+                img.save(out, format="JPEG", quality=88, optimize=True, progressive=True)
+            elif normalized_ext == "png":
+                img.save(out, format="PNG", optimize=True)
+            elif normalized_ext == "webp":
+                if img.mode not in ("RGB", "RGBA"):
+                    img = img.convert("RGB")
+                img.save(out, format="WEBP", quality=84, method=6)
+            else:  # Defensive: _photo_extension should already prevent this.
+                raise CatalogServiceError(
+                    "unsupported photo type — allowed: jpg, png, webp",
+                    code="vehicle_photo_unsupported_type",
+                )
+            return out.getvalue(), normalized_ext
+    except CatalogServiceError:
+        raise
+    except (
+        Image.DecompressionBombError,
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+    ) as exc:
+        raise CatalogServiceError(
+            "photo could not be decoded as an image",
+            code="vehicle_photo_invalid_image",
+        ) from exc
+
+
+def _vehicle_media_key_from_url(url: str) -> str | None:
+    """Return a local vehicle storage key for Kelley-owned media URLs.
+
+    External http(s) URLs are valid image references but must never be deleted
+    from local storage. Origin-relative `/api/public/media/vehicles/...` URLs,
+    and absolute URLs pointing at the configured public API origin, map back
+    to document-storage keys.
+    """
+    if not isinstance(url, str):
+        return None
+    value = url.strip()
+    prefix = "/api/public/media/"
+    if value.startswith(prefix):
+        key = value[len(prefix):]
+        return key if key.startswith(f"{_VEHICLE_MEDIA_PREFIX}/") else None
+    if value.startswith("http://") or value.startswith("https://"):
+        parsed = urlparse(value)
+        api = urlparse(PUBLIC_API_BASE_URL)
+        if (parsed.scheme, parsed.netloc) != (api.scheme, api.netloc):
+            return None
+        if not parsed.path.startswith(prefix):
+            return None
+        key = parsed.path[len(prefix):]
+        return key if key.startswith(f"{_VEHICLE_MEDIA_PREFIX}/") else None
+    return None
+
+
+def _validate_image_urls(value: list[str]) -> None:
+    for url in value:
+        stripped = url.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("http://") or stripped.startswith("https://"):
+            continue
+        if _vehicle_media_key_from_url(stripped):
+            continue
+        raise CatalogServiceError(
+            "image_urls must be http(s) URLs or Kelley vehicle media paths",
+            code="image_urls_invalid",
+        )
+
+
+def _removed_vehicle_media_keys(old_urls: list[str], new_urls: list[str]) -> list[str]:
+    old_keys = {
+        key for url in old_urls if (key := _vehicle_media_key_from_url(url))
+    }
+    new_keys = {
+        key for url in new_urls if (key := _vehicle_media_key_from_url(url))
+    }
+    return sorted(old_keys - new_keys)
+
+
+def delete_vehicle_media_keys(keys: list[str]) -> None:
+    """Delete Kelley-owned vehicle media keys after the DB commit succeeds."""
+    for key in keys:
+        if key.startswith(f"{_VEHICLE_MEDIA_PREFIX}/"):
+            # delete_object still resolves inside DOCUMENT_STORAGE_ROOT; the
+            # prefix guard keeps this helper scoped to vehicle media.
+            document_storage.delete_object(key)
 
 
 def add_vehicle_photo(
@@ -704,10 +848,12 @@ def add_vehicle_photo(
             code="vehicle_photo_insufficient_storage",
         )
 
+    processed, stored_ext = _process_vehicle_photo(body, ext)
+
     storage_key = (
-        f"{_VEHICLE_MEDIA_PREFIX}/{catalog_item_id}/{uuid.uuid4().hex}.{ext}"
+        f"{_VEHICLE_MEDIA_PREFIX}/{catalog_item_id}/{uuid.uuid4().hex}.{stored_ext}"
     )
-    document_storage.put_object(storage_key, BytesIO(body))
+    document_storage.put_object(storage_key, BytesIO(processed))
     public_path = f"/api/public/media/{storage_key}"
     item.image_urls = list(item.image_urls or []) + [public_path]
     item.updated_at = datetime.now(timezone.utc)
@@ -743,15 +889,17 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
     vehicle-create path supplies them (``color<-exterior_color``,
     ``internal_sku<-stock_number``) before calling here.
     """
-    validate_vehicle_fields(
-        {
-            "vin": data.vin,
-            "year": data.year,
-            "mileage": data.mileage,
-            "vehicle_status": data.vehicle_status,
-            "features_json": data.features_json,
-        }
-    )
+    vehicle_values = {
+        "vin": data.vin,
+        "year": data.year,
+        "mileage": data.mileage,
+        "vehicle_status": data.vehicle_status,
+        "features_json": data.features_json,
+    }
+    validate_vehicle_fields(vehicle_values)
+    _validate_image_urls(list(data.image_urls or []))
+    # validate_vehicle_fields normalized the VIN in place; persist that form.
+    normalized_vin = vehicle_values["vin"]
 
     designer = data.designer
     style_number = data.style_number
@@ -764,8 +912,23 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
             style_number = data.model
 
     public_code = _assign_catalog_public_code(db)
+
+    # Vehicles: staff aren't asked to invent a stock number. When both
+    # internal_sku and stock_number are blank, fall back to the freshly
+    # minted public_code so the NOT NULL/unique internal_sku is satisfied
+    # and the car stays findable by a real code. Staff can set a real
+    # dealer stock number later via edit. Non-vehicle rows are unaffected
+    # (the API requires internal_sku for them).
+    internal_sku = data.internal_sku
+    stock_number = data.stock_number
+    if data.is_vehicle:
+        if not internal_sku:
+            internal_sku = public_code
+        if not stock_number:
+            stock_number = public_code
+
     item = CatalogItem(
-        internal_sku=data.internal_sku,
+        internal_sku=internal_sku,
         public_code=public_code,
         designer=designer,
         style_number=style_number,
@@ -785,8 +948,8 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
         active=data.active,
         unit_price_cents=data.unit_price_cents,
         is_vehicle=data.is_vehicle,
-        vin=data.vin,
-        stock_number=data.stock_number,
+        vin=normalized_vin,
+        stock_number=stock_number,
         year=data.year,
         make=data.make,
         model=data.model,
@@ -1160,6 +1323,7 @@ def update_catalog_item(
             "public_code is immutable once issued",
             code="public_code_immutable",
         )
+    old_image_urls = list(row.image_urls or [])
     unknown = set(patch) - _ADMIN_PATCHABLE_FIELDS
     if unknown:
         raise CatalogServiceError(
@@ -1197,6 +1361,7 @@ def update_catalog_item(
                     "image_urls must contain strings",
                     code="image_urls_invalid",
                 )
+            _validate_image_urls(value)
         if field_name == "unit_price_cents" and value is not None:
             # Mirror migration 067's CHECK so the rejection surfaces
             # as a friendly domain error instead of a raw IntegrityError.
@@ -1215,6 +1380,10 @@ def update_catalog_item(
         setattr(row, field_name, value)
     row.updated_at = datetime.now(timezone.utc)
     db.flush()
+    if "image_urls" in patch:
+        row._removed_vehicle_media_keys = _removed_vehicle_media_keys(
+            old_image_urls, list(row.image_urls or [])
+        )
     return row
 
 
@@ -1303,8 +1472,8 @@ def get_by_internal_sku(db: Session, internal_sku: str) -> CatalogItem | None:
 
 
 def get_by_public_code(db: Session, public_code: str) -> CatalogItem | None:
-    """Lookup by public BVX code. Useful when staff need to answer
-    "what dress is on invoice line BVX-00042?"
+    """Lookup by public KAP code. Useful when staff need to answer
+    "what dress is on invoice line KAP-00042?"
     """
     return (
         db.query(CatalogItem)

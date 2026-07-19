@@ -386,11 +386,21 @@ def punch_in(
     accuracy_buffer_max_m: int = 0,
     trusted_network_match: bool = False,
     trusted_network_enabled: bool = False,
+    require_geofence: bool = True,
     ip: str | None = None,
     user_agent: str | None = None,
     now_override: datetime | None = None,
 ) -> StaffPunch:
     """Record a clock-in for `user`.
+
+    Phase 14 (`require_geofence=False`, commission mode): clock-in is an
+    "active in app" signal, not a location proof. The punch is accepted
+    regardless of GPS — no `outside_geofence` rejection and no
+    `too_early_for_shift` block. When coords place the rep inside a
+    location the punch still records `accepted_by='gps'` and the distance;
+    otherwise it lands as `accepted_by='app_session'` and attributes to the
+    closest (or first) active location if one exists, else no location at
+    all. The strict `require_geofence=True` path below is unchanged.
 
     Slice B added shift-aware behavior on top of Phase 7:
 
@@ -423,7 +433,9 @@ def punch_in(
         db, user_id=user.id, as_of_local=now_local
     )
 
-    if resolved is not None:
+    # Commission mode (require_geofence=False) never blocks a rep from
+    # using the app, so the earliest-check-in window is not enforced there.
+    if resolved is not None and require_geofence:
         earliest_allowed_local = resolved.starts_at_local - timedelta(
             minutes=resolved.earliest_check_in_minutes
         )
@@ -475,63 +487,80 @@ def punch_in(
         match = None
         closest, closest_distance = None, None
 
-    if match is None:
-        if trusted_network_match and trusted_network_enabled:
-            # Attribute against the closest active location when a GPS
-            # fix exists to measure from; otherwise fall back to any
-            # active location so the row keeps a usable `location_id`
-            # (and the punch_out / shift-resolution flows downstream do
-            # not need a special null-location branch). When no active
-            # location exists at all, the trusted network cannot rescue
-            # a punch with nowhere to attribute it.
-            loc = closest if closest is not None else _first_active_location(db)
-            if loc is None:
-                raise ClockInError(
-                    "outside_geofence",
-                    http_status=403,
-                    extra={
-                        "distance_m": None,
-                        "closest_location_name": None,
-                        "closest_location_radius_m": None,
-                        "accuracy_buffer_m": None,
-                    },
-                )
-            match = GeofenceMatch(
-                location=loc,
-                distance_m=closest_distance,
-                buffer_applied_m=0.0,
-            )
+    # Resolve the acceptance decision into explicit (location, distance,
+    # buffer, accepted_by). `accepted_location` may be None only in
+    # commission mode with no active locations configured — the punch row
+    # keeps a NULL location_id in that case (the column is nullable).
+    accepted_location: StaffLocation | None = None
+    accepted_distance: float | None = None
+    accepted_buffer: float = 0.0
+    accepted_by: str
+
+    if match is not None:
+        accepted_location = match.location
+        accepted_distance = match.distance_m
+        accepted_buffer = match.buffer_applied_m
+        accepted_by = (
+            "gps_with_accuracy_buffer" if match.buffer_applied_m > 0 else "gps"
+        )
+    elif trusted_network_match and trusted_network_enabled:
+        # Attribute against the closest active location when a GPS fix
+        # exists to measure from; otherwise fall back to any active
+        # location so the row keeps a usable `location_id`.
+        loc = closest if closest is not None else _first_active_location(db)
+        if loc is not None:
+            accepted_location = loc
+            accepted_distance = closest_distance
             accepted_by = "trusted_network"
+        elif not require_geofence:
+            # Commission mode with no locations configured: still accept.
+            accepted_by = "app_session"
         else:
             raise ClockInError(
                 "outside_geofence",
                 http_status=403,
                 extra={
-                    "distance_m": (
-                        round(closest_distance, 1)
-                        if closest_distance is not None
-                        else None
-                    ),
-                    "closest_location_name": (
-                        closest.name if closest else None
-                    ),
-                    "closest_location_radius_m": (
-                        closest.radius_m if closest else None
-                    ),
-                    # Surfacing the buffer in the rejection payload lets
-                    # the frontend say "we already widened the gate by
-                    # X m; the closest boutique is still Y m past that"
-                    # instead of a generic "outside" message.
-                    "accuracy_buffer_m": (
-                        round(effective_buffer, 1)
-                        if effective_buffer > 0
-                        else None
-                    ),
+                    "distance_m": None,
+                    "closest_location_name": None,
+                    "closest_location_radius_m": None,
+                    "accuracy_buffer_m": None,
                 },
             )
+    elif not require_geofence:
+        # Commission mode: clock-in is an active-app signal, not a
+        # location proof. Accept regardless of GPS. Attribute to the
+        # closest (or first) active location for reporting if one exists,
+        # but never reject and never require coords.
+        loc = closest if closest is not None else _first_active_location(db)
+        accepted_location = loc
+        accepted_distance = closest_distance
+        accepted_by = "app_session"
     else:
-        accepted_by = (
-            "gps_with_accuracy_buffer" if match.buffer_applied_m > 0 else "gps"
+        raise ClockInError(
+            "outside_geofence",
+            http_status=403,
+            extra={
+                "distance_m": (
+                    round(closest_distance, 1)
+                    if closest_distance is not None
+                    else None
+                ),
+                "closest_location_name": (
+                    closest.name if closest else None
+                ),
+                "closest_location_radius_m": (
+                    closest.radius_m if closest else None
+                ),
+                # Surfacing the buffer in the rejection payload lets the
+                # frontend say "we already widened the gate by X m; the
+                # closest boutique is still Y m past that" instead of a
+                # generic "outside" message.
+                "accuracy_buffer_m": (
+                    round(effective_buffer, 1)
+                    if effective_buffer > 0
+                    else None
+                ),
+            },
         )
 
     # Slice-4 idempotency guard: a same-direction non-void punch
@@ -552,8 +581,12 @@ def punch_in(
     if state == "in":
         raise ClockInError("already_punched_in", http_status=409)
 
-    holiday_id = shift_resolver.find_holiday_id(
-        db, biz_date=biz_date, location_id=match.location.id
+    holiday_id = (
+        shift_resolver.find_holiday_id(
+            db, biz_date=biz_date, location_id=accepted_location.id
+        )
+        if accepted_location is not None
+        else None
     )
 
     punch = StaffPunch(
@@ -564,18 +597,18 @@ def punch_in(
         # `NOW()` fire so production stays exact-same as before Slice B.
         punched_at=now_utc if now_override is not None else None,
         status=_classify_in_status(now_local=now_local, resolved=resolved),
-        location_id=match.location.id,
+        location_id=accepted_location.id if accepted_location else None,
         shift_id=resolved.shift_id if resolved else None,
         holiday_id=holiday_id,
         client_latitude=client_lat,
         client_longitude=client_lng,
         client_accuracy_m=client_accuracy_m,
-        distance_to_location_m=match.distance_m,
+        distance_to_location_m=accepted_distance,
         ip=_coerce_ip(ip),
         user_agent=(user_agent or "")[:255] or None,
         accepted_by=accepted_by,
         accepted_buffer_m=(
-            match.buffer_applied_m if match.buffer_applied_m > 0 else None
+            accepted_buffer if accepted_buffer > 0 else None
         ),
         # Log-only audit: a punch coming from the boutique Wi-Fi gets
         # this flag set even on a GPS-accepted pass, so the owner can

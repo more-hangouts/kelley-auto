@@ -62,6 +62,17 @@ ATTRIBUTION_COOKIE_DOMAIN = os.getenv("ATTRIBUTION_COOKIE_DOMAIN") or None
 META_PIXEL_ID = os.getenv("META_PIXEL_ID") or None
 META_CAPI_TOKEN = os.getenv("META_CAPI_TOKEN") or None
 META_CAPI_TEST_EVENT_CODE = os.getenv("META_CAPI_TEST_EVENT_CODE") or None
+# Master kill switch for ALL outbound Meta Conversions API delivery. Stays OFF
+# until Pixel ID, access token, test event code, and consent language are in
+# place. The storefront analytics tables and the outbound queue exist
+# regardless — this only gates whether anything is actually sent to Meta.
+META_CAPI_ENABLED = os.getenv("META_CAPI_ENABLED", "false").lower() == "true"
+META_CAPI_API_VERSION = os.getenv("META_CAPI_API_VERSION", "v21.0")
+# Storefront first-party analytics ingestion (POST /api/public/track). Kill
+# switch for behavioral tracking, independent of any ad destination.
+STOREFRONT_ANALYTICS_ENABLED = (
+    os.getenv("STOREFRONT_ANALYTICS_ENABLED", "true").lower() == "true"
+)
 GOOGLE_ADS_CONVERSION_ID = os.getenv("GOOGLE_ADS_CONVERSION_ID") or None
 GOOGLE_ADS_CONVERSION_LABEL = os.getenv("GOOGLE_ADS_CONVERSION_LABEL") or None
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None
@@ -77,6 +88,18 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD") or None
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL") or None
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kelley Autoplex")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
+# Outbound email via the Gmail API using OAuth2 (an "installed app" client
+# plus a long-lived refresh token minted by a one-time consent as the
+# sending mailbox). When all three OAuth values are present, the Gmail API
+# transport takes precedence over SMTP. GMAIL_API_SENDER is the mailbox that
+# granted consent — it is both the authenticated user and the From address,
+# so consent must be granted as this address. Falls back to SMTP_FROM_EMAIL.
+GMAIL_OAUTH_CLIENT_ID = os.getenv("GMAIL_OAUTH_CLIENT_ID") or None
+GMAIL_OAUTH_CLIENT_SECRET = os.getenv("GMAIL_OAUTH_CLIENT_SECRET") or None
+GMAIL_OAUTH_REFRESH_TOKEN = os.getenv("GMAIL_OAUTH_REFRESH_TOKEN") or None
+GMAIL_API_SENDER = os.getenv("GMAIL_API_SENDER") or SMTP_FROM_EMAIL
+
 BOOKING_INTERNAL_NOTIFICATION_EMAILS = _csv("BOOKING_INTERNAL_NOTIFICATION_EMAILS")
 # Staff recipients for public storefront lead alerts (comma-separated). When
 # unset, the service falls back to business_profile.email, then to every
@@ -99,6 +122,40 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID") or None
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN") or None
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER") or None
 TWILIO_MESSAGING_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID") or None
+
+# Omnichannel inbox (Phase 2+). Outbound SMS stays hard-disabled until the
+# A2P 10DLC campaign is approved — inbound lands regardless. Inbound webhook
+# signature verification is REQUIRED by default (needs TWILIO_AUTH_TOKEN);
+# only a dev/test box should ever set the require flag to false.
+SMS_SENDING_ENABLED = os.getenv("SMS_SENDING_ENABLED", "false").lower() == "true"
+INBOUND_SMS_REQUIRE_SIGNATURE = (
+    os.getenv("INBOUND_SMS_REQUIRE_SIGNATURE", "true").lower() == "true"
+)
+
+# Outbound SMS quiet hours (shop-local, America/Chicago via APP_TIMEZONE). A
+# staff reply attempted inside the window is refused with a clear reason and
+# the composer can offer an override; automated sends never override. Default
+# 21:00–08:00. Set START == END to disable the window entirely.
+SMS_QUIET_HOURS_START = int(os.getenv("SMS_QUIET_HOURS_START", "21"))  # 9pm
+SMS_QUIET_HOURS_END = int(os.getenv("SMS_QUIET_HOURS_END", "8"))  # 8am
+
+# Meta (Facebook Messenger + Instagram DM) inbox channels — Phase 5.
+# Inbound webhooks work with test/app-role accounts before App Review; real
+# customer DMs need pages_messaging + instagram_manage_messages + human_agent
+# approved. Outbound Meta replies stay hard-disabled until then.
+META_APP_ID = os.getenv("META_APP_ID") or None
+META_APP_SECRET = os.getenv("META_APP_SECRET") or None  # verifies X-Hub-Signature-256
+META_WEBHOOK_VERIFY_TOKEN = os.getenv("META_WEBHOOK_VERIFY_TOKEN") or None
+META_PAGE_ID = os.getenv("META_PAGE_ID") or None
+META_IG_ACCOUNT_ID = os.getenv("META_IG_ACCOUNT_ID") or None
+# Page access token — used to fetch sender profile (name/avatar) and, later,
+# to send replies. Store here for v1; move to encrypted integration_tokens once
+# a long-lived System-User token is in place.
+META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN") or None
+META_MESSAGING_ENABLED = os.getenv("META_MESSAGING_ENABLED", "false").lower() == "true"
+INBOUND_META_REQUIRE_SIGNATURE = (
+    os.getenv("INBOUND_META_REQUIRE_SIGNATURE", "true").lower() == "true"
+)
 
 # Event documents — local file storage (Phase 2 of EVENT_DETAIL_TABS_PHASES.md).
 # `_BACKEND` is a forward-looking selector; only `local` is wired today. When
@@ -123,6 +180,14 @@ RATE_LIMIT_FAIL_OPEN = os.getenv("RATE_LIMIT_FAIL_OPEN", "true").lower() == "tru
 # letting traffic rewrite rows, then dropping the trailing old key.
 # Generate with:  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 INTEGRATION_TOKEN_KEYS = _csv("INTEGRATION_TOKEN_KEYS", "")
+
+# Encryption keys for at-rest BHPH lead-application PII (DOB, driver's
+# license #, SSN, home address). Same Fernet/MultiFernet rotation scheme as
+# INTEGRATION_TOKEN_KEYS — comma-separated, NEWEST FIRST — but a SEPARATE key
+# so the two blast radii don't overlap. This key MUST be backed up securely:
+# losing every key here makes existing encrypted applications unrecoverable.
+# Generate with:  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+LEAD_PII_KEYS = _csv("LEAD_PII_KEYS", "")
 
 # Webhook event retention (Phase C2 of SECURITY_REMEDIATION_PLAN.md).
 # The daily worker prunes `webhook_events` rows older than this. 90 days

@@ -349,6 +349,14 @@ class Contact(Base):
     tags = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     notes = Column(Text)
     marketing_consent_at = Column(DateTime(timezone=True))
+    # SMS opt-out (migration 094). Distinct from marketing_consent_at (email).
+    sms_opted_out_at = Column(DateTime(timezone=True))
+    sms_opt_out_source = Column(Text)
+    # SMS express consent (migration 095). Set when the customer checks the
+    # optional consent box on a storefront form. Outbound SMS requires
+    # sms_consent_at set AND sms_opted_out_at clear.
+    sms_consent_at = Column(DateTime(timezone=True))
+    sms_consent_source = Column(Text)
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
@@ -384,6 +392,163 @@ class Event(Base):
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class LeadApplication(Base):
+    """Sensitive BHPH application PII for a vehicle-sale deal (migration 089).
+
+    1:1 with an ``events`` row. High-sensitivity fields are Fernet ciphertext
+    (BYTEA), read/written only through ``services/lead_application_service.py``
+    which decrypts inside the permission-gated, audited endpoint. This table is
+    deliberately NOT joined into the normal event serializers — application PII
+    must never be fetched, rendered, emailed, or exported with the deal by
+    accident.
+    """
+
+    __tablename__ = "lead_applications"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(
+        Integer,
+        ForeignKey("events.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    contact_id = Column(
+        Integer, ForeignKey("contacts.id", ondelete="RESTRICT"), nullable=False
+    )
+    # Fernet ciphertext (services/lead_pii_crypto.py):
+    date_of_birth_ciphertext = Column(LargeBinary)
+    driver_license_number_ciphertext = Column(LargeBinary)
+    ssn_ciphertext = Column(LargeBinary)
+    address_ciphertext = Column(LargeBinary)
+    # Low-sensitivity workflow fields, plaintext:
+    driver_license_state = Column(String(2))
+    has_driver_license = Column(Boolean)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontVisitor(Base):
+    """Anonymous storefront browser (migration 090). Keyed by the first-party
+    ``ka_vid`` cookie value. No raw PII — attribution is source/UTM only."""
+
+    __tablename__ = "storefront_visitors"
+
+    id = Column(Integer, primary_key=True)
+    visitor_key = Column(String(64), unique=True, nullable=False)
+    first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    first_touch_attribution = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    last_touch_attribution = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontSession(Base):
+    """A single storefront visit (migration 090). Keyed by the first-party
+    ``ka_sid`` cookie. IP is stored HASHED only, never raw."""
+
+    __tablename__ = "storefront_sessions"
+
+    id = Column(Integer, primary_key=True)
+    visitor_id = Column(
+        Integer, ForeignKey("storefront_visitors.id", ondelete="CASCADE"), nullable=False
+    )
+    session_key = Column(String(64), unique=True, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    landing_page = Column(Text)
+    initial_referrer = Column(Text)
+    initial_utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    user_agent = Column(Text)
+    ip_hash = Column(String(64))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class StorefrontEvent(Base):
+    """Behavioral storefront event stream (migration 090): page_view,
+    vehicle_view, lead_form_opened/started, lead_submitted. ``event_id`` is the
+    CAPI dedup id (unique when present)."""
+
+    __tablename__ = "storefront_events"
+
+    id = Column(BigInteger, primary_key=True)
+    visitor_id = Column(Integer, ForeignKey("storefront_visitors.id", ondelete="SET NULL"))
+    session_id = Column(Integer, ForeignKey("storefront_sessions.id", ondelete="SET NULL"))
+    event_name = Column(String(50), nullable=False)
+    event_id = Column(String(64))  # CAPI dedup id; UNIQUE via partial index
+    path = Column(Text)
+    referrer = Column(Text)
+    utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    listing_code = Column(String(40))
+    vehicle_catalog_item_id = Column(
+        Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
+    )
+    # Normalized channel (migration 096), derived at write time via the
+    # UTM → click-id → referrer priority ladder. NULL = honestly unknown.
+    source = Column(String(120))
+    medium = Column(String(120))
+    click_id = Column(String(255))
+    # `metadata` is reserved on the declarative Base, so the attribute is
+    # `event_metadata` while the column stays `metadata`.
+    event_metadata = Column("metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    occurred_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class LeadAttribution(Base):
+    """Bridge from anonymous browsing to a CRM deal (migration 090). 1:1 with an
+    ``events`` row. Carries source/UTM/landing + the ``_fbp``/``_fbc`` Meta
+    cookies for later CAPI matching. NEVER carries BHPH application PII."""
+
+    __tablename__ = "lead_attribution"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(
+        Integer, ForeignKey("events.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    visitor_id = Column(Integer, ForeignKey("storefront_visitors.id", ondelete="SET NULL"))
+    session_id = Column(Integer, ForeignKey("storefront_sessions.id", ondelete="SET NULL"))
+    conversion_storefront_event_id = Column(
+        BigInteger, ForeignKey("storefront_events.id", ondelete="SET NULL")
+    )
+    landing_page = Column(Text)
+    source_page = Column(Text)
+    utm = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    referrer = Column(Text)
+    fbp = Column(String(255))
+    fbc = Column(String(255))
+    # Normalized channel (migration 096) — the deal's first-touch source.
+    source = Column(String(120))
+    medium = Column(String(120))
+    click_id = Column(String(255))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class AdConversionEvent(Base):
+    """Provider-neutral OUTBOUND ad-conversion queue (migration 090, Phase 3).
+
+    The table exists so the CAPI data model is ready, but nothing enqueues or
+    sends until ``META_CAPI_ENABLED`` is flipped and the sender is built.
+    ``user_data`` holds SERVER-HASHED identifiers only — never raw PII."""
+
+    __tablename__ = "ad_conversion_events"
+
+    id = Column(BigInteger, primary_key=True)
+    provider = Column(String(20), nullable=False, server_default=text("'meta'"))
+    event_name = Column(String(50), nullable=False)
+    event_id = Column(String(64))
+    event_time = Column(DateTime(timezone=True), nullable=False)
+    source_url = Column(Text)
+    action_source = Column(String(20), nullable=False, server_default=text("'website'"))
+    user_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    custom_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    status = Column(String(20), nullable=False, server_default=text("'pending'"))
+    attempt_count = Column(Integer, nullable=False, server_default=text("0"))
+    last_error = Column(Text)
+    lead_event_id = Column(Integer, ForeignKey("events.id", ondelete="SET NULL"))
+    sent_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
 
 
 class EventParticipant(Base):
@@ -927,6 +1092,12 @@ class BusinessProfile(Base):
     attendance_gate_enabled = Column(
         Boolean, nullable=False, server_default=text("TRUE")
     )
+    # Phase 14: 'payroll' (strict geofence/selfie enforcement) or
+    # 'commission' (clock-in is an active-app signal; no GPS/geofence
+    # block, selfie never required). Migration 092.
+    attendance_mode = Column(
+        String(20), nullable=False, server_default=text("'payroll'")
+    )
     selfie_policy = Column(
         String(16), nullable=False, server_default=text("'optional'")
     )
@@ -1076,6 +1247,187 @@ class NotificationPreference(Base):
     )
 
 
+class NotificationSubscriber(Base):
+    """A person who can receive staff notifications (migration 093).
+
+    ``user_id`` links a login account (one subscriber row per user, enforced
+    by the partial unique index ``uq_notification_subscribers_user``);
+    ``user_id IS NULL`` is an external, email-only recipient with no CRM
+    login. The ``chk_notification_subscribers_deliverable`` CHECK guarantees
+    an external row always carries an email. This is the fourth recipient
+    layer read by ``services.notification_routing.recipients_for``.
+    """
+
+    __tablename__ = "notification_subscribers"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    display_name = Column(String(200), nullable=False)
+    email = Column(String(320))
+    phone_e164 = Column(String(20))
+    is_active = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class NotificationSubscription(Base):
+    """Which event kinds a subscriber wants, per channel (migration 093).
+
+    PK ``(subscriber_id, kind, channel)`` makes an upsert the natural write.
+    Phase 1 only routes ``channel='email'``; ``in_app`` / ``sms`` are reserved
+    for the inbox and Twilio phases.
+    """
+
+    __tablename__ = "notification_subscriptions"
+
+    subscriber_id = Column(
+        Integer,
+        ForeignKey("notification_subscribers.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    kind = Column(Text, primary_key=True)
+    channel = Column(
+        String(16), primary_key=True, server_default=text("'email'")
+    )
+    enabled = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class Conversation(Base):
+    """One omnichannel inbox thread per (provider, channel, external party)
+    — migration 094. ``external_id`` is the customer's E.164 for SMS. The
+    ``uq_conversations_identity`` unique index is the upsert target that
+    stops racing inbound webhooks from forking a thread. ``contact_id`` /
+    ``event_id`` stay NULL until a text is matched/linked to the CRM.
+    """
+
+    __tablename__ = "conversations"
+
+    id = Column(BigInteger, primary_key=True)
+    channel = Column(String(16), nullable=False)
+    provider = Column(String(16), nullable=False)
+    external_id = Column(Text, nullable=False)
+    business_ref = Column(Text)
+    contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="SET NULL"))
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="SET NULL"))
+    status = Column(String(16), nullable=False, server_default=text("'open'"))
+    assigned_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    last_message_at = Column(DateTime(timezone=True))
+    last_inbound_at = Column(DateTime(timezone=True))
+    last_outbound_at = Column(DateTime(timezone=True))
+    last_inbound_preview = Column(Text)
+    # Web chat only (migration 097): presence stamp from the widget's poll
+    # (≤ every 30s), the storefront page being viewed, and SMS consent from
+    # the chat contact step. NULL on every other channel.
+    visitor_last_seen_at = Column(DateTime(timezone=True))
+    visitor_page_url = Column(Text)
+    visitor_sms_opt_in = Column(Boolean)
+    conversation_metadata = Column(
+        "metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class ConversationMessage(Base):
+    """One inbound/outbound message in a conversation (migration 094).
+    Channel-neutral ``sender_ref`` / ``recipient_ref``. The partial unique
+    ``(provider, provider_message_id)`` dedups webhook retries and echoes of
+    our own sends; ``status`` moves monotonically in the service layer.
+    """
+
+    __tablename__ = "conversation_messages"
+
+    id = Column(BigInteger, primary_key=True)
+    conversation_id = Column(
+        BigInteger,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    direction = Column(String(8), nullable=False)
+    channel = Column(String(16), nullable=False)
+    provider = Column(String(16), nullable=False)
+    sender_ref = Column(Text, nullable=False)
+    recipient_ref = Column(Text, nullable=False)
+    body = Column(Text)
+    media = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    status = Column(String(16), nullable=False)
+    provider_message_id = Column(Text)
+    provider_payload = Column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    provider_error_code = Column(Text)
+    provider_error_message = Column(Text)
+    sent_by_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    consent_snapshot = Column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    is_echo = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    sent_at = Column(DateTime(timezone=True))
+    delivered_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+
+
+class ConversationRead(Base):
+    """Per-user read state for a conversation (migration 094). Unread is
+    derived: ``conversation.last_inbound_at > last_read_at``."""
+
+    __tablename__ = "conversation_reads"
+
+    conversation_id = Column(
+        BigInteger,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    last_read_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class WebChatScript(Base):
+    """Versioned guided-intake question tree for the storefront web chat
+    (migration 097). Append-only: saving an edit inserts ``version = max+1``;
+    old conversations stay readable because each intake block is stamped with
+    the script version it ran. The service falls back to a seeded constant
+    when this table is empty."""
+
+    __tablename__ = "web_chat_scripts"
+
+    id = Column(Integer, primary_key=True)
+    version = Column(Integer, nullable=False, unique=True)
+    script = Column(JSONB, nullable=False)
+    created_by_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
 class AppointmentTriedOnItem(Base):
     """One catalog item tried on during one appointment (Phase 4 of the
     sales portal). UNIQUE (appointment_id, catalog_item_id, size_label)
@@ -1131,19 +1483,52 @@ class ActivityLog(Base):
     )
 
 
+class SalesActivityEvent(Base):
+    """Commission-mode sales activity monitoring (Phase 14, migration 091).
+
+    Append-only stream of the meaningful *reads* a sales rep performs
+    (lead/event opened, appointment opened, contact opened, search run),
+    recorded server-side inside the sales read endpoints. Separate from
+    ``activity_log`` because contact/search views have no ``event_id`` to
+    anchor to. Privacy: no note bodies, no financial fields, no raw search
+    text — only normalized ``metadata`` (query length, result count).
+    """
+
+    __tablename__ = "sales_activity_events"
+
+    id = Column(BigInteger, primary_key=True)
+    actor_user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    activity_type = Column(String(40), nullable=False)
+    # Subject pair invariant (CHECK in migration 091): both set or both NULL.
+    subject_kind = Column(String(20))
+    subject_id = Column(Integer)
+    route = Column(Text)
+    source = Column(String(40))
+    activity_metadata = Column(
+        "metadata", JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
 class CatalogItem(Base):
     """One row per orderable style + color combination.
 
     Two identifier semantics:
       - `internal_sku`: real designer SKU staff types and searches by.
         Never returned from public/customer-facing endpoints.
-      - `public_code`: opaque Bellas-only code (BVX-NNNNN) minted by
+      - `public_code`: opaque customer-facing code (KAP-NNNNN) minted by
         services/catalog_service.py under a row-level lock on
         numbering_state. Once assigned, never rewritten by service code;
         Phase 7 will add a DB trigger as belt-and-suspenders.
 
     The category whitelist, image_urls array shape, and public_code
-    format (^BVX-[0-9]{5}$) are enforced by CHECK constraints in
+    format (^KAP-[0-9]{5}$) are enforced by CHECK constraints in
     migration 041; if you change those rules, change the migration.
     """
 

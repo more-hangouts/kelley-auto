@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PayloadVehicle } from "@/types/vehicle";
 import { primaryPhoto, displayYear, displayColor, isSold, lexicalToText, allPhotos } from "@/lib/vehicle-utils";
+import { downPaymentHeadline } from "@/lib/pricing";
 
 export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
   const imageUrl = primaryPhoto(vehicle);
@@ -10,10 +11,11 @@ export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
   const color = displayColor(vehicle);
   const sold = isSold(vehicle);
   const description = lexicalToText(vehicle.description);
+  const detailPath = `/inventory/${vehicle.listingCode || vehicle.id}`;
 
   return (
     <Link
-      href={`/inventory/${vehicle.id}`}
+      href={detailPath}
       className="group flex flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-50 hover:shadow-lg transition-shadow"
     >
       {/* Image */}
@@ -74,9 +76,7 @@ export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
         </h3>
 
         <p className="mt-1 text-lg md:text-xl font-semibold text-primary">
-          {vehicle.cashPrice
-            ? `$${vehicle.cashPrice.toLocaleString()}`
-            : "Call for price"}
+          {downPaymentHeadline()}
         </p>
 
         {description && (

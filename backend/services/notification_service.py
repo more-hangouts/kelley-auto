@@ -202,6 +202,10 @@ STAFF_EMAIL_RENDERERS: dict[str, StaffEmailRenderer] = {
     "staff.shift_swap_denied": _call_with_staff_user(
         render_staff_simple_notice
     ),
+    # Omnichannel inbox — inbound customer message. Copy is supplied in the
+    # event payload (headline/message/details), so the shared generic notice
+    # renderer covers it without a per-kind template.
+    "inbox.message_received": _call_with_staff_user(render_staff_simple_notice),
     "admin.walk_in_lead_created": lambda user, payload: render_admin_walk_in_lead_created(
         captured_by=payload["captured_by"],
         appointment=payload["appointment"],

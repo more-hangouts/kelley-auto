@@ -1,0 +1,46 @@
+# Kelley Autoplex — PREVIEW Caddyfile (client review BEFORE DNS cutover).
+#
+# Use this INSTEAD OF deploy/Caddyfile during the preview phase. It serves the
+# new build on api./admin./preview. while the LIVE site stays on the old host
+# (apex + www still resolve to 198.185.165.141 and are intentionally absent
+# here, so Caddy won't try — and fail — to get certs for them).
+#
+# Install:  sudo cp /opt/kelley/deploy/Caddyfile.preview /etc/caddy/Caddyfile
+#           sudo caddy validate --config /etc/caddy/Caddyfile
+#           sudo systemctl reload caddy
+# At cutover: swap back to deploy/Caddyfile and flip apex+www DNS to this box.
+
+# --- Storefront PREVIEW (Next.js on 127.0.0.1:3000) ---
+preview.kelleyautoplex.com {
+	encode gzip zstd
+	# Keep the preview out of search results (protects real-site SEO).
+	header X-Robots-Tag "noindex, nofollow"
+
+	# OPTIONAL — make it actually private. Generate a hash with:
+	#   caddy hash-password --plaintext 'your-password-here'
+	# then uncomment and paste the hash:
+	# basic_auth {
+	# 	client JDJhJDE0... # <- paste the hash here
+	# }
+
+	reverse_proxy 127.0.0.1:3000
+}
+
+# --- API (FastAPI/uvicorn on 127.0.0.1:8000) — REAL host, safe to point now ---
+api.kelleyautoplex.com {
+	encode gzip zstd
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy 127.0.0.1:8000
+	request_body {
+		max_size 25MB
+	}
+}
+
+# --- Admin SPA (static Vite build) — REAL host, safe to point now ---
+admin.kelleyautoplex.com {
+	encode gzip zstd
+	header X-Robots-Tag "noindex, nofollow"
+	root * /opt/kelley/backend/frontend/dist
+	try_files {path} /index.html
+	file_server
+}

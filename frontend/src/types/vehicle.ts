@@ -27,6 +27,9 @@ export type PayloadVehicle = {
   interiorColorCustom?: string | null;
   transmission?: "AUTOMATIC" | "MANUAL" | null;
   fuelType?: "GAS" | "DIESEL" | "ELECTRIC" | "HYBRID" | null;
+  bodyType?: string | null;
+  trim?: string | null;
+  listingCode?: string | null;
   /** Lexical rich text — use lexicalToText() to get plain string */
   description?: unknown;
   status?: "AVAILABLE" | "PENDING" | "SOLD" | null;

@@ -26,7 +26,7 @@ to land a half-tuned CSP that prints console errors at every page
 load. Tracked as an E-phase follow-up.
 
 The starter `X-Frame-Options: DENY` matches the admin/sales hosts.
-The public marketing host (shopbellasxv.com) is served by a separate
+The public marketing host (kelleyautoplex.com) is served by a separate
 nginx stanza that sets `SAMEORIGIN`; that stanza isn't fronted by
 this middleware, so the divergence stays where it is.
 """

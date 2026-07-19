@@ -179,7 +179,7 @@ def get_public_vehicle(
     """Resolve one car for a public detail page, or ``None`` (-> 404).
 
     ``id_or_listing_code`` is the numeric id (all digits) or the
-    ``listingCode`` (public_code, e.g. ``BVX-00042``, matched case-
+    ``listingCode`` (public_code, e.g. ``KAP-00042``, matched case-
     insensitively). Returns the DTO only if the row is a vehicle, active,
     and in a publicly viewable status; otherwise ``None``.
     """

@@ -115,7 +115,7 @@ export default function Notifications() {
           Notifications
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Choose which Bella&apos;s XV emails you receive. Safety
+          Choose which Kelley Autoplex emails you receive. Safety
           notifications (your shift was edited, your PIN was reset, etc.)
           always go through and aren&apos;t listed here.
         </Typography>

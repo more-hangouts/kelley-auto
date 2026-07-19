@@ -226,6 +226,9 @@ def _set_attendance_gate(*, enabled: bool, selfie_policy: str = "optional") -> N
             )
         row.attendance_gate_enabled = enabled
         row.selfie_policy = selfie_policy
+        # Commission mode (Phase 14) downgrades 'required' selfies to
+        # optional; the gate assertions below only hold in payroll mode.
+        row.attendance_mode = "payroll"
         db.commit()
     finally:
         db.close()
@@ -238,6 +241,9 @@ def _capture_business_profile_settings() -> dict:
         return {
             "attendance_gate_enabled": row.attendance_gate_enabled if row else True,
             "selfie_policy": row.selfie_policy if row else "optional",
+            "attendance_mode": (
+                getattr(row, "attendance_mode", None) or "payroll"
+            ) if row else "payroll",
         }
     finally:
         db.close()
@@ -251,6 +257,7 @@ def _restore_business_profile_settings(snapshot: dict) -> None:
             return
         row.attendance_gate_enabled = snapshot["attendance_gate_enabled"]
         row.selfie_policy = snapshot["selfie_policy"]
+        row.attendance_mode = snapshot["attendance_mode"]
         db.commit()
     finally:
         db.close()

@@ -14,22 +14,22 @@ export default function CTASection() {
         </p>
 
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight tracking-tight text-white">
-          Find Your Next Car — No Financing Needed
+          Find Your Next Car with Buy Here, Pay Here
         </h2>
         <p className="mt-4 text-base md:text-lg text-neutral-400 leading-relaxed">
-          We keep it simple. Browse our lot, pick a car you love, pay cash, and
-          drive home the same day. No applications. No credit checks. No hassle.
+          We keep it simple. Browse our lot, pick a car you love, and get
+          approved in minutes with no credit check approval.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/shop"
+            href="/loan-application#application"
             className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white hover:bg-primary-dark transition-colors"
           >
-            Browse Inventory
+            Get Approved · No Credit Check
           </Link>
           <Link
-            href="/contact"
+            href="/contact-us"
             className="w-full sm:w-auto rounded-xl border border-neutral-600 px-8 py-3.5 text-base font-semibold text-neutral-100 hover:border-neutral-400 transition-colors"
           >
             Contact Us
@@ -48,7 +48,7 @@ export default function CTASection() {
             <svg className="size-4 text-primary" fill="none" viewBox="0 0 16 16">
               <path d="M3 8l3 3 7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Cash only
+            Buy here, pay here
           </span>
           <span className="flex items-center gap-2">
             <svg className="size-4 text-primary" fill="none" viewBox="0 0 16 16">

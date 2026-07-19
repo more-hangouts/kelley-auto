@@ -187,7 +187,7 @@ def main() -> int:
         assert resp.status_code == 201, resp.text
         created = resp.json()
         assert created["id"] > 0
-        assert created["public_code"].startswith("BVX-")
+        assert created["public_code"].startswith("KAP-")
         assert created["internal_sku"] == payload["internal_sku"]
         print("create ok")
 
@@ -197,7 +197,7 @@ def main() -> int:
 
         bad = dict(payload)
         bad["internal_sku"] = _SKU_PREFIX + "PUBLIC-CODE-SETTER"
-        bad["public_code"] = "BVX-99999"
+        bad["public_code"] = "KAP-99999"
         resp = client.post("/api/catalog", headers=admin_auth, json=bad)
         assert resp.status_code == 422, resp.text
         print("public_code setter rejected ok")

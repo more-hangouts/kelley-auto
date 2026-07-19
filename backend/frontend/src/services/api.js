@@ -108,7 +108,7 @@ export async function listAppointments(params) {
   return data
 }
 
-export async function getEventBoard(eventType = 'quinceanera') {
+export async function getEventBoard(eventType = 'vehicle_sale') {
   const { data } = await api.get('/events/board', { params: { event_type: eventType } })
   return data
 }
@@ -122,6 +122,11 @@ export async function patchEventStatus(eventId, newStatus, notes) {
 
 export async function getEvent(eventId) {
   const { data } = await api.get(`/events/${eventId}`)
+  return data
+}
+
+export async function getEventJourney(eventId) {
+  const { data } = await api.get(`/events/${eventId}/journey`)
   return data
 }
 
@@ -142,13 +147,44 @@ export async function addSalesEventParticipant(eventId, body) {
   return data
 }
 
-export async function getEventWorkflow(eventType = 'quinceanera') {
+export async function getEventWorkflow(eventType = 'vehicle_sale') {
   const { data } = await api.get(`/events/workflow/${eventType}`)
+  return data
+}
+
+// Contacts rolodex list. Params: { query, tag, sort, limit, offset }.
+// Returns { items, total, limit, offset, tags: [{tag, count}] }.
+export async function listContacts(params = {}) {
+  const { data } = await api.get('/contacts', { params })
   return data
 }
 
 export async function getContact(contactId) {
   const { data } = await api.get(`/contacts/${contactId}`)
+  return data
+}
+
+// Phase 14: sales activity monitoring (admin-scope). `range` is
+// 'today' | 'yesterday' | 'week'. Returns { since, until, reps: [...] }.
+export async function getSalesActivitySummary(params = {}) {
+  const { data } = await api.get('/admin/sales-activity/summary', { params })
+  return data
+}
+
+// Storefront analytics rollup (admin-scope): funnel, traffic/leads/revenue
+// by channel, shop-local daily series, most-viewed vehicles.
+export async function getStorefrontAnalyticsSummary(days = 30) {
+  const { data } = await api.get('/admin/storefront-analytics/summary', {
+    params: { days },
+  })
+  return data
+}
+
+// Recent activity rows for one rep. Returns { actor_user_id, rows, next_before_id }.
+export async function getSalesActivityRepRecent(userId, params = {}) {
+  const { data } = await api.get(`/admin/sales-activity/rep/${userId}/recent`, {
+    params,
+  })
   return data
 }
 
@@ -751,7 +787,7 @@ export async function getAgendaToday() {
   return data
 }
 
-export async function getPipelineCounts(eventType = 'quinceanera') {
+export async function getPipelineCounts(eventType = 'vehicle_sale') {
   const { data } = await api.get('/dashboard/pipeline-counts', {
     params: { event_type: eventType },
   })
@@ -881,6 +917,25 @@ export async function uploadVehiclePhoto(catalogItemId, file) {
   const form = new FormData()
   form.append('file', file)
   const { data } = await api.post(`/catalog/${catalogItemId}/photos`, form)
+  return data
+}
+
+// Decode a VIN via NHTSA vPIC. Returns { vin (normalized), check_digit_ok,
+// decoded: {year, make, model, trim, body_type, fuel_type, transmission,
+// drivetrain}, error, existing_vehicle_id }. A 422 means the VIN is
+// structurally invalid (bad length / I,O,Q); the caller shows detail.message.
+export async function decodeVin(vin) {
+  const { data } = await api.get(`/admin/vin/decode/${encodeURIComponent(vin)}`)
+  return data
+}
+
+// OCR a photo of a VIN sticker/plate. Returns { found, best, candidates }.
+// `best` (when found) has the same shape as decodeVin's result, so the
+// caller reuses the same prefill path. Only checksum-valid reads come back.
+export async function scanVin(file) {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post('/admin/vin/scan', form)
   return data
 }
 
@@ -1787,6 +1842,62 @@ export async function generateDraftScheduleWeek({ week_start, overrides }) {
     '/admin/schedule/generate-draft-week',
     body,
   )
+  return data
+}
+
+// ─── Notification subscribers ("who gets what"; Omnichannel Inbox Plan Part 1)
+export async function listNotificationSubscribers() {
+  const { data } = await api.get('/admin/notification-subscribers')
+  return data
+}
+export async function createNotificationSubscriber(body) {
+  const { data } = await api.post('/admin/notification-subscribers', body)
+  return data
+}
+export async function updateSubscriberSubscriptions(subscriberId, subscriptions) {
+  const { data } = await api.put(
+    `/admin/notification-subscribers/${subscriberId}/subscriptions`,
+    { subscriptions },
+  )
+  return data
+}
+export async function setSubscriberActive(subscriberId, isActive) {
+  const { data } = await api.patch(
+    `/admin/notification-subscribers/${subscriberId}`,
+    { is_active: isActive },
+  )
+  return data
+}
+export async function deleteNotificationSubscriber(subscriberId) {
+  await api.delete(`/admin/notification-subscribers/${subscriberId}`)
+}
+
+// ─── Omnichannel inbox (Phase 2) ───────────────────────────────────────────
+export async function listInboxConversations(params = {}) {
+  const { data } = await api.get('/inbox/conversations', { params })
+  return data
+}
+export async function getInboxConversation(conversationId) {
+  const { data } = await api.get(`/inbox/conversations/${conversationId}`)
+  return data
+}
+export async function patchInboxConversation(conversationId, body) {
+  const { data } = await api.patch(`/inbox/conversations/${conversationId}`, body)
+  return data
+}
+// Reply into a thread. Web-chat threads deliver immediately (the visitor's
+// widget polls the row); SMS sends via Twilio once A2P sending is enabled.
+// Pass allowQuietHours to override the quiet-hours guard after a 409.
+export async function sendInboxMessage(conversationId, body, allowQuietHours = false) {
+  const { data } = await api.post(
+    `/inbox/conversations/${conversationId}/messages`,
+    { body, allow_quiet_hours: allowQuietHours },
+  )
+  return data
+}
+
+export async function getInboxUnreadCount() {
+  const { data } = await api.get('/inbox/unread-count')
   return data
 }
 

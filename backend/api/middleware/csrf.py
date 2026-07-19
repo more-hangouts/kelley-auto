@@ -3,7 +3,7 @@
 The browser path stores its JWT in an HttpOnly session cookie that JS
 cannot read. That defeats XSS exfiltration, but it also re-opens the
 classic cross-site request forgery channel: any third-party page can
-trigger a request to api.shopbellasxv.com and the browser will attach
+trigger a request to api.kelleyautoplex.com and the browser will attach
 the cookie unbidden. The double-submit pattern closes that channel
 without server-side session state:
 

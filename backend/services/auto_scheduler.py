@@ -64,7 +64,7 @@ _WEEKDAY_TOKENS: dict[str, int] = {
 
 @dataclass(frozen=True)
 class AutoScheduleRules:
-    """Configurable rule set. Defaults match the Bella's XV operating
+    """Configurable rule set. Defaults match the Kelley Autoplex operating
     rhythm (closed Mon/Tue, 12-7 hours, no-appointment fill 2-7)."""
 
     open_days: tuple[str, ...] = ("Wed", "Thu", "Fri", "Sat", "Sun")

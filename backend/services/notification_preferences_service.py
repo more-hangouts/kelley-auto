@@ -84,6 +84,11 @@ KIND_DESCRIPTORS: dict[str, dict[str, str]] = {
         "label": "Missing clock-out (admin)",
         "description": "Attendance cron flags a missed clock-out for review.",
     },
+    "inbox.message_received": {
+        "category": "Inbox",
+        "label": "New customer message",
+        "description": "A customer sends an inbound SMS (and later Facebook/Instagram) message.",
+    },
 }
 
 

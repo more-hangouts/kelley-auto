@@ -493,9 +493,19 @@ class BoardCard:
     vehicle_year: int | None = None
     vehicle_make: str | None = None
     vehicle_model: str | None = None
+    vehicle_trim: str | None = None
     vehicle_vin: str | None = None
+    vehicle_stock_number: str | None = None
     vehicle_status: str | None = None
     vehicle_mileage: int | None = None
+    vehicle_price_cents: int | None = None
+    vehicle_exterior_color: str | None = None
+    vehicle_body_type: str | None = None
+    vehicle_drivetrain: str | None = None
+    vehicle_transmission: str | None = None
+    vehicle_fuel_type: str | None = None
+    vehicle_condition: str | None = None
+    vehicle_carfax_url: str | None = None
 
 
 @dataclass
@@ -632,9 +642,19 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
             CatalogItem.year.label("vehicle_year"),
             CatalogItem.make.label("vehicle_make"),
             CatalogItem.model.label("vehicle_model"),
+            CatalogItem.trim.label("vehicle_trim"),
             CatalogItem.vin.label("vehicle_vin"),
+            CatalogItem.stock_number.label("vehicle_stock_number"),
             CatalogItem.vehicle_status.label("vehicle_status"),
             CatalogItem.mileage.label("vehicle_mileage"),
+            CatalogItem.unit_price_cents.label("vehicle_price_cents"),
+            CatalogItem.exterior_color.label("vehicle_exterior_color"),
+            CatalogItem.body_type.label("vehicle_body_type"),
+            CatalogItem.drivetrain.label("vehicle_drivetrain"),
+            CatalogItem.transmission.label("vehicle_transmission"),
+            CatalogItem.fuel_type.label("vehicle_fuel_type"),
+            CatalogItem.condition.label("vehicle_condition"),
+            CatalogItem.carfax_url.label("vehicle_carfax_url"),
         )
         .join(Contact, Contact.id == Event.primary_contact_id)
         .outerjoin(User, User.id == Event.owner_user_id)
@@ -688,9 +708,19 @@ def get_board_data(db: Session, *, event_type: str = "quinceanera") -> list[Boar
                 vehicle_year=r.vehicle_year,
                 vehicle_make=r.vehicle_make,
                 vehicle_model=r.vehicle_model,
+                vehicle_trim=r.vehicle_trim,
                 vehicle_vin=r.vehicle_vin,
+                vehicle_stock_number=r.vehicle_stock_number,
                 vehicle_status=r.vehicle_status,
                 vehicle_mileage=r.vehicle_mileage,
+                vehicle_price_cents=r.vehicle_price_cents,
+                vehicle_exterior_color=r.vehicle_exterior_color,
+                vehicle_body_type=r.vehicle_body_type,
+                vehicle_drivetrain=r.vehicle_drivetrain,
+                vehicle_transmission=r.vehicle_transmission,
+                vehicle_fuel_type=r.vehicle_fuel_type,
+                vehicle_condition=r.vehicle_condition,
+                vehicle_carfax_url=r.vehicle_carfax_url,
             )
         )
 

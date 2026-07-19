@@ -76,6 +76,9 @@ class AppointmentRow(BaseModel):
     device_type: str | None
     bot_suspected: bool
     created_at: datetime
+    # CRM linkage so the calendar can label + link an appointment to its deal.
+    crm_event_id: int | None = None
+    crm_event_name: str | None = None
 
 
 class AppointmentListResponse(BaseModel):
@@ -148,8 +151,10 @@ class AppointmentPatch(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _row(appt: Appointment) -> AppointmentRow:
+def _row(appt: Appointment, *, crm_event_name: str | None = None) -> AppointmentRow:
     return AppointmentRow(
+        crm_event_id=appt.crm_event_id,
+        crm_event_name=crm_event_name,
         id=appt.id,
         confirmation_code=booking_service.format_confirmation_code(appt.confirmation_code),
         slot_start_at=appt.slot_start_at,
@@ -180,7 +185,10 @@ def _detail(
     event: Event | None,
 ) -> AppointmentDetail:
     return AppointmentDetail(
-        **_row(appt).model_dump(),
+        **_row(
+            appt,
+            crm_event_name=event.event_name if event is not None else None,
+        ).model_dump(),
         customer_note=appt.customer_note,
         internal_notes=appt.internal_notes,
         cancelled_at=appt.cancelled_at,
@@ -221,8 +229,6 @@ def _detail(
         enrichment=_enrichment_payload(enrichment),
         contact_id=appt.contact_id,
         contact_display_name=contact.display_name if contact is not None else None,
-        crm_event_id=appt.crm_event_id,
-        crm_event_name=event.event_name if event is not None else None,
         crm_event_status=event.status if event is not None else None,
         can_promote_to_event=(
             appt.contact_id is not None and appt.crm_event_id is None
@@ -297,8 +303,18 @@ def list_appointments(
         .offset(offset)
         .all()
     )
+    # Batch-resolve deal names for the page (avoids an N+1 per appointment).
+    event_ids = {r.crm_event_id for r in rows if r.crm_event_id}
+    event_names: dict[int, str] = {}
+    if event_ids:
+        event_names = {
+            eid: name
+            for eid, name in db.query(Event.id, Event.event_name)
+            .filter(Event.id.in_(event_ids), Event.deleted_at.is_(None))
+            .all()
+        }
     return AppointmentListResponse(
-        items=[_row(r) for r in rows],
+        items=[_row(r, crm_event_name=event_names.get(r.crm_event_id)) for r in rows],
         total=total,
         limit=limit,
         offset=offset,

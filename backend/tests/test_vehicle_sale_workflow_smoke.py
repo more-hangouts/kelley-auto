@@ -417,6 +417,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
             headers=auth,
             json={
                 "primary_contact_id": quince_buyer,
+                "event_type": "quinceanera",
                 "event_name": "Sofia's Quince",
             },
         )

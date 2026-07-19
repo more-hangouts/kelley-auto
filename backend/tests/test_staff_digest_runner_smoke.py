@@ -260,7 +260,7 @@ def main() -> int:
         )
         # The digest body should name both appointments by celebrant.
         digest = next(m for m in _captured if m.to == sales_in.email)
-        assert "appointment" in digest.subject.lower() or "day at Bella" in digest.subject
+        assert "appointment" in digest.subject.lower() or "day at Kelley" in digest.subject
         assert "Smoke Celebrant" in digest.text or "Smoke Parent" in digest.text
         print("  ok   run_staff_daily sends to subscribed user with shift")
         print("  ok   preferences override skips opted-out user")

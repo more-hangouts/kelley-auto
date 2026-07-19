@@ -173,7 +173,7 @@ def main() -> None:
     finally:
         db.close()
     assert tripwire.to == admin_email, tripwire.to
-    assert tripwire.subject == "Your Bella's XV password was changed", (
+    assert tripwire.subject == "Your Kelley Autoplex password was changed", (
         tripwire.subject
     )
     assert "was just changed" in tripwire.text, tripwire.text

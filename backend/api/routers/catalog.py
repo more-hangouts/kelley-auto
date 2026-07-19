@@ -28,6 +28,7 @@ from services.catalog_service import (
     VIN_LENGTH,
     add_vehicle_photo,
     create_catalog_item,
+    delete_vehicle_media_keys,
     find_catalog_items,
     get_by_internal_sku,
     get_by_public_code,
@@ -103,8 +104,9 @@ class CatalogItemCreate(BaseModel):
             raise ValueError("vehicle_status is not allowed")
 
         if self.is_vehicle:
-            if not self.stock_number:
-                raise ValueError("stock_number is required for vehicle create")
+            # stock_number is optional: staff shouldn't have to invent one.
+            # When blank, the service derives internal_sku + stock_number
+            # from the minted public_code (see create_catalog_item).
             if not self.exterior_color:
                 raise ValueError("exterior_color is required for vehicle create")
             if self.category is not None and self.category != "vehicle":
@@ -448,6 +450,8 @@ _CATALOG_ERROR_STATUS: dict[str, int] = {
     "vehicle_status_invalid": 422,
     "vehicle_features_invalid": 422,
     "vehicle_photo_unsupported_type": 415,
+    "vehicle_photo_invalid_image": 415,
+    "vehicle_photo_too_small": 422,
     "vehicle_photo_too_large": 413,
     "vehicle_photo_empty": 400,
     "vehicle_photo_insufficient_storage": 507,
@@ -478,7 +482,9 @@ def patch_catalog_item_route(
         item = update_catalog_item(
             db, catalog_item_id=catalog_item_id, patch=raw
         )
+        removed_vehicle_media_keys = getattr(item, "_removed_vehicle_media_keys", [])
         db.commit()
+        delete_vehicle_media_keys(removed_vehicle_media_keys)
         db.refresh(item)
         return item
     except CatalogServiceError as exc:

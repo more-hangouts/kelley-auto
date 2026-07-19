@@ -9,7 +9,7 @@ invoice page, portal quote page) through
      dangerous string ``Mori Lee 89216 Ivory 8`` is typed into both
      ``description`` and ``notes`` of a separately-created legacy line
      in the same invoice. Catalog-backed lines render the public
-     ``BVX-NNNNN`` code and the customer-safe ``Isabella / Ivory /
+     ``KAP-NNNNN`` code and the customer-safe ``Isabella / Ivory /
      Size 08`` description derived from the catalog row.
 
   2. A legacy line (no ``catalog_item_id``) keeps rendering its
@@ -388,7 +388,7 @@ def _assert_customer_surface_safe(rendered: str, *, surface: str) -> None:
         backed line.
 
     Required tokens:
-      - The customer-safe BVX code on the catalog-backed line.
+      - The customer-safe KAP code on the catalog-backed line.
       - The catalog-derived display text (``Isabella / Ivory / Size 08``).
       - The legacy line's ``description`` (grandfathered).
       - The new non-catalog line's ``public_description``.
@@ -578,8 +578,8 @@ def check_invoice_pdf_safe(invoice_id: int) -> None:
             rendered_at=datetime.now(timezone.utc),
         )
         _assert_customer_surface_safe(html, surface="invoice PDF HTML")
-        assert re.search(r"BVX-\d{5}", html), (
-            "expected BVX-NNNNN in invoice PDF HTML"
+        assert re.search(r"KAP-\d{5}", html), (
+            "expected KAP-NNNNN in invoice PDF HTML"
         )
     finally:
         db.close()
@@ -611,8 +611,8 @@ def check_portal_invoice_html_safe(invoice_id: int) -> None:
         # HTML byte stream is what the customer would see.
         html = _render_portal_invoice(view)
         _assert_customer_surface_safe(html, surface="portal invoice HTML")
-        assert re.search(r"BVX-\d{5}", html), (
-            "expected BVX-NNNNN in portal invoice HTML"
+        assert re.search(r"KAP-\d{5}", html), (
+            "expected KAP-NNNNN in portal invoice HTML"
         )
     finally:
         db.close()
@@ -680,8 +680,8 @@ def check_portal_quote_html_safe(quote_id: int) -> None:
         assert "Legacy line text (already on issued PDFs)" in html, (
             "portal quote HTML missing legacy line description"
         )
-        assert re.search(r"BVX-\d{5}", html), (
-            "expected BVX-NNNNN in portal quote HTML"
+        assert re.search(r"KAP-\d{5}", html), (
+            "expected KAP-NNNNN in portal quote HTML"
         )
     finally:
         db.close()
@@ -823,8 +823,8 @@ def check_quote_pdf_safe(contact_id: int, event_id: int, catalog_id: int) -> int
         assert "Legacy line text (already on issued PDFs)" in html, (
             "quote PDF HTML missing legacy line description"
         )
-        assert re.search(r"BVX-\d{5}", html), (
-            "expected BVX-NNNNN in quote PDF HTML"
+        assert re.search(r"KAP-\d{5}", html), (
+            "expected KAP-NNNNN in quote PDF HTML"
         )
         return q.id
     finally:

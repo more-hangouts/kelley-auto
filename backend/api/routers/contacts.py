@@ -14,10 +14,10 @@ second fetch.
 
 from __future__ import annotations
 
-from datetime import date as date_type
+from datetime import date as date_type, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
@@ -92,6 +92,33 @@ class ContactCreateResponse(BaseModel):
     was_new: bool
 
 
+class ContactListItem(BaseModel):
+    id: int
+    display_name: str
+    first_name: str | None
+    last_name: str | None
+    email: str | None
+    phone: str | None
+    phone_e164: str | None
+    tags: list[str]
+    event_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ContactTagFacet(BaseModel):
+    tag: str
+    count: int
+
+
+class ContactListResponse(BaseModel):
+    items: list[ContactListItem]
+    total: int
+    limit: int
+    offset: int
+    tags: list[ContactTagFacet]
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -115,6 +142,34 @@ def _to_response(
         appointment_count=ctx["appointment_count"],
         alternate_celebrants=ctx["alternate_celebrants"],
         linked_events=[LinkedEventSummary(**e) for e in linked_events],
+    )
+
+
+@router.get("", response_model=ContactListResponse)
+def list_contacts(
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+    query: Annotated[str | None, Query(max_length=200)] = None,
+    tag: Annotated[str | None, Query(max_length=100)] = None,
+    sort: Annotated[str, Query(pattern="^(name|recent|created)$")] = "name",
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ContactListResponse:
+    """Browsable, searchable roster of contacts for the Contacts tab.
+
+    Tag facets are always returned for the full (unfiltered) live set so
+    the filter chips stay stable while the caller narrows the list.
+    """
+    page = contact_service.list_contacts(
+        db, query=query, tag=tag, sort=sort, limit=limit, offset=offset
+    )
+    facets = contact_service.list_contact_tags(db)
+    return ContactListResponse(
+        items=[ContactListItem(**it) for it in page["items"]],
+        total=page["total"],
+        limit=page["limit"],
+        offset=page["offset"],
+        tags=[ContactTagFacet(**f) for f in facets],
     )
 
 

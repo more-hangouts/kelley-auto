@@ -37,3 +37,6 @@ marketing/assets/previous-hero-*/
 
 # Per-run catalog import summary (regenerated every import; not source data)
 data/reports/catalog_import_summary.json
+
+# Extracted CRM import package (44MB photos+csv) — never commit
+var/crm_import_package/

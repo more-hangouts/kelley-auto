@@ -19,6 +19,15 @@ from api.routers import admin_cron_health as admin_cron_health_router
 from api.routers import admin_booking_settings as admin_booking_settings_router
 from api.routers import admin_holidays as admin_holidays_router
 from api.routers import admin_me as admin_me_router
+from api.routers import (
+    admin_notification_subscribers as admin_notification_subscribers_router,
+)
+from api.routers import inbox as inbox_router
+from api.routers import webhooks_twilio as webhooks_twilio_router
+from api.routers import webhooks_meta as webhooks_meta_router
+from api.routers import web_chat as web_chat_router
+from api.routers import admin_sales_activity as admin_sales_activity_router
+from api.routers import admin_storefront_analytics as admin_storefront_analytics_router
 from api.routers import admin_sales_staff as admin_sales_staff_router
 from api.routers import admin_open_shifts as admin_open_shifts_router
 from api.routers import admin_schedule as admin_schedule_router
@@ -31,6 +40,7 @@ from api.routers import auth as auth_router
 from api.routers import booking as booking_router
 from api.routers import business_profile as business_profile_router
 from api.routers import catalog as catalog_router
+from api.routers import vin_decode as vin_decode_router
 from api.routers import contacts as contacts_router
 from api.routers import dashboard as dashboard_router
 from api.routers import event_documents as event_documents_routers
@@ -62,11 +72,13 @@ from api.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
 from api.routers import walk_in_leads as walk_in_leads_router
 from config.settings import (
+    APP_ENV,
     APP_TIMEZONE,
     BOOKING_WIDGET_ALLOWED_ORIGINS,
     CORS_ORIGINS,
     validate_config,
 )
+from services import email_transport
 from api.redis_rate_limit import close_client as close_redis_client
 from database.connection import engine
 from workers.daily import run_loop as run_daily_loop
@@ -80,9 +92,31 @@ _WIDGETS_DIR = _REPO_ROOT / "widgets"
 _MARKETING_DIR = _REPO_ROOT / "marketing"
 
 
+def _warn_if_email_delivery_disabled() -> None:
+    """At boot, shout if outbound email will silently no-op. In production a
+    NullEmailTransport means every lead alert / transactional email is dropped
+    — exactly the silent failure that let a live lead sit un-notified. We log
+    it LOUD (CRITICAL in prod) so it can't hide; the /api/health payload also
+    surfaces it for uptime monitors."""
+    kind = email_transport.active_email_transport_kind()
+    if kind != "null":
+        log.info("email delivery active via %s transport", kind)
+        return
+    msg = (
+        "EMAIL DELIVERY DISABLED — resolved transport is NullEmailTransport; "
+        "no mail (lead alerts, booking, digests) will actually be sent. "
+        "Configure GMAIL_OAUTH_* or SMTP_* in the environment."
+    )
+    if APP_ENV == "production":
+        log.critical("%s [APP_ENV=production]", msg)
+    else:
+        log.warning(msg)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_config()
+    _warn_if_email_delivery_disabled()
     stop_event = asyncio.Event()
     notifications_task = asyncio.create_task(run_notifications_loop(stop_event))
     daily_task = asyncio.create_task(run_daily_loop(stop_event))
@@ -108,6 +142,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# E3: baseline security headers. Uses `setdefault` semantics inside the
+# middleware so nginx-supplied values (admin/sales hosts already emit
+# HSTS, nosniff, X-Frame-Options, Referrer-Policy) win in production;
+# the middleware only fills in gaps. The new contribution over nginx
+# is `Permissions-Policy`, scoped to the camera + geolocation surface
+# the sales clock and admin staff-locations pages need.
+app.add_middleware(SecurityHeadersMiddleware)
+
+# D3: double-submit CSRF for cookie-authenticated requests. Skips safe
+# methods, skips the login/PIN/password-reset bootstrap routes, and
+# skips entirely when no session cookie is present (header-bearer
+# callers like smokes and curl continue to work unchanged). Keep CORS
+# outside this middleware so CSRF rejects still carry browser-readable
+# CORS headers.
+app.add_middleware(CSRFMiddleware)
+
 # Auth + admin surface uses cookies/credentials. The public booking widget
 # does not, so its origin list can be wider without weakening dashboard CORS.
 _all_origins = sorted(set(CORS_ORIGINS) | set(BOOKING_WIDGET_ALLOWED_ORIGINS))
@@ -120,24 +170,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# E3: baseline security headers. Uses `setdefault` semantics inside the
-# middleware so nginx-supplied values (admin/sales hosts already emit
-# HSTS, nosniff, X-Frame-Options, Referrer-Policy) win in production;
-# the middleware only fills in gaps. The new contribution over nginx
-# is `Permissions-Policy`, scoped to the camera + geolocation surface
-# the sales clock and admin staff-locations pages need.
-app.add_middleware(SecurityHeadersMiddleware)
-
-# D3: double-submit CSRF for cookie-authenticated requests. Skips safe
-# methods, skips the login/PIN/password-reset bootstrap routes, and
-# skips entirely when no session cookie is present (header-bearer
-# callers like smokes and curl continue to work unchanged). Added LAST
-# so it runs first on inbound — a CSRF reject never reaches the route
-# handler or its DB session.
-app.add_middleware(CSRFMiddleware)
-
 app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(admin_me_router.router, prefix="/api/admin/me", tags=["admin-me"])
+app.include_router(
+    admin_notification_subscribers_router.router,
+    prefix="/api/admin/notification-subscribers",
+    tags=["admin-notification-subscribers"],
+)
+app.include_router(inbox_router.router, prefix="/api/inbox", tags=["inbox"])
+app.include_router(
+    web_chat_router.router, prefix="/api/web-chat", tags=["web-chat"]
+)
+app.include_router(
+    webhooks_twilio_router.router,
+    prefix="/api/webhooks/twilio",
+    tags=["webhooks-twilio"],
+)
+app.include_router(
+    webhooks_meta_router.router,
+    prefix="/api/webhooks/meta",
+    tags=["webhooks-meta"],
+)
 app.include_router(booking_router.router, prefix="/api/booking", tags=["booking"])
 app.include_router(
     admin_booking_router.router, prefix="/api/admin/booking", tags=["admin-booking"]
@@ -230,9 +283,19 @@ app.include_router(
     tags=["dashboard"],
 )
 app.include_router(
+    admin_storefront_analytics_router.router,
+    prefix="/api/admin/storefront-analytics",
+    tags=["storefront-analytics"],
+)
+app.include_router(
     catalog_router.router,
     prefix="/api/catalog",
     tags=["catalog"],
+)
+app.include_router(
+    vin_decode_router.router,
+    prefix="/api/admin/vin",
+    tags=["vin"],
 )
 app.include_router(
     public_site_router.router,
@@ -272,6 +335,11 @@ app.include_router(
     admin_sales_staff_router.router,
     prefix="/api/admin/sales-staff",
     tags=["admin-sales-staff"],
+)
+app.include_router(
+    admin_sales_activity_router.router,
+    prefix="/api/admin/sales-activity",
+    tags=["admin-sales-activity"],
 )
 app.include_router(
     admin_staff_router.router,
@@ -433,9 +501,19 @@ def health():
             content={"status": "error", "database": "schema_missing"},
         )
 
-    return {
+    email_kind = email_transport.active_email_transport_kind()
+    email_ok = email_kind != "null"
+    body = {
         "status": "ok",
         "database": "connected",
         "migrations_applied": count,
         "timezone": APP_TIMEZONE,
+        "email_transport": email_kind,
+        "email_delivery_enabled": email_ok,
     }
+    if not email_ok:
+        # Degrade visibly for monitors without failing the whole app: the DB
+        # is fine, so return 200 but flag the outage prominently.
+        body["status"] = "degraded"
+        body["warnings"] = ["email_delivery_disabled"]
+    return body

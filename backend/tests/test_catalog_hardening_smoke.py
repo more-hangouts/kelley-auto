@@ -374,7 +374,7 @@ def check_public_code_trigger(catalog_id: int) -> None:
         try:
             db.execute(
                 sql_text(
-                    "UPDATE catalog_items SET public_code = 'BVX-99999' "
+                    "UPDATE catalog_items SET public_code = 'KAP-99999' "
                     "WHERE id = :id"
                 ),
                 {"id": catalog_id},

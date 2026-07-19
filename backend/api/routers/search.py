@@ -7,7 +7,7 @@ special orders without changing this router's shape.
 
 Auth: admin-only via the local `require_admin` dependency. The plan
 locks this surface as staff/admin and there is no per-row scoping
-because Bellas is single-tenant; the gate exists so a non-admin user
+because Kelley is single-tenant; the gate exists so a non-admin user
 account on the system cannot enumerate the customer base by typing
 fragments.
 """

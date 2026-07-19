@@ -1,16 +1,60 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import TopBanner from "@/app/components/TopBanner";
 import NavbarWrapper from "@/app/components/NavbarWrapper";
 import Features from "@/app/components/Features";
 import Footer from "@/app/components/Footer";
 import { getVehicle, displayYear, displayColor, isSold, lexicalToText } from "@/lib/api";
+import { downPaymentHeadline, formatDownPayment } from "@/lib/pricing";
 import { resolveNap } from "@/lib/nap";
 import ImageGallery from "./ImageGallery";
 import InquiryForm from "./InquiryForm";
+import VehicleViewTracker from "./VehicleViewTracker";
 import type { PayloadVehicle } from "@/types/vehicle";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const vehicle = await getVehicle(id);
+
+  if (!vehicle) {
+    return {
+      title: "Vehicle Not Found | Kelley Autoplex",
+    };
+  }
+
+  const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
+  const description = [
+    `${title} for sale at Kelley Autoplex.`,
+    `${downPaymentHeadline()} — no credit check.`,
+    vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} miles.` : null,
+    "Contact us to confirm availability.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const canonicalId = vehicle.listingCode || vehicle.id;
+  const images = (vehicle.photos ?? []).map((p) => p.url).filter(Boolean);
+
+  return {
+    title: `${title} For Sale | Kelley Autoplex`,
+    description,
+    alternates: {
+      canonical: `/inventory/${canonicalId}`,
+    },
+    openGraph: {
+      title: `${title} For Sale | Kelley Autoplex`,
+      description,
+      images,
+      type: "website",
+    },
+  };
+}
 
 export default async function CarDetailPage({
   params,
@@ -34,6 +78,16 @@ export default async function CarDetailPage({
 
   return (
     <div className="min-h-screen">
+      <VehicleViewTracker
+        vehicleId={vehicle.id}
+        listingCode={vehicle.listingCode}
+        year={vehicle.year}
+        make={vehicle.make}
+        model={vehicle.model}
+        priceCents={
+          typeof vehicle.cashPrice === "number" ? vehicle.cashPrice * 100 : null
+        }
+      />
       <TopBanner />
       <NavbarWrapper />
 
@@ -43,7 +97,7 @@ export default async function CarDetailPage({
           Home
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/shop" className="hover:text-neutral-600 transition-colors">
+        <Link href="/cars-for-sale" className="hover:text-neutral-600 transition-colors">
           Inventory
         </Link>
         <span className="mx-2">/</span>
@@ -78,15 +132,16 @@ export default async function CarDetailPage({
               {title}
             </h1>
 
-            {/* Price */}
+            {/* Down payment */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                Cash Price
+                Down Payment
               </p>
               <p className="mt-1 text-4xl font-bold text-primary">
-                {vehicle.cashPrice
-                  ? `$${vehicle.cashPrice.toLocaleString()}`
-                  : "Call for price"}
+                {formatDownPayment()}
+              </p>
+              <p className="mt-1 text-sm font-medium text-neutral-500">
+                Buy here, pay here · no credit check
               </p>
             </div>
 
@@ -150,15 +205,15 @@ export default async function CarDetailPage({
               </div>
             )}
 
-            {/* Cash-only notice */}
+            {/* Buy here pay here notice */}
             <div className="flex items-start gap-3 rounded-xl bg-primary/5 px-4 py-3">
               <svg className="mt-0.5 size-4 flex-shrink-0 text-primary" fill="none" viewBox="0 0 20 20">
                 <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4" />
                 <path d="M10 9v5M10 7h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
               <p className="text-xs text-neutral-600 leading-relaxed">
-                <span className="font-semibold text-primary">Cash only</span> — No financing or online
-                payments. All transactions completed in person at the lot.
+                <span className="font-semibold text-primary">Buy here, pay here</span> available.
+                Get approved in minutes with no credit check approval.
               </p>
             </div>
 
@@ -169,7 +224,7 @@ export default async function CarDetailPage({
               <div className="rounded-2xl border border-neutral-100 bg-neutral-25 p-6 text-center">
                 <p className="font-medium text-neutral-500">This vehicle has been sold.</p>
                 <Link
-                  href="/shop"
+                  href="/cars-for-sale"
                   className="mt-3 inline-block text-sm font-semibold text-primary hover:underline"
                 >
                   View available cars →

@@ -273,7 +273,7 @@ class PipelineCountsResponse(BaseModel):
 def get_pipeline_counts(
     db: Annotated[Session, Depends(get_db)],
     _user: Annotated[User, Depends(require_admin_scope)],
-    event_type: str = Query(default="quinceanera"),
+    event_type: str = Query(default="vehicle_sale"),
 ) -> PipelineCountsResponse:
     lanes = dashboard.pipeline_counts(db, event_type=event_type)
     return PipelineCountsResponse(

@@ -12,6 +12,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import GroupsIcon from '@mui/icons-material/Groups'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import TuneIcon from '@mui/icons-material/Tune'
 import { Link as RouterLink } from 'react-router-dom'
 
@@ -29,10 +30,16 @@ const SECTIONS = [
     description: 'Theme, copy, availability, blackout dates, and embed code for the public booking widget.',
   },
   {
-    to: '/settings/staff',
+    to: '/settings/staff/profiles',
     icon: GroupsIcon,
-    title: 'Staff management',
-    description: 'Stylist profiles, schedules and time off, boutique locations, and attendance review.',
+    title: 'Team & admins',
+    description: 'Add sales team members and admins, set roles, and manage login PINs.',
+  },
+  {
+    to: '/settings/notifications',
+    icon: NotificationsActiveIcon,
+    title: 'Notifications',
+    description: 'Who gets which alerts — add people (including email-only recipients with no login) and choose what each one receives.',
   },
   {
     to: '/settings/recycle-bin',

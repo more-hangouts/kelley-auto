@@ -20,7 +20,7 @@ def _prompt(label: str) -> str:
 
 
 def main() -> int:
-    print("Create the first Bellas XV admin user.")
+    print("Create the first Kelley Autoplex admin user.")
     username = _prompt("username")
     email = _prompt("email")
     full_name = _prompt("full name")

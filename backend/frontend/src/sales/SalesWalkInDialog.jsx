@@ -78,7 +78,7 @@ function defaultEventName(first, last) {
   const base = (first || '').trim()
   if (!base) return ''
   const surname = (last || '').trim()
-  return `${surname ? `${base} ${surname}` : base}'s Quince`
+  return `${surname ? `${base} ${surname}` : base}'s Deal`
 }
 
 function describeError(err) {
@@ -96,7 +96,7 @@ function describeError(err) {
     return 'Enter a first/last name or display name for the contact.'
   }
   if (status === 422 && detail === 'celebrant_first_name_required') {
-    return 'Celebrant first name is required.'
+    return 'Buyer first name is required.'
   }
   if (status === 422 && detail === 'invalid_party_size_bucket') {
     return 'Pick a party size.'
@@ -312,7 +312,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                   fullWidth
                   required
                   size="small"
-                  label="Celebrant first name"
+                  label="Buyer first name"
                   value={details.celebrant_first_name}
                   onChange={(e) =>
                     patchDetails({ celebrant_first_name: e.target.value })
@@ -321,7 +321,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Celebrant last name"
+                  label="Buyer last name"
                   value={details.celebrant_last_name}
                   onChange={(e) =>
                     patchDetails({ celebrant_last_name: e.target.value })

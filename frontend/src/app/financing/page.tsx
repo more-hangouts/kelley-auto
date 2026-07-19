@@ -1,8 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import TopBanner from "../components/TopBanner";
 import NavbarWrapper from "../components/NavbarWrapper";
 import Footer from "../components/Footer";
 import { resolveNap } from "@/lib/nap";
+import { getVehicles } from "@/lib/api";
+import LoanApplicationForm from "./LoanApplicationForm";
 
 const steps = [
   {
@@ -24,6 +27,15 @@ const steps = [
       "Complete your paperwork, pick up your vehicle, and hit the road with confidence.",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Get Approved Today! Auto Loans in San Antonio, TX | Kelley Autoplex",
+  description:
+    "Get approved with no credit check at Kelley Autoplex in San Antonio, TX. Tell us which vehicle you are interested in and start your approval.",
+  alternates: {
+    canonical: "/loan-application",
+  },
+};
 
 const bankSteps = [
   "Contact your bank or credit union about an auto loan",
@@ -106,9 +118,23 @@ const CheckIcon = () => (
 
 export default async function FinancingPage() {
   const nap = await resolveNap();
+  const inventory = await getVehicles({ limit: 100 });
+  const vehicleOptions = inventory.docs
+    .filter((vehicle) => vehicle.status !== "SOLD")
+    .map((vehicle) => {
+      const title = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+        .filter(Boolean)
+        .join(" ");
+      const listingCode = vehicle.listingCode || vehicle.id;
+      return {
+        id: vehicle.id,
+        listingCode,
+        label: `${title || vehicle.title || "Vehicle"} (${listingCode})`,
+      };
+    });
   // Where the "Apply"/"Call" CTAs point: the phone if we have one, else the
   // contact page. Never a hardcoded number.
-  const callHref = nap.telHref || "/contact";
+  const callHref = nap.telHref || "/contact-us";
   return (
     <div className="min-h-screen">
       <TopBanner />
@@ -145,10 +171,10 @@ export default async function FinancingPage() {
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href={callHref}
+              href="#application"
               className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white hover:bg-primary-dark transition-colors"
             >
-              Apply for financing
+              Get approved
             </a>
             <a
               href={callHref}
@@ -156,6 +182,43 @@ export default async function FinancingPage() {
             >
               {nap.phone ? `Call ${nap.phoneDisplay}` : "Contact us"}
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 1.5: Standard Approval Form */}
+      <section className="bg-white px-5 md:px-10 lg:px-20 py-14 md:py-20">
+        <div className="mx-auto grid max-w-[1040px] grid-cols-1 gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              No credit check
+            </p>
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-neutral-700">
+              Start your approval
+            </h2>
+            <p className="mt-4 text-base md:text-lg text-neutral-500 leading-relaxed">
+              Fill out the standard form and tell us which car you are
+              interested in. If you are still deciding, leave the vehicle field
+              blank and we will help you narrow it down.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 text-sm text-neutral-600">
+              <p className="flex items-start gap-3">
+                <CheckIcon />
+                Buy here, pay here options available.
+              </p>
+              <p className="flex items-start gap-3">
+                <CheckIcon />
+                Vehicle interest is attached to your lead when selected.
+              </p>
+              <p className="flex items-start gap-3">
+                <CheckIcon />
+                A Kelley Autoplex team member will follow up with next steps.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-100 bg-neutral-25 p-5 md:p-7">
+            <LoanApplicationForm vehicles={vehicleOptions} />
           </div>
         </div>
       </section>
@@ -656,7 +719,7 @@ export default async function FinancingPage() {
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/shop"
+                  href="/cars-for-sale"
                   className="w-full sm:w-auto rounded-xl bg-primary px-8 py-3.5 text-center text-base font-semibold text-white hover:bg-primary-dark transition-colors"
                 >
                   Browse inventory

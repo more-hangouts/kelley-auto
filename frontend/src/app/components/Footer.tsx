@@ -1,13 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { resolveNap } from "@/lib/nap";
+import { slugFromMake } from "@/lib/inventory-seo";
 
 const topBrands = ["Honda", "Toyota", "Chevrolet", "Ford", "Nissan", "Hyundai"];
 const quickLinks = [
-  { label: "Browse Inventory", href: "/shop" },
+  { label: "Browse Inventory", href: "/cars-for-sale" },
   { label: "About Us", href: "/about" },
-  { label: "Financing", href: "/financing" },
-  { label: "Contact Us", href: "/contact" },
+  { label: "Financing", href: "/loan-application" },
+  { label: "Contact Us", href: "/contact-us" },
+  { label: "Sitemap", href: "/sitemap" },
+  { label: "Terms", href: "/terms-and-conditions" },
+  { label: "Privacy", href: "/privacy-policy" },
   { label: "Blog", href: "/blog" },
 ];
 const tags = [
@@ -53,7 +57,7 @@ export default async function Footer() {
               {nap.telHref ? (
                 <a
                   href={nap.telHref}
-                  className="text-lg font-medium text-neutral-100 hover:text-primary transition-colors"
+                  className="text-lg font-medium text-neutral-100 hover:text-primary-light transition-colors"
                 >
                   {nap.phoneDisplay}
                 </a>
@@ -71,7 +75,7 @@ export default async function Footer() {
             {nap.email && (
               <a
                 href={`mailto:${nap.email}`}
-                className="text-base font-medium text-neutral-100 hover:text-primary transition-colors"
+                className="text-base font-medium text-neutral-100 hover:text-primary-light transition-colors"
               >
                 {nap.email}
               </a>
@@ -98,7 +102,7 @@ export default async function Footer() {
               {topBrands.map((brand) => (
                 <li key={brand}>
                   <Link
-                    href={`/shop?brand=${brand}`}
+                    href={`/${slugFromMake(brand)}`}
                     className="block py-1.5 text-sm font-medium text-neutral-400 hover:text-neutral-100 transition-colors"
                   >
                     {brand}
@@ -107,8 +111,8 @@ export default async function Footer() {
               ))}
               <li>
                 <Link
-                  href="/shop"
-                  className="mt-1 flex items-center gap-2 py-1.5 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
+                  href="/cars-for-sale"
+                  className="mt-1 flex items-center gap-2 py-1.5 text-sm font-medium text-primary-light hover:text-white transition-colors"
                 >
                   Browse All Inventory
                   <svg className="size-4" fill="none" viewBox="0 0 20 20">
@@ -156,8 +160,8 @@ export default async function Footer() {
                 {row.map((tag) => (
                   <Link
                     key={tag}
-                    href={`/shop?tag=${tag}`}
-                    className="rounded border border-neutral-600 px-3 py-1.5 text-sm font-medium text-neutral-100 hover:border-primary hover:text-primary transition-colors"
+                    href={`/cars-for-sale?tag=${tag}`}
+                    className="rounded border border-neutral-600 px-3 py-1.5 text-sm font-medium text-neutral-100 hover:border-primary-light hover:text-primary-light transition-colors"
                   >
                     {tag}
                   </Link>

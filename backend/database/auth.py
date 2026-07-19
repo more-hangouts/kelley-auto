@@ -138,6 +138,17 @@ _SCOPE_FORBIDDEN_EXC = HTTPException(
     detail="scope_forbidden",
 )
 
+# Explicit per-user permission (stored in users.permissions JSONB) required to
+# view decrypted BHPH application PII. Being admin-scoped is NECESSARY but not
+# SUFFICIENT — this permission must also be present, so PII access can be
+# granted to specific trusted staff rather than every admin.
+LEAD_APPLICATION_PII_PERMISSION = "lead_applications:read_sensitive"
+
+_PII_FORBIDDEN_EXC = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="missing_permission:lead_applications:read_sensitive",
+)
+
 
 def _bearer_token_from_header(request: Request) -> str | None:
     """Return the bearer token from an `Authorization` header, if present."""
@@ -297,6 +308,18 @@ def require_sales_scope(
     user, scope = bundle
     if scope != SALES_SCOPE:
         raise _SCOPE_FORBIDDEN_EXC
+    return user
+
+
+def require_lead_application_pii(
+    user: User = Depends(require_admin_scope),
+) -> User:
+    """Gate decrypted BHPH application PII behind an explicit per-user
+    permission ON TOP of admin scope. Admin scope alone is not enough — the
+    user's ``permissions`` JSONB must list ``lead_applications:read_sensitive``.
+    """
+    if LEAD_APPLICATION_PII_PERMISSION not in (user.permissions or []):
+        raise _PII_FORBIDDEN_EXC
     return user
 
 

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import buyer_journey, sales_appointments
+from services import buyer_journey, sales_activity, sales_appointments
 from services.attendance_gate import require_floor_access
 from services.buyer_journey import BuyerJourneyError
 from services.sales_appointments import SalesActionError
@@ -182,11 +182,28 @@ def list_today(
 def get_detail(
     appointment_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _user: Annotated[User, Depends(require_sales_scope)],
+    current_user: Annotated[User, Depends(require_sales_scope)],
 ) -> AppointmentDetailResponse:
     payload = sales_appointments.get_detail(db, appointment_id=appointment_id)
     if payload is None:
         raise HTTPException(status_code=404, detail="appointment_not_found")
+    # Phase 14: record that this rep opened the appointment. Best-effort and
+    # throttled — never blocks the read. `lead_viewed` is intentionally NOT
+    # emitted here (this is the appointment surface, not a dedicated lead
+    # surface); it will be wired when a sales lead/event detail endpoint
+    # exists, so the two counts stay meaningful. The linked event id rides
+    # along in metadata for admin drilldown (a non-sensitive id only).
+    crm_event_id = payload.get("event", {}).get("id") if payload.get("event") else None
+    sales_activity.record(
+        db,
+        actor_user_id=current_user.id,
+        activity_type=sales_activity.SALES_APPOINTMENT_VIEWED,
+        subject_kind="appointment",
+        subject_id=appointment_id,
+        route=f"/api/sales/appointments/{appointment_id}",
+        source="sales_appointment_detail",
+        metadata={"crm_event_id": crm_event_id} if crm_event_id else None,
+    )
     return AppointmentDetailResponse(**payload)
 
 

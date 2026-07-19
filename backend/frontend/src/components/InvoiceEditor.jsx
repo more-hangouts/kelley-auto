@@ -936,7 +936,7 @@ function LineRow({
         </Stack>
 
         {/* Identifier slot. Catalog-backed lines lock this to the
-            catalog row and surface the staff SKU + public BVX code.
+            catalog row and surface the staff SKU + public KAP code.
             Non-catalog lines edit the customer-facing public copy
             directly. */}
         {isCatalog ? (

@@ -40,8 +40,8 @@ export default function PipelineCountersWidget() {
   const [activeLane, setActiveLane] = useState(null)
 
   const board = useQuery({
-    queryKey: ['events', 'board', 'quinceanera'],
-    queryFn: () => getEventBoard('quinceanera'),
+    queryKey: ['events', 'board', 'vehicle_sale'],
+    queryFn: () => getEventBoard('vehicle_sale'),
     enabled: Boolean(activeLane),
     staleTime: 30_000,
   })

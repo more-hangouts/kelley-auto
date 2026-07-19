@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import sales_search_service
+from services import sales_activity, sales_search_service
 from services.sales_search_service import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
@@ -54,7 +54,7 @@ class SalesSearchResponse(BaseModel):
 @router.get("/leads", response_model=SalesSearchResponse)
 def search_leads(
     db: Annotated[Session, Depends(get_db)],
-    _sales: Annotated[User, Depends(require_sales_scope)],
+    current_user: Annotated[User, Depends(require_sales_scope)],
     q: Annotated[str, Query(min_length=MIN_QUERY_LENGTH, max_length=200)],
     limit: Annotated[
         int,
@@ -62,6 +62,17 @@ def search_leads(
     ] = DEFAULT_LIMIT,
 ) -> SalesSearchResponse:
     results = sales_search_service.search_leads(db, q=q, limit=limit)
+    # Phase 14: record that this rep searched. Never throttled (each distinct
+    # search is signal) and never stores raw query text — only length +
+    # result count — because `q` may be a phone number or email.
+    sales_activity.record(
+        db,
+        actor_user_id=current_user.id,
+        activity_type=sales_activity.SALES_SEARCH_PERFORMED,
+        route="/api/sales/search/leads",
+        source="sales_search",
+        metadata=sales_activity.normalized_search_metadata(q, len(results)),
+    )
     return SalesSearchResponse(
         query=q,
         results=[

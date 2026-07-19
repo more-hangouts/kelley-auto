@@ -39,6 +39,9 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A2P 10DLC: SMS consent — never pre-checked and never required to submit
+  // (consent may not be a condition of service). Recorded server-side.
+  const [smsConsent, setSmsConsent] = useState(false);
   const [form, setForm] = useState<FormState>({
     firstName: "",
     lastName: "",
@@ -69,8 +72,9 @@ export default function ContactForm() {
       phone: form.phone,
       message: form.message,
       preferredTime,
+      smsConsent,
       sourcePage:
-        typeof window !== "undefined" ? window.location.pathname : "/contact",
+        typeof window !== "undefined" ? window.location.pathname : "/contact-us",
     });
     if (result.ok) {
       setSent(true);
@@ -178,6 +182,31 @@ export default function ContactForm() {
           ))}
         </div>
       </div>
+
+      <label className="flex items-start gap-3 text-xs leading-5 text-neutral-500">
+        <input
+          type="checkbox"
+          checked={smsConsent}
+          onChange={(e) => setSmsConsent(e.target.checked)}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        <span>
+          Optional: By checking this box, I agree to receive calls and text
+          messages from Kelley Autoplex about my inquiry at the phone number
+          provided, including via automated technology. Consent is not a
+          condition of any purchase or service — you may submit this form
+          without checking this box. Msg frequency varies. Msg &amp; data rates
+          may apply. Reply STOP to opt out, HELP for help. See our{" "}
+          <a href="/privacy-policy" target="_blank" className="font-medium text-primary underline">
+            Privacy Policy
+          </a>{" "}
+          and{" "}
+          <a href="/terms-and-conditions" target="_blank" className="font-medium text-primary underline">
+            Terms
+          </a>
+          .
+        </span>
+      </label>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 

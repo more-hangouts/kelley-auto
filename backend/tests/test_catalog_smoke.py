@@ -3,7 +3,7 @@
 Exercises the model + service end-to-end against a real Postgres
 connection:
 
-  - `create_catalog_item` mints a fresh `BVX-NNNNN` code under the
+  - `create_catalog_item` mints a fresh `KAP-NNNNN` code under the
     `numbering_state` row lock.
   - Sequential creates produce a contiguous sequence with no skips.
   - Duplicate `internal_sku` is rejected, and the failed transaction
@@ -145,7 +145,7 @@ def check_create_and_mint_code() -> None:
         item = create_catalog_item(db, _make_input("BASIC"))
         db.commit()
         assert item.id is not None, "id was not flushed"
-        expected = f"BVX-{seq_before + 1:05d}"
+        expected = f"KAP-{seq_before + 1:05d}"
         assert item.public_code == expected, (
             f"got {item.public_code!r}, expected {expected!r}"
         )
@@ -170,9 +170,9 @@ def check_sequential_codes_no_skips() -> None:
     finally:
         db.close()
     expected = [
-        f"BVX-{seq_before + 1:05d}",
-        f"BVX-{seq_before + 2:05d}",
-        f"BVX-{seq_before + 3:05d}",
+        f"KAP-{seq_before + 1:05d}",
+        f"KAP-{seq_before + 2:05d}",
+        f"KAP-{seq_before + 3:05d}",
     ]
     assert codes == expected, f"got {codes}, expected {expected}"
 
@@ -215,14 +215,14 @@ def check_duplicate_internal_sku_rejected() -> None:
 def check_customer_line_description_formatter() -> None:
     item = CatalogItem(
         internal_sku="MORI-89216-IVORY",
-        public_code="BVX-00042",
+        public_code="KAP-00042",
         designer="Morilee",
         style_number="89216",
         color="Ivory",
         category="quince_gown",
         product_title="Beatriz Quinceanera Dress",
     )
-    assert customer_sku(item) == "BVX-00042"
+    assert customer_sku(item) == "KAP-00042"
     assert staff_sku(item) == "MORI-89216-IVORY"
 
     desc = customer_line_description(item)
@@ -243,7 +243,7 @@ def check_customer_line_description_formatter() -> None:
     # bridal_gown maps to the bridal label.
     bridal = CatalogItem(
         internal_sku="ALLURE-9999-IVORY",
-        public_code="BVX-00099",
+        public_code="KAP-00099",
         designer="Allure Bridals",
         color="Ivory",
         category="bridal_gown",
@@ -259,7 +259,7 @@ def check_no_designer_leak_in_helpers() -> None:
     """
     item = CatalogItem(
         internal_sku="MORI-89216-IVORY",
-        public_code="BVX-00042",
+        public_code="KAP-00042",
         designer="Morilee",
         style_number="89216",
         color="Ivory",

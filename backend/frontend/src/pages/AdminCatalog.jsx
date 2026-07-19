@@ -118,7 +118,7 @@ function colorFamiliesFor(row) {
 // cluster together: active+sample highest, inactive lowest.
 const TABLE_COLUMNS = [
   { id: 'internal_sku', label: 'Internal SKU', getValue: (r) => r.internal_sku },
-  { id: 'public_code', label: 'BVX code', getValue: (r) => r.public_code },
+  { id: 'public_code', label: 'KAP code', getValue: (r) => r.public_code },
   {
     id: 'title',
     label: 'Title / Description',
@@ -511,7 +511,7 @@ export default function AdminCatalog() {
   const headerNote = useMemo(() => {
     switch (tab) {
       case 'dress':
-        return 'Gowns by Quince / Bridal / Formal.'
+        return 'Gowns — bridal and formal.'
       case 'accessory':
         return 'Accessories like veils, jewelry, headpieces.'
       case 'addon':
@@ -551,7 +551,7 @@ export default function AdminCatalog() {
           <TextField
             size="small"
             label="Search"
-            placeholder="SKU, BVX code, designer, color, title..."
+            placeholder="SKU, KAP code, designer, color, title..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             sx={{ flex: 1 }}

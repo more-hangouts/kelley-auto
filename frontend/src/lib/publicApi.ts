@@ -125,10 +125,43 @@ export interface LeadInput {
   message?: string;
   preferredDay?: string;
   preferredTime?: string;
+  // Structured preferred appointment slot: dealership-local date (YYYY-MM-DD)
+  // + hour (0-23). When set, the backend creates a pending appointment.
+  preferredDate?: string;
+  preferredHour?: number;
   sourcePage?: string;
   utm?: Partial<
     Record<"source" | "medium" | "campaign" | "term" | "content", string>
   >;
+  // Structured BHPH application fields. Encrypted at rest server-side and kept
+  // out of the deal notes — send these as discrete fields, NEVER concatenated
+  // into `message`.
+  dateOfBirth?: string;
+  driverLicenseNumber?: string;
+  driverLicenseState?: string;
+  hasDriverLicense?: boolean;
+  addressStreet?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
+  // A2P 10DLC: the customer actively checked the OPTIONAL SMS-consent box.
+  // Never a submit gate — a lead without it still goes through, it just
+  // can't be texted.
+  smsConsent?: boolean;
+  // First-party analytics identity + Meta attribution cookies. Pseudonymous
+  // ids/cookies — NOT application PII. Populated from getTrackingContext().
+  tracking?: {
+    ka_vid?: string;
+    ka_sid?: string;
+    event_id?: string;
+    fbp?: string;
+    fbc?: string;
+    fbclid?: string;
+    gclid?: string;
+    msclkid?: string;
+    landing_page?: string;
+    referrer?: string;
+  };
 }
 
 export interface LeadResult {
@@ -218,7 +251,13 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
   if (input.message) body.message = input.message;
   if (input.preferredDay) body.preferred_day = input.preferredDay;
   if (input.preferredTime) body.preferred_time = input.preferredTime;
+  if (input.preferredDate) body.preferred_date = input.preferredDate;
+  if (input.preferredHour !== undefined && input.preferredHour !== null)
+    body.preferred_hour = input.preferredHour;
   if (input.sourcePage) body.source_page = input.sourcePage;
+  // Sent explicitly (not truthy-gated) so an unchecked box is a recorded
+  // "no consent", not an absent field.
+  body.sms_consent = Boolean(input.smsConsent);
 
   // Vehicle ref: explicit listingCode wins; otherwise a numeric id links by
   // id and any other token links by code. A ref the backend can't resolve
@@ -237,6 +276,35 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
     if (input.utm.campaign) body.utm_campaign = input.utm.campaign;
     if (input.utm.term) body.utm_term = input.utm.term;
     if (input.utm.content) body.utm_content = input.utm.content;
+  }
+
+  // Structured BHPH PII — discrete fields, never folded into `message`.
+  if (input.dateOfBirth) body.date_of_birth = input.dateOfBirth;
+  if (input.driverLicenseNumber)
+    body.driver_license_number = input.driverLicenseNumber;
+  if (input.driverLicenseState)
+    body.driver_license_state = input.driverLicenseState;
+  if (input.hasDriverLicense !== undefined)
+    body.has_driver_license = input.hasDriverLicense;
+  if (input.addressStreet) body.address_street = input.addressStreet;
+  if (input.addressCity) body.address_city = input.addressCity;
+  if (input.addressState) body.address_state = input.addressState;
+  if (input.addressZip) body.address_zip = input.addressZip;
+
+  // Attribution context (first-party analytics + Meta cookies). Sent so the
+  // backend can tie this lead to the visitor's browsing journey.
+  if (input.tracking) {
+    const t = input.tracking;
+    if (t.ka_vid) body.ka_vid = t.ka_vid;
+    if (t.ka_sid) body.ka_sid = t.ka_sid;
+    if (t.event_id) body.event_id = t.event_id;
+    if (t.fbp) body.fbp = t.fbp;
+    if (t.fbc) body.fbc = t.fbc;
+    if (t.fbclid) body.fbclid = t.fbclid;
+    if (t.gclid) body.gclid = t.gclid;
+    if (t.msclkid) body.msclkid = t.msclkid;
+    if (t.landing_page) body.landing_page = t.landing_page;
+    if (t.referrer) body.referrer = t.referrer;
   }
 
   try {
