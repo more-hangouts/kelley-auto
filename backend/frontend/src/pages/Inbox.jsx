@@ -311,8 +311,8 @@ export default function Inbox() {
             loading={detailLoading}
             onBack={() => { setSelectedId(null); setDetail(null) }}
             onStatus={changeStatus}
-            onSend={async (text) => {
-              const result = await sendInboxMessage(detail.id, text)
+            onSend={async (text, allowQuietHours = false) => {
+              const result = await sendInboxMessage(detail.id, text, allowQuietHours)
               setDetail((d) =>
                 d && d.id === detail.id
                   ? {
@@ -334,26 +334,44 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState(null)
+  const [quietPrompt, setQuietPrompt] = useState(false)
   const isWebChat = detail.channel === 'web_chat'
   const canReply = detail.reply_enabled ?? isWebChat
   const composerReason =
     detail.contact?.sms_opted_out || detail.opted_out
       ? 'This customer opted out — messaging is disabled for them.'
       : detail.channel === 'sms'
-        ? 'Replies turn on once the carrier (A2P) campaign is approved. Inbound messages are logged here now.'
+        ? 'Texting turns on once outbound SMS is enabled. Inbound messages are logged here now.'
         : 'Replies to Facebook/Instagram turn on once Meta approves messaging. Inbound messages are logged here now.'
 
-  async function submit() {
+  function errorCodeOf(err) {
+    return err?.response?.data?.detail?.code
+  }
+  function errorMessageOf(err) {
+    const d = err?.response?.data?.detail
+    if (d?.code === 'recipient_opted_out') return 'This customer opted out — you can’t text them.'
+    if (d?.code === 'sms_send_failed') return d.message ? `Carrier rejected it: ${d.message}` : 'The carrier rejected the message.'
+    if (d?.code === 'sms_not_configured') return 'SMS isn’t configured yet.'
+    return "Couldn't send — try again."
+  }
+
+  async function submit(allowQuietHours = false) {
     const text = draft.trim()
     if (!text || sending) return
     setSending(true)
     setSendError(null)
     try {
-      await onSend(text)
+      await onSend(text, allowQuietHours)
       setDraft('')
-    } catch {
-      // Keep the draft so nothing typed is lost.
-      setSendError("Couldn't send — try again.")
+      setQuietPrompt(false)
+    } catch (err) {
+      if (errorCodeOf(err) === 'quiet_hours') {
+        // Recoverable — offer a one-tap override instead of an error.
+        setQuietPrompt(true)
+      } else {
+        // Keep the draft so nothing typed is lost.
+        setSendError(errorMessageOf(err))
+      }
     } finally {
       setSending(false)
     }
@@ -457,12 +475,26 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
                 {sendError}
               </Alert>
             )}
+            {quietPrompt && (
+              <Alert
+                severity="warning"
+                sx={{ mb: 1 }}
+                action={
+                  <Button color="inherit" size="small" onClick={() => submit(true)} disabled={sending}>
+                    Send anyway
+                  </Button>
+                }
+                onClose={() => setQuietPrompt(false)}
+              >
+                It’s quiet hours (9pm–8am) for the customer.
+              </Alert>
+            )}
             <TextField
               fullWidth
               size="small"
               multiline
               maxRows={4}
-              placeholder="Reply to the visitor…"
+              placeholder={isWebChat ? 'Reply to the visitor…' : 'Text the customer…'}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -477,7 +509,7 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={submit}
+                      onClick={() => submit()}
                       disabled={sending || !draft.trim()}
                     >
                       {sending ? <CircularProgress size={16} /> : <SendIcon fontSize="small" />}
@@ -487,9 +519,11 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
               }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              {detail.visitor_active
-                ? 'Visitor is on the site — they’ll see this instantly.'
-                : 'Visitor left the page — they’ll see this if they come back.'}
+              {isWebChat
+                ? detail.visitor_active
+                  ? 'Visitor is on the site — they’ll see this instantly.'
+                  : 'Visitor left the page — they’ll see this if they come back.'
+                : 'Sends as an SMS from the business number.'}
             </Typography>
           </>
         ) : (

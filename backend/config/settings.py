@@ -132,6 +132,13 @@ INBOUND_SMS_REQUIRE_SIGNATURE = (
     os.getenv("INBOUND_SMS_REQUIRE_SIGNATURE", "true").lower() == "true"
 )
 
+# Outbound SMS quiet hours (shop-local, America/Chicago via APP_TIMEZONE). A
+# staff reply attempted inside the window is refused with a clear reason and
+# the composer can offer an override; automated sends never override. Default
+# 21:00–08:00. Set START == END to disable the window entirely.
+SMS_QUIET_HOURS_START = int(os.getenv("SMS_QUIET_HOURS_START", "21"))  # 9pm
+SMS_QUIET_HOURS_END = int(os.getenv("SMS_QUIET_HOURS_END", "8"))  # 8am
+
 # Meta (Facebook Messenger + Instagram DM) inbox channels — Phase 5.
 # Inbound webhooks work with test/app-role accounts before App Review; real
 # customer DMs need pages_messaging + instagram_manage_messages + human_agent

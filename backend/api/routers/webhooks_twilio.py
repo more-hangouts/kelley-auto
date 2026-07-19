@@ -137,3 +137,47 @@ async def inbound_sms(
     db.commit()
 
     return _twiml()
+
+
+@router.post("/status")
+async def delivery_status(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    """Twilio delivery-status callback for OUTBOUND messages. Twilio POSTs
+    MessageSid + MessageStatus (sent/delivered/undelivered/failed) as the
+    message moves through the carrier. Signature-verified like inbound; we
+    stamp the matching conversation_messages row. Always returns 200 so
+    Twilio doesn't retry-storm on a status we don't track."""
+    form_multi = await request.form()
+    form = {k: (str(v) if v is not None else "") for k, v in form_multi.items()}
+
+    if settings.INBOUND_SMS_REQUIRE_SIGNATURE:
+        if not settings.TWILIO_AUTH_TOKEN:
+            log.error("delivery_status: TWILIO_AUTH_TOKEN unset; cannot verify")
+            raise HTTPException(
+                status_code=503, detail={"code": "sms_not_configured"}
+            )
+        if not verify_signature(
+            settings.TWILIO_AUTH_TOKEN,
+            _public_url(request),
+            form,
+            request.headers.get("X-Twilio-Signature"),
+        ):
+            raise HTTPException(
+                status_code=403, detail={"code": "invalid_signature"}
+            )
+
+    message_sid = form.get("MessageSid") or form.get("SmsSid")
+    message_status = form.get("MessageStatus") or form.get("SmsStatus")
+    if not message_sid or not message_status:
+        raise HTTPException(status_code=400, detail={"code": "malformed_webhook"})
+
+    inbox_service.apply_delivery_status(
+        db,
+        message_sid=message_sid,
+        status=message_status,
+        error_code=form.get("ErrorCode") or None,
+    )
+    db.commit()
+    return Response(status_code=204)

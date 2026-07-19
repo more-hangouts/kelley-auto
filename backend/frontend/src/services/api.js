@@ -1886,11 +1886,12 @@ export async function patchInboxConversation(conversationId, body) {
   return data
 }
 // Reply into a thread. Web-chat threads deliver immediately (the visitor's
-// widget polls the row); SMS/Meta stay 503-gated until A2P/Meta approval.
-export async function sendInboxMessage(conversationId, body) {
+// widget polls the row); SMS sends via Twilio once A2P sending is enabled.
+// Pass allowQuietHours to override the quiet-hours guard after a 409.
+export async function sendInboxMessage(conversationId, body, allowQuietHours = false) {
   const { data } = await api.post(
     `/inbox/conversations/${conversationId}/messages`,
-    { body },
+    { body, allow_quiet_hours: allowQuietHours },
   )
   return data
 }

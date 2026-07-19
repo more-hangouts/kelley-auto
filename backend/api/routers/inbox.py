@@ -24,7 +24,10 @@ router = APIRouter()
 
 
 def _raise(exc: InboxError) -> None:
-    raise HTTPException(status_code=exc.http_status, detail={"code": exc.code}) from exc
+    body: dict[str, str] = {"code": exc.code}
+    if getattr(exc, "detail", None):
+        body["message"] = exc.detail
+    raise HTTPException(status_code=exc.http_status, detail=body) from exc
 
 
 class ConversationPatch(BaseModel):
@@ -39,6 +42,9 @@ class ReplyBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     body: str = Field(min_length=1, max_length=1600)
+    # Set true to send an SMS despite quiet hours (the composer's "send
+    # anyway" after a 409 quiet_hours). Ignored on channels without the gate.
+    allow_quiet_hours: bool = False
 
 
 @router.get("/unread-count")
@@ -119,11 +125,15 @@ def send_message(
     db: Annotated[Session, Depends(get_db)],
     admin: Annotated[User, Depends(require_admin_scope)],
 ) -> dict:
-    # Hard-gated off until Twilio A2P clears (SMS_SENDING_ENABLED). The UI keeps
-    # the composer disabled; this is the server-side backstop.
+    # Web chat sends immediately; SMS sends via Twilio when SMS_SENDING_ENABLED
+    # is on (past opt-out + quiet-hours guards); Meta stays 501 until App Review.
     try:
         result = inbox_service.send_reply(
-            db, conversation_id, body=payload.body, user_id=admin.id
+            db,
+            conversation_id,
+            body=payload.body,
+            user_id=admin.id,
+            allow_quiet_hours=payload.allow_quiet_hours,
         )
     except InboxError as exc:
         db.rollback()

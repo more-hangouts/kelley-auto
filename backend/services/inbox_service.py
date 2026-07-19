@@ -48,7 +48,7 @@ from database.models import (
     ConversationRead,
     Event,
 )
-from services import notification_routing
+from services import business_time, notification_routing
 from services.booking_service import normalize_phone_e164
 
 log = logging.getLogger(__name__)
@@ -71,6 +71,22 @@ _WEB_CHAT_ACTIVE_WINDOW = timedelta(seconds=90)
 
 def web_chat_active_window() -> timedelta:
     return _WEB_CHAT_ACTIVE_WINDOW
+
+
+def in_sms_quiet_hours(now: datetime | None = None) -> bool:
+    """True if the shop-local hour falls in the outbound SMS quiet window.
+    Handles the normal overnight case (21→08 wraps midnight) and a same-day
+    window; START == END disables it."""
+    from config.settings import SMS_QUIET_HOURS_END, SMS_QUIET_HOURS_START
+
+    start, end = SMS_QUIET_HOURS_START, SMS_QUIET_HOURS_END
+    if start == end:
+        return False
+    local = business_time.to_business_local(now) if now else business_time.business_now()
+    hour = local.hour
+    if start > end:  # wraps midnight, e.g. 21..08
+        return hour >= start or hour < end
+    return start <= hour < end
 
 PREVIEW_LEN = 200
 
@@ -288,6 +304,53 @@ def record_inbound_sms(
     return msg, conv, True
 
 
+# Twilio delivery-status → our message status. queued/sending are transient
+# and don't downgrade a row we already marked sent.
+_DELIVERY_STATUS_MAP = {
+    "sent": "sent",
+    "delivered": "delivered",
+    "undelivered": "failed",
+    "failed": "failed",
+}
+
+
+def apply_delivery_status(
+    db: Session,
+    *,
+    message_sid: str,
+    status: str,
+    error_code: str | None = None,
+) -> bool:
+    """Update an outbound message from a Twilio status callback. Idempotent
+    and monotonic — a late ``sent`` never clobbers a ``delivered``. Returns
+    True if a row was found and touched. Does NOT commit."""
+    mapped = _DELIVERY_STATUS_MAP.get((status or "").strip().lower())
+    if mapped is None:
+        return False
+    msg = (
+        db.query(ConversationMessage)
+        .filter_by(provider="twilio", provider_message_id=message_sid)
+        .first()
+    )
+    if msg is None:
+        return False
+    # Never downgrade a terminal-good state.
+    if msg.status == "delivered" and mapped != "delivered":
+        return True
+    now = _now()
+    msg.status = mapped
+    if mapped == "delivered":
+        msg.delivered_at = now
+    elif mapped == "failed":
+        msg.failed_at = now
+        if error_code:
+            msg.provider_error_code = str(error_code)
+    elif mapped == "sent" and msg.sent_at is None:
+        msg.sent_at = now
+    db.flush()
+    return True
+
+
 def record_inbound_meta(
     db: Session,
     *,
@@ -419,10 +482,15 @@ def mark_read(db: Session, conversation_id: int, user_id: int) -> None:
 
 
 class InboxError(Exception):
-    def __init__(self, code: str, *, http_status: int = 400) -> None:
+    def __init__(
+        self, code: str, *, http_status: int = 400, detail: str | None = None
+    ) -> None:
         super().__init__(code)
         self.code = code
         self.http_status = http_status
+        # Optional human-readable extra (e.g. a Twilio rejection reason) the
+        # router can surface alongside the machine code.
+        self.detail = detail
 
 
 _UNSET = object()
@@ -483,6 +551,10 @@ def _serialize_conversation(
     db: Session, conv: Conversation, *, unread: bool
 ) -> dict:
     meta = conv.conversation_metadata or {}
+    contact = _contact_summary(db, conv)
+    opted_out = bool(meta.get("sms_opted_out_at")) or bool(
+        contact and contact.get("sms_opted_out")
+    )
     return {
         "id": conv.id,
         "channel": conv.channel,
@@ -493,14 +565,14 @@ def _serialize_conversation(
         "display_name": meta.get("display_name"),
         "status": conv.status,
         "assigned_user_id": conv.assigned_user_id,
-        "contact": _contact_summary(db, conv),
+        "contact": contact,
         "event": _event_summary(db, conv),
         "last_message_at": _iso(conv.last_message_at),
         "last_inbound_at": _iso(conv.last_inbound_at),
         "last_inbound_preview": conv.last_inbound_preview,
         "unread": unread,
         "is_linked": conv.contact_id is not None,
-        "opted_out": bool(meta.get("sms_opted_out_at")),
+        "opted_out": opted_out,
         # Web chat extras (None/False on other channels). ``visitor_active``
         # = the widget's presence heartbeat landed within the last 90s, i.e.
         # the visitor is still on the page and will see a reply live.
@@ -512,8 +584,20 @@ def _serialize_conversation(
             <= web_chat_active_window()
         ),
         # Whether the composer can actually deliver on this channel today.
-        "reply_enabled": conv.channel == "web_chat",
+        # Web chat is always live; SMS is live once A2P sending is enabled and
+        # the recipient hasn't opted out; Meta stays gated.
+        "reply_enabled": _reply_enabled(conv, contact_opted_out=opted_out),
     }
+
+
+def _reply_enabled(conv: Conversation, *, contact_opted_out: bool) -> bool:
+    if conv.channel == "web_chat":
+        return True
+    if conv.channel == "sms":
+        from config.settings import SMS_SENDING_ENABLED
+
+        return bool(SMS_SENDING_ENABLED) and not contact_opted_out
+    return False
 
 
 def list_conversations(
@@ -616,17 +700,21 @@ def send_reply(
     *,
     body: str,
     user_id: int,
+    allow_quiet_hours: bool = False,
 ) -> dict:
     """Outbound reply, branched on channel.
 
     ``web_chat`` needs NO transport: writing the outbound row IS the delivery
-    — the visitor's cursor poll reads it. This is why chat replies work while
-    SMS is still A2P-blocked; the channel check runs FIRST so the SMS gate
-    can never block a chat reply.
+    — the visitor's cursor poll reads it. The channel check runs FIRST so the
+    SMS/Meta gate can never block a chat reply.
 
-    SMS/Meta stay HARD-GATED OFF until the A2P campaign clears
-    (``SMS_SENDING_ENABLED``); Phase 3 lands the real transport path (opt-out
-    + quiet-hours + window checks, queued send, SID capture)."""
+    ``sms`` sends via Twilio (A2P 10DLC approved), guarded in order:
+    opt-out → quiet hours (overridable) → transport configured → send. The
+    row is persisted with the returned Twilio SID (for the delivery-status
+    callback) or the error, and NEVER partially: a failed send yields a
+    ``failed`` row and a raised InboxError, not a half-written thread.
+
+    Meta (facebook/instagram) outbound stays hard-gated until App Review."""
     conv = db.get(Conversation, conversation_id)
     if conv is None:
         raise InboxError("conversation_not_found", http_status=404)
@@ -661,13 +749,97 @@ def send_reply(
             "conversation": _serialize_conversation(db, conv, unread=False),
         }
 
+    if conv.channel == "sms":
+        return _send_sms_reply(
+            db, conv, body=text, user_id=user_id, allow_quiet_hours=allow_quiet_hours
+        )
+
+    # Facebook / Instagram outbound not built (needs Meta App Review).
+    raise InboxError("channel_send_not_supported", http_status=501)
+
+
+def _send_sms_reply(
+    db: Session,
+    conv: Conversation,
+    *,
+    body: str,
+    user_id: int,
+    allow_quiet_hours: bool,
+) -> dict:
     from config.settings import SMS_SENDING_ENABLED
+    from services import sms_transport
 
     if not SMS_SENDING_ENABLED:
         raise InboxError("sms_sending_disabled", http_status=503)
-    # Phase 3 replaces this with: opt-out + quiet-hours + window checks,
-    # persist queued message, hand to the Twilio transport, capture SID.
-    raise InboxError("sms_sending_not_implemented", http_status=501)
+
+    contact = db.get(Contact, conv.contact_id) if conv.contact_id else None
+
+    # Opt-out is absolute — a STOP contact must never be texted.
+    meta = conv.conversation_metadata or {}
+    opted_out = bool(meta.get("sms_opted_out_at")) or (
+        contact is not None and contact.sms_opted_out_at is not None
+    )
+    if opted_out:
+        raise InboxError("recipient_opted_out", http_status=409)
+
+    if not allow_quiet_hours and in_sms_quiet_hours():
+        # Recoverable: the UI offers a "send anyway" that re-calls with
+        # allow_quiet_hours=True.
+        raise InboxError("quiet_hours", http_status=409)
+
+    if not sms_transport.sms_transport_configured():
+        raise InboxError("sms_not_configured", http_status=503)
+
+    now = _now()
+    consent_at = contact.sms_consent_at if contact is not None else None
+
+    # Persist a queued row FIRST so the message is durable even if the process
+    # dies mid-send; then attempt delivery and stamp the outcome.
+    msg = ConversationMessage(
+        conversation_id=conv.id,
+        direction="outbound",
+        channel="sms",
+        provider="twilio",
+        sender_ref="business",
+        recipient_ref=conv.external_id,
+        body=body,
+        status="queued",
+        sent_by_user_id=user_id,
+        consent_snapshot={
+            "sms_consent_at": consent_at.isoformat() if consent_at else None,
+            "quiet_hours_override": bool(allow_quiet_hours),
+        },
+        created_at=now,
+    )
+    db.add(msg)
+    db.flush()
+
+    result = sms_transport.get_sms_transport().send_result(
+        to=conv.external_id, body=body
+    )
+    if result.ok:
+        msg.status = "sent"
+        msg.sent_at = _now()
+        msg.provider_message_id = result.provider_message_id
+        conv.last_message_at = msg.sent_at
+        conv.last_outbound_at = msg.sent_at
+        if conv.status == "open":
+            conv.status = "pending"  # awaiting the customer's reply
+        conv.updated_at = msg.sent_at
+        db.flush()
+        return {
+            "message": _serialize_message(msg),
+            "conversation": _serialize_conversation(db, conv, unread=False),
+        }
+
+    # Failed: raise so the router rolls back — the queued row is discarded
+    # (no phantom "failed" message in the thread) and the composer shows the
+    # reason. The attempt is still in Twilio's logs and this app's logs.
+    raise InboxError(
+        "sms_send_failed",
+        http_status=502,
+        detail=result.error_message,
+    )
 
 
 def unread_count_for_user(db: Session, user_id: int) -> int:
