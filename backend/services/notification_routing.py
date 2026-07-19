@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 
 from database.models import (
     Appointment,
+    Conversation,
     Event,
     NotificationPreference,
     StaffNotificationEvent,
@@ -115,7 +116,7 @@ def record_event(
 def recipients_for(
     db: Session, event: StaffNotificationEvent
 ) -> list["Recipient"]:
-    """Resolve the recipient set for an event. Three layers, in order:
+    """Resolve the recipient set for an event. Four layers, in order:
 
       1. Intrinsic targeting — users the event is *about* (the affected
          staffer for a shift edit, the assigned stylist for a booking).
@@ -124,10 +125,13 @@ def recipients_for(
          default subscription bundle includes this event kind.
       3. Per-user overrides — rows in ``notification_preferences`` flip
          a role-default subscriber on or off explicitly.
+      4. Subscriber registry — active ``notification_subscribers`` (login
+         users AND external, email-only people) subscribed to this kind.
+         The "who gets what" layer; see the Omnichannel Inbox Plan Part 1.
 
-    Returns a deduplicated list of recipients. An empty list means
-    "no one is subscribed and the event has no intrinsic recipient";
-    real-time fan-out becomes a no-op.
+    Deduplicated by email so a role default plus an explicit subscription
+    can't double-send. An empty list means "no one is subscribed and the
+    event has no intrinsic recipient"; real-time fan-out becomes a no-op.
     """
     intrinsic_fn = INTRINSIC_TARGETING.get(event.kind)
     intrinsic: list[Recipient] = list(intrinsic_fn(db, event)) if intrinsic_fn else []
@@ -158,13 +162,33 @@ def recipients_for(
 
     role_users = [u for u in candidate_users if u.id in role_default_user_ids]
 
-    out: list[Recipient] = list(intrinsic)
-    seen_ids = {r.user_id for r in out}
+    # Dedup by email across every layer: delivery is by address, and an
+    # external subscriber can share an address with a role-default user.
+    out: list[Recipient] = []
+    seen_emails: set[str] = set()
+
+    def _add(user_id: int | None, email: str | None) -> None:
+        if not email:
+            return
+        key = email.strip().lower()
+        if not key or key in seen_emails:
+            return
+        seen_emails.add(key)
+        out.append(Recipient(user_id=user_id, email=email))
+
+    for recipient in intrinsic:
+        _add(recipient.user_id, recipient.email)
     for user in role_users:
-        if user.id in seen_ids or not user.email:
-            continue
-        out.append(Recipient(user_id=user.id, email=user.email))
-        seen_ids.add(user.id)
+        _add(user.id, user.email)
+
+    # Layer 4: the subscriber registry. Local import keeps the module load
+    # acyclic (the subscriber service imports the prefs catalog, which is
+    # routing-adjacent) — same pattern as record_event's deferred import.
+    from services.notification_subscriber_service import subscribers_for_kind
+
+    for sub in subscribers_for_kind(db, event.kind):
+        _add(sub.user_id, sub.email)
+
     return out
 
 
@@ -175,11 +199,15 @@ class Recipient:
     """A resolved notification target. Carries the user id so the queue
     can audit fan-out per-staffer, plus the email currently on file so
     the dispatcher doesn't need a second User lookup at send time.
+
+    ``user_id`` is ``None`` for external subscribers (Omnichannel Inbox
+    Plan Part 1) — people who get email alerts with no CRM login. The
+    queue's ``recipient_user_id`` column already tolerates NULL for this.
     """
 
     __slots__ = ("user_id", "email")
 
-    def __init__(self, *, user_id: int, email: str) -> None:
+    def __init__(self, *, user_id: int | None, email: str) -> None:
         self.user_id = user_id
         self.email = email
 
@@ -228,6 +256,8 @@ TIMING_MODE: dict[str, str] = {
     # admin daily digest has it to summarise.
     "admin.walk_in_lead_created": "direct",
     "admin.new_booking": "real_time",
+    # Omnichannel inbox — inbound customer message on any channel.
+    "inbox.message_received": "real_time",
     # Schedule — #17 + #20 wired in A2.
     "staff.schedule_published": "real_time",
     "staff.shift_edited": "real_time",
@@ -298,6 +328,8 @@ ROLE_DEFAULTS: dict[str, dict[str, bool]] = {
         # Booking-side admin alerts
         "admin.new_booking": True,
         "admin.walk_in_lead_created": True,
+        # Inbound customer messages (omnichannel inbox)
+        "inbox.message_received": True,
         # Time-off review queue
         "admin.time_off_requested": True,
         # Attendance exceptions
@@ -434,6 +466,31 @@ def _owner_of_event(
     return _user_to_recipient(db.get(User, crm_event.owner_user_id))
 
 
+def _assignee_or_owner_of_conversation(
+    db: Session, event: StaffNotificationEvent
+) -> Iterable[Recipient]:
+    """Inbound inbox message → the conversation's assignee if it has one,
+    else the linked deal's owner. Empty when the thread is unassigned and
+    unlinked (a text from an unknown number) — role-default admins +
+    subscribers still get it so nothing is missed."""
+    if event.subject_id is None:
+        return []
+    conv = db.get(Conversation, event.subject_id)
+    if conv is None:
+        return []
+    if conv.assigned_user_id is not None:
+        return _user_to_recipient(db.get(User, conv.assigned_user_id))
+    if conv.event_id is not None:
+        crm_event = db.get(Event, conv.event_id)
+        if (
+            crm_event is not None
+            and crm_event.deleted_at is None
+            and crm_event.owner_user_id is not None
+        ):
+            return _user_to_recipient(db.get(User, crm_event.owner_user_id))
+    return []
+
+
 #: Functions that compute the intrinsic recipients of an event from its
 #: subject. Each function takes ``(db, event)`` and returns an iterable of
 #: ``Recipient``. Missing entry means the event has no intrinsic recipient
@@ -468,6 +525,9 @@ INTRINSIC_TARGETING: dict[
     # approval path (Phase 9.4 D3); customer-portal sign goes through a
     # different code path today.
     "quote.approved_in_store":        _owner_of_event,
+    # Omnichannel inbox — the conversation assignee, else the linked deal
+    # owner. Unassigned+unlinked falls through to admins + subscribers.
+    "inbox.message_received":         _assignee_or_owner_of_conversation,
     # Scheduling Phase 2 shift requests — recipient named in the payload.
     "staff.shift_cover_requested":    _explicit_recipient,
     "staff.shift_cover_accepted":     _explicit_recipient,

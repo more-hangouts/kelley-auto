@@ -12,6 +12,7 @@ import BusinessIcon from '@mui/icons-material/Business'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import GroupsIcon from '@mui/icons-material/Groups'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import TuneIcon from '@mui/icons-material/Tune'
 import { Link as RouterLink } from 'react-router-dom'
 
@@ -33,6 +34,12 @@ const SECTIONS = [
     icon: GroupsIcon,
     title: 'Team & admins',
     description: 'Add sales team members and admins, set roles, and manage login PINs.',
+  },
+  {
+    to: '/settings/notifications',
+    icon: NotificationsActiveIcon,
+    title: 'Notifications',
+    description: 'Who gets which alerts — add people (including email-only recipients with no login) and choose what each one receives.',
   },
   {
     to: '/settings/recycle-bin',

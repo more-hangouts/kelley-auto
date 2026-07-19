@@ -3,6 +3,7 @@ import { Inter, Bebas_Neue } from "next/font/google";
 import "./globals.css";
 import { getSiteSettings } from "@/lib/api";
 import { SITE_URL } from "@/lib/site";
+import ChatWidget from "./components/ChatWidget";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import PageViewTracker from "./components/PageViewTracker";
 
@@ -64,6 +65,7 @@ export default async function RootLayout({
         {children}
         <PageViewTracker />
         <GoogleAnalytics />
+        <ChatWidget />
       </body>
     </html>
   );

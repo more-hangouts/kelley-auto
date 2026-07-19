@@ -39,6 +39,8 @@ import RecycleBin from './pages/RecycleBin'
 import SalesStaffSchedule from './pages/SalesStaffSchedule'
 import SalesStaffSettings from './pages/SalesStaffSettings'
 import Settings from './pages/Settings'
+import NotificationSubscribers from './pages/NotificationSubscribers'
+import Inbox from './pages/Inbox'
 import StaffManagementLayout from './pages/StaffManagementLayout'
 import StaffScheduleLayout from './pages/StaffScheduleLayout'
 import theme from './theme'
@@ -102,6 +104,7 @@ export default function App() {
                   <Route path="payments" element={<Payments />} />
                   <Route path="activity" element={<Activity />} />
                 </Route>
+                <Route path="inbox" element={<Inbox />} />
                 <Route path="calendar" element={<AppointmentsCalendar />} />
                 <Route path="contacts" element={<Contacts />} />
                 <Route path="contacts/:contactId" element={<ContactDetail />} />
@@ -113,6 +116,7 @@ export default function App() {
                 <Route path="settings/widget" element={<BookingWidgetSettings />} />
                 <Route path="settings/recycle-bin" element={<RecycleBin />} />
                 <Route path="settings/business-profile" element={<BusinessProfile />} />
+                <Route path="settings/notifications" element={<NotificationSubscribers />} />
                 {/* Legacy URLs — Products moved to top-level nav, Widget settings
                     moved under Settings. Keep old bookmarks/links working. */}
                 <Route

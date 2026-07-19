@@ -211,6 +211,19 @@ def run_admin_daily(db: Session, *, digest_date: date) -> int:
         db, since_utc=yesterday_utc
     )
 
+    # Quiet day → no email. An all-zero digest gives the admin nothing to
+    # act on; skip without stamping the dedup ledger so a later tick the
+    # same day still sends if activity shows up.
+    if (
+        not new_bookings
+        and not pending_rows
+        and not missing_rows
+        and not abandoned
+        and not in_store_approvals
+    ):
+        log.info("staff_digest_runner: admin_daily skipped, nothing to report")
+        return 0
+
     sent = 0
     for recipient in recipients:
         user = db.get(User, recipient.user_id)

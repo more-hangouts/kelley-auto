@@ -289,9 +289,19 @@ class VehicleCardSummary(BaseModel):
     year: int | None
     make: str | None
     model: str | None
+    trim: str | None = None
     vin: str | None
+    stock_number: str | None = None
     vehicle_status: str | None
     mileage: int | None
+    price_cents: int | None = None
+    exterior_color: str | None = None
+    body_type: str | None = None
+    drivetrain: str | None = None
+    transmission: str | None = None
+    fuel_type: str | None = None
+    condition: str | None = None
+    carfax_url: str | None = None
 
 
 class BoardCardResponse(BaseModel):
@@ -447,9 +457,19 @@ def get_board(
                             year=c.vehicle_year,
                             make=c.vehicle_make,
                             model=c.vehicle_model,
+                            trim=c.vehicle_trim,
                             vin=c.vehicle_vin,
+                            stock_number=c.vehicle_stock_number,
                             vehicle_status=c.vehicle_status,
                             mileage=c.vehicle_mileage,
+                            price_cents=c.vehicle_price_cents,
+                            exterior_color=c.vehicle_exterior_color,
+                            body_type=c.vehicle_body_type,
+                            drivetrain=c.vehicle_drivetrain,
+                            transmission=c.vehicle_transmission,
+                            fuel_type=c.vehicle_fuel_type,
+                            condition=c.vehicle_condition,
+                            carfax_url=c.vehicle_carfax_url,
                         )
                         if c.vehicle_id is not None
                         else None,

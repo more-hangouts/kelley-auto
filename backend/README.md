@@ -46,6 +46,9 @@ Section-by-section reference under [docs/](docs/):
 Phase plans (feature-by-feature roadmaps with reality findings,
 slices, and shipped/deferred markers):
 
+- [Omnichannel CRM Inbox](docs/CRM_OMNICHANNEL_INBOX_PLAN.md) — Twilio
+  SMS/MMS + Facebook Messenger + Instagram DM inbox, subscriber-based
+  "who gets what" notification routing, sales-portal reply surface
 - [Sales Portal](docs/SALES_PORTAL_PHASES.md) — stylist kiosk surface,
   geofenced clock-in, attendance review, shifts, time-off, holidays
 - [Scheduling Improvement Plan](docs/SCHEDULING_IMPROVEMENT_PLAN.md) —

@@ -19,7 +19,15 @@ from api.routers import admin_cron_health as admin_cron_health_router
 from api.routers import admin_booking_settings as admin_booking_settings_router
 from api.routers import admin_holidays as admin_holidays_router
 from api.routers import admin_me as admin_me_router
+from api.routers import (
+    admin_notification_subscribers as admin_notification_subscribers_router,
+)
+from api.routers import inbox as inbox_router
+from api.routers import webhooks_twilio as webhooks_twilio_router
+from api.routers import webhooks_meta as webhooks_meta_router
+from api.routers import web_chat as web_chat_router
 from api.routers import admin_sales_activity as admin_sales_activity_router
+from api.routers import admin_storefront_analytics as admin_storefront_analytics_router
 from api.routers import admin_sales_staff as admin_sales_staff_router
 from api.routers import admin_open_shifts as admin_open_shifts_router
 from api.routers import admin_schedule as admin_schedule_router
@@ -164,6 +172,25 @@ app.add_middleware(
 
 app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
 app.include_router(admin_me_router.router, prefix="/api/admin/me", tags=["admin-me"])
+app.include_router(
+    admin_notification_subscribers_router.router,
+    prefix="/api/admin/notification-subscribers",
+    tags=["admin-notification-subscribers"],
+)
+app.include_router(inbox_router.router, prefix="/api/inbox", tags=["inbox"])
+app.include_router(
+    web_chat_router.router, prefix="/api/web-chat", tags=["web-chat"]
+)
+app.include_router(
+    webhooks_twilio_router.router,
+    prefix="/api/webhooks/twilio",
+    tags=["webhooks-twilio"],
+)
+app.include_router(
+    webhooks_meta_router.router,
+    prefix="/api/webhooks/meta",
+    tags=["webhooks-meta"],
+)
 app.include_router(booking_router.router, prefix="/api/booking", tags=["booking"])
 app.include_router(
     admin_booking_router.router, prefix="/api/admin/booking", tags=["admin-booking"]

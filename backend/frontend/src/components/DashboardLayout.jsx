@@ -16,6 +16,7 @@ import {
   Typography,
 } from '@mui/material'
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import DirectionsCarOutlinedIcon from '@mui/icons-material/DirectionsCarOutlined'
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline'
@@ -48,6 +49,7 @@ const TOPBAR_HEIGHT = 64
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashboardOutlinedIcon, end: true },
   { to: '/sales', label: 'Deals', icon: SellOutlinedIcon },
+  { to: '/inbox', label: 'Inbox', icon: ForumOutlinedIcon },
   { to: '/calendar', label: 'Appointments', icon: CalendarMonthOutlinedIcon },
   { to: '/contacts', label: 'Contacts', icon: PeopleOutlineIcon },
   { to: '/inventory', label: 'Inventory', icon: DirectionsCarOutlinedIcon },
