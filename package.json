@@ -1,0 +1,12 @@
+{
+  "name": "kelley",
+  "private": true,
+  "packageManager": "pnpm@10.4.1",
+  "scripts": {
+    "build:admin": "pnpm --filter ./apps/admin build",
+    "build:storefront": "pnpm --filter ./apps/storefront build",
+    "build": "pnpm -r build",
+    "lint:admin": "pnpm --filter ./apps/admin lint",
+    "lint:storefront": "pnpm --filter ./apps/storefront lint"
+  }
+}
