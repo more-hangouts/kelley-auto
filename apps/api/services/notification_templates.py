@@ -23,7 +23,7 @@ from config.settings import (
     WIDGET_PUBLIC_BASE_URL,
 )
 from database.models import Appointment
-from services.booking_service import format_confirmation_code
+from services.confirmation_codes import format_confirmation_code
 from services.booking_tokens import cancel_url, reschedule_url
 from services.email_transport import EmailMessagePayload
 from services.sms_transport import SmsMessagePayload

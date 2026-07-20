@@ -49,7 +49,7 @@ from database.models import (
     Event,
 )
 from services import business_time, notification_routing
-from services.booking_service import normalize_phone_e164
+from services.phone import normalize_phone_e164
 
 log = logging.getLogger(__name__)
 

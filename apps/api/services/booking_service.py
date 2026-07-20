@@ -37,7 +37,6 @@ _CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 # stays out of practical reach.
 _CODE_LENGTH = 20
 _CODE_PREFIX = "BX"  # No hyphen in stored canonical form; display layer adds it.
-_DISPLAY_GROUP_SIZE = 5  # `BX-XXXXX-XXXXX-XXXXX-XXXXX` for human reading.
 
 _LIVE_STATUSES = ("pending", "confirmed")
 
@@ -62,19 +61,9 @@ def to_utc(dt: datetime) -> datetime:
 # ---------------------------------------------------------------------------
 
 
-def normalize_phone_e164(raw: str) -> str | None:
-    if not raw:
-        return None
-    digits = re.sub(r"\D", "", raw)
-    if not digits:
-        return None
-    if len(digits) == 10:
-        return f"+1{digits}"
-    if len(digits) == 11 and digits.startswith("1"):
-        return f"+{digits}"
-    if raw.lstrip().startswith("+") and 8 <= len(digits) <= 15:
-        return f"+{digits}"
-    return None
+# normalize_phone_e164 is a core primitive (services/phone.py); re-exported
+# here so booking_service.normalize_phone_e164 stays a valid call site.
+from services.phone import normalize_phone_e164  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
@@ -87,51 +76,14 @@ def _generate_code() -> str:
     return f"{_CODE_PREFIX}{body}"
 
 
-def normalize_confirmation_code(raw: str | None) -> str:
-    """Canonicalize a confirmation code for storage and lookup.
-
-    Strips every non-alphanumeric character and uppercases. This makes
-    `BX-ABCDE-FGHJK-MNPQR-STUVW`, `bx abcde fghjk mnpqr stuvw`, and
-    `bxabcdefghjkmnpqrstuvw` all match a single canonical stored form.
-    Also handles legacy `BX-ABCDEF` codes from before D1 (their hyphen
-    is stripped to `BXABCDEF`, matching the post-D1 canonical column).
-
-    Returns an empty string for None or whitespace-only input — the
-    caller should treat that the same as a not-found lookup.
-    """
-    if not raw:
-        return ""
-    return _NON_ALPHANUMERIC_RE.sub("", str(raw)).upper()
-
-
-def format_confirmation_code(stored: str | None) -> str:
-    """Render a stored canonical code for human display.
-
-    For D1-era bodies (≥ 2 groups' worth of characters) inserts hyphens
-    every `_DISPLAY_GROUP_SIZE` chars: `BX-ABCDE-FGHJK-MNPQR-STUVW`.
-    For legacy short bodies (≤ one full group, e.g. backfilled
-    pre-D1 codes) the body is rendered as a single segment so the
-    display matches what the original customer email showed:
-    `BXABCDEF` → `BX-ABCDEF`, not `BX-ABCDE-F`.
-    Storage stays hyphen-free.
-    """
-    if not stored:
-        return ""
-    canon = normalize_confirmation_code(stored)
-    if not canon.startswith(_CODE_PREFIX):
-        return stored  # Unrecognized shape — return as-is rather than mangle.
-    body = canon[len(_CODE_PREFIX):]
-    if not body:
-        return canon
-    if len(body) <= _DISPLAY_GROUP_SIZE + 2:
-        # Pre-D1 codes (6-7 char body). Single-group display is friendlier
-        # than `BX-ABCDE-F` for the trailing-one-char case.
-        return f"{_CODE_PREFIX}-{body}"
-    groups = [
-        body[i : i + _DISPLAY_GROUP_SIZE]
-        for i in range(0, len(body), _DISPLAY_GROUP_SIZE)
-    ]
-    return f"{_CODE_PREFIX}-{'-'.join(groups)}"
+# Confirmation-code canonicalization/display are core primitives
+# (services/confirmation_codes.py) — code *generation* below stays booking.
+# Re-exported so booking_service.{normalize,format}_confirmation_code call
+# sites keep working.
+from services.confirmation_codes import (  # noqa: E402,F401
+    format_confirmation_code,
+    normalize_confirmation_code,
+)
 
 
 def generate_unique_confirmation_code(db: Session, *, max_attempts: int = 8) -> str:
@@ -149,9 +101,6 @@ def generate_unique_confirmation_code(db: Session, *, max_attempts: int = 8) -> 
         if exists is None:
             return code
     raise RuntimeError("could not generate unique confirmation code")
-
-
-_NON_ALPHANUMERIC_RE = re.compile(r"[^A-Za-z0-9]+")
 
 
 # ---------------------------------------------------------------------------
