@@ -54,7 +54,7 @@ EXPECTED_ORM_DELETES: set[tuple[str, str]] = {
 # (relative_path, table_name) for `DELETE FROM <table>` raw SQL.
 EXPECTED_RAW_DELETES: set[tuple[str, str]] = {
     # Tier 3 — retention sweep:
-    ("services/webhook_ingest.py", "webhook_events"),
+    ("modules/messaging/services/webhook_ingest.py", "webhook_events"),
     # Tier 5 — rebuild-children inside parent transactions:
     ("services/invoice_service.py", "invoice_order_discounts"),
     ("services/invoice_service.py", "invoice_line_items"),
@@ -220,7 +220,7 @@ def _scan_raw_deletes(py_path: Path) -> list[tuple[int, str]]:
 
 
 def _iter_target_files() -> list[Path]:
-    roots = [_REPO_ROOT / "services", _REPO_ROOT / "api"]
+    roots = [_REPO_ROOT / "services", _REPO_ROOT / "api", _REPO_ROOT / "modules"]
     files: list[Path] = []
     for root in roots:
         for p in root.rglob("*.py"):
