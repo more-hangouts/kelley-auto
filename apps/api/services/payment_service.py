@@ -37,7 +37,8 @@ from database.models import (
     RefundEvent,
     User,
 )
-from services import activity_log, storefront_analytics_service
+from services import activity_log
+from modules.analytics.services import storefront_analytics_service
 from services.email_transport import send_rendered_safely
 
 

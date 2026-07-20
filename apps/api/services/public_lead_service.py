@@ -42,11 +42,10 @@ from services import (
     contact_service,
     event_service,
     lead_application_service,
-    meta_capi_service,
     public_inventory_service,
-    storefront_analytics_service,
 )
-from services.storefront_analytics_service import TrackingContext
+from modules.analytics.services import meta_capi_service, storefront_analytics_service
+from modules.analytics.services.storefront_analytics_service import TrackingContext
 from services import email_transport
 from services.email_transport import send_rendered_safely
 from services.event_service import EventOverrides

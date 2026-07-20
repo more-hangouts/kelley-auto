@@ -26,7 +26,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import sales_activity, sales_search_service
+from modules.analytics.services import sales_activity
+from services import sales_search_service
 from services.sales_search_service import (
     DEFAULT_LIMIT,
     MAX_LIMIT,

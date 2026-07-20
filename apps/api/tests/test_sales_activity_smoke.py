@@ -40,7 +40,7 @@ from api.server import app  # noqa: E402
 from database.auth import create_access_token, create_sales_token, hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import SalesActivityEvent, User  # noqa: E402
-from services import sales_activity  # noqa: E402
+from modules.analytics.services import sales_activity  # noqa: E402
 
 client = TestClient(app)
 

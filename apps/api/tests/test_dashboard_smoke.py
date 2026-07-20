@@ -69,14 +69,15 @@ from database.models import (  # noqa: E402
     Quote,
     User,
 )
-from services import (  # noqa: E402
+from services import (
+    # noqa: E402
     booking_service,
-    dashboard,
     event_service,
     invoice_service,
     payment_service,
     quote_service,
 )
+from modules.analytics.services import dashboard
 from services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,

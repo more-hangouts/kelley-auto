@@ -35,14 +35,14 @@ from database.connection import get_db
 from services import booking_service
 from services import business_profile_service
 from services import document_storage
-from services import meta_capi_service
+from modules.analytics.services import meta_capi_service
 from services import public_inventory_service as inventory
 from services import public_lead_service
-from services import storefront_analytics_service
+from modules.analytics.services import storefront_analytics_service
 from services.business_profile_service import BusinessProfileError
 from services.public_inventory_service import InventoryFilters
 from services.public_lead_service import LeadInput, PublicLeadError
-from services.storefront_analytics_service import TrackingContext
+from modules.analytics.services.storefront_analytics_service import TrackingContext
 
 log = logging.getLogger(__name__)
 

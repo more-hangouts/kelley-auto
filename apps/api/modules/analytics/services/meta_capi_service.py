@@ -46,7 +46,7 @@ from config.settings import (
 )
 from database.connection import SessionLocal
 from database.models import AdConversionEvent
-from services.storefront_analytics_service import TrackingContext
+from modules.analytics.services.storefront_analytics_service import TrackingContext
 
 log = logging.getLogger(__name__)
 

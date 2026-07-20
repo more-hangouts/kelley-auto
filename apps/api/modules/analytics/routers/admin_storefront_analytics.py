@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import storefront_analytics_service
+from modules.analytics.services import storefront_analytics_service
 
 router = APIRouter()
 

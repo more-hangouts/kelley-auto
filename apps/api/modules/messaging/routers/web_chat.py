@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from api.redis_rate_limit import rate_limit
 from database.connection import get_db
-from services import storefront_analytics_service
+from modules.analytics.services import storefront_analytics_service
 from modules.messaging.services import web_chat_service
 from modules.messaging.services.web_chat_service import WebChatError
 

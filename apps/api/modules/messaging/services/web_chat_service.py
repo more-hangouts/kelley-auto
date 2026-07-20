@@ -42,8 +42,8 @@ from services import (
     booking_service,
     contact_service,
     event_service,
-    storefront_analytics_service,
 )
+from modules.analytics.services import storefront_analytics_service
 from modules.messaging.services import inbox_service
 from services.event_service import EventOverrides
 from services.event_workflow import all_statuses

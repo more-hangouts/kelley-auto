@@ -45,7 +45,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 
 from api.server import app  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
-from services import storefront_analytics_service as svc  # noqa: E402
+from modules.analytics.services import storefront_analytics_service as svc  # noqa: E402
 
 client = TestClient(app)
 

@@ -19,7 +19,8 @@ import asyncio
 import logging
 
 from database.connection import SessionLocal
-from services import meta_capi_service, no_show_cron, shift_request_expiry_cron
+from modules.analytics.services import meta_capi_service
+from services import no_show_cron, shift_request_expiry_cron
 
 log = logging.getLogger(__name__)
 

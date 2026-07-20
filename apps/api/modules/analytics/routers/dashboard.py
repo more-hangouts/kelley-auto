@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import dashboard
+from modules.analytics.services import dashboard
 
 
 router = APIRouter()

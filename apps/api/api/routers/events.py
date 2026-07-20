@@ -39,8 +39,8 @@ from services import (
     booking_service,
     event_service,
     lead_application_service,
-    storefront_analytics_service,
 )
+from modules.analytics.services import storefront_analytics_service
 from services.event_service import EventOverrides, EventServiceError
 from services.event_workflow import all_statuses
 
