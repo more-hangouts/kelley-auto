@@ -369,7 +369,7 @@ def record_inbound_meta(
     a real name instead of an opaque id. Does NOT commit.
     """
     if display_name is None and not is_echo:
-        from services import meta_client
+        from modules.messaging.services import meta_client
 
         prof = meta_client.fetch_profile(external_id, channel=channel)
         if prof:

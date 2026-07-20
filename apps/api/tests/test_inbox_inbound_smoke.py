@@ -50,7 +50,7 @@ from database.models import (  # noqa: E402
     NotificationJob,
     User,
 )
-from services import inbox_service  # noqa: E402
+from modules.messaging.services import inbox_service  # noqa: E402
 
 SEED = "smoke-inbox"
 TO_NUMBER = "+17265550000"

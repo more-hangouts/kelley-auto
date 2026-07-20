@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import inbox_service
-from services.inbox_service import InboxError
+from modules.messaging.services import inbox_service
+from modules.messaging.services.inbox_service import InboxError
 
 router = APIRouter()
 

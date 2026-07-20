@@ -31,8 +31,8 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from database.connection import get_db
-from services import inbox_service, webhook_ingest
-from services.meta_signature import verify_signature
+from modules.messaging.services import inbox_service, webhook_ingest
+from modules.messaging.services.meta_signature import verify_signature
 
 log = logging.getLogger(__name__)
 router = APIRouter()

@@ -42,7 +42,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Conversation, User  # noqa: E402
-from services import inbox_service  # noqa: E402
+from modules.messaging.services import inbox_service  # noqa: E402
 from services.sms_transport import SmsSendResult  # noqa: E402
 
 _TAG = uuid.uuid4().hex[:8]
@@ -155,7 +155,7 @@ def test_quiet_hours_then_override() -> None:
         conv_id = _make_sms_conversation(db)
         ok_result = SmsSendResult(ok=True, provider_message_id=f"SM{_TAG}", status="queued")
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
-            "services.inbox_service.in_sms_quiet_hours", return_value=True
+            "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=True
         ), mock.patch(
             "services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
@@ -202,7 +202,7 @@ def test_send_failure_rolls_back() -> None:
         conv_id = _make_sms_conversation(db)
         fail = SmsSendResult(ok=False, error_code="21610", error_message="unsubscribed recipient")
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
-            "services.inbox_service.in_sms_quiet_hours", return_value=False
+            "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=False
         ), mock.patch(
             "services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
@@ -236,7 +236,7 @@ def test_delivery_status_monotonic() -> None:
         sid = f"SM{_TAG}D"
         ok_result = SmsSendResult(ok=True, provider_message_id=sid, status="queued")
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
-            "services.inbox_service.in_sms_quiet_hours", return_value=False
+            "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=False
         ), mock.patch(
             "services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(

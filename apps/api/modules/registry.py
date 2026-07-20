@@ -64,7 +64,7 @@ from api.routers import dashboard as dashboard_router
 from api.routers import event_documents as event_documents_routers
 from api.routers import event_participants as event_participants_router
 from api.routers import events as events_router
-from api.routers import inbox as inbox_router
+from modules.messaging.routers import inbox as inbox_router
 from api.routers import invoices as invoices_routers
 from api.routers import payments as payments_routers
 from api.routers import portal as portal_routers
@@ -87,9 +87,9 @@ from api.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
 from api.routers import vin_decode as vin_decode_router
 from api.routers import walk_in_leads as walk_in_leads_router
-from api.routers import web_chat as web_chat_router
-from api.routers import webhooks_meta as webhooks_meta_router
-from api.routers import webhooks_twilio as webhooks_twilio_router
+from modules.messaging.routers import web_chat as web_chat_router
+from modules.messaging.routers import webhooks_meta as webhooks_meta_router
+from modules.messaging.routers import webhooks_twilio as webhooks_twilio_router
 
 # Workers, imported at their current flat paths (unchanged in this commit).
 from workers.daily import run_loop as run_daily_loop

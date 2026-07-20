@@ -37,8 +37,8 @@ from services import (
     missing_out_punch_cron,
     reminder_runner,
     staff_digest_runner,
-    webhook_ingest,
 )
+from modules.messaging.services import webhook_ingest
 
 log = logging.getLogger(__name__)
 

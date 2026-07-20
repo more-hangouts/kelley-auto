@@ -42,7 +42,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 
 from api.server import app  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
-from services import inbox_service  # noqa: E402
+from modules.messaging.services import inbox_service  # noqa: E402
 
 client = TestClient(app)
 
