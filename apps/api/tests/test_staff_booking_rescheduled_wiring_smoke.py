@@ -268,7 +268,7 @@ def _carry_forward_check() -> None:
     unassigned appointment, silently making #13 unreachable from real
     customer traffic.
     """
-    booking_py = (_REPO_ROOT / "api/routers/booking.py").read_text()
+    booking_py = (_REPO_ROOT / "modules/booking/routers/booking.py").read_text()
     # The new_appt construction in post_reschedule must include the
     # assigned_user_id field copied from original. Both substrings
     # appear in the same Appointment(...) block.
