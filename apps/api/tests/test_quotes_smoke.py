@@ -57,8 +57,8 @@ from database.models import (  # noqa: E402
     QuoteLineItem,
     User,
 )
-from services import invoice_service, quote_service  # noqa: E402
-from services.invoice_service import LineItemInput  # noqa: E402
+from modules.deals.services import invoice_service, quote_service  # noqa: E402
+from modules.deals.services.invoice_service import LineItemInput  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -806,13 +806,13 @@ def check_quote_pdf_renders_phase6_schedule(contact_id, event_id, user_id):
     from datetime import timezone as _tz
 
     from database.models import QuoteInstallment as _QI
-    from services.invoice_pdf import (
+    from modules.deals.services.invoice_pdf import (
         _project_customer_lines,
         _render_html,
         _resolve_business_header,
         _totals_breakdown,
     )
-    from services.quote_service import QuoteInstallmentInput
+    from modules.deals.services.quote_service import QuoteInstallmentInput
 
     db = SessionLocal()
     try:

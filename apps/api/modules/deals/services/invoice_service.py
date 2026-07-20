@@ -44,7 +44,7 @@ from modules.inventory.services.catalog_service import (
     assert_no_catalog_leak,
     assert_no_public_catalog_leaks,
 )
-from services.discount_snapshot import (
+from modules.deals.services.discount_snapshot import (
     DiscountRowInput,
     DiscountRowSnapshot,
     DiscountSnapshotError,

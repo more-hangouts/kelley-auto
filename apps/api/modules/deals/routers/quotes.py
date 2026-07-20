@@ -24,27 +24,23 @@ from database.auth import require_admin_scope, require_any_scope
 from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
 from database.models import Quote, User
-from services import (
-    invoice_pdf,
-    portal_email,
-    quote_service,
-)
+from modules.deals.services import invoice_pdf, portal_email, quote_service
 from modules.contacts.services import buyer_journey
 from modules.contacts.services.buyer_journey import BuyerJourneyError
-from services.invoice_pdf import PdfRenderError
-from services.invoice_service import LineItemInput
-from services.portal_email import PortalEmailError
-from services.quote_service import QuoteInstallmentInput
+from modules.deals.services.invoice_pdf import PdfRenderError
+from modules.deals.services.invoice_service import LineItemInput
+from modules.deals.services.portal_email import PortalEmailError
+from modules.deals.services.quote_service import QuoteInstallmentInput
 
 # Reuse the invoice router's detail shape verbatim — `convert_to_invoice`
 # returns a fully-populated invoice detail and clients already know how
 # to render it.
-from api.routers.invoices import (
+from modules.deals.routers.invoices import (
     InvoiceDetailResponse,
     _detail_to_response as _invoice_detail_to_response,
 )
-from services.invoice_service import get_invoice_detail
-from services.quote_service import QuoteServiceError
+from modules.deals.services.invoice_service import get_invoice_detail
+from modules.deals.services.quote_service import QuoteServiceError
 
 log = logging.getLogger(__name__)
 

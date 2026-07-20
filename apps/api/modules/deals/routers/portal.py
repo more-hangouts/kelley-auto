@@ -38,15 +38,24 @@ from database.auth import require_admin_scope, require_any_scope
 from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
 from database.models import Invoice, Quote, User
-from services import invoice_pdf, portal_email, portal_service
-from services.invoice_pdf import PdfRenderError
-from services.portal_email import PortalEmailError
-from services.portal_service import PortalServiceError
+from modules.deals.services import invoice_pdf, portal_email, portal_service
+from modules.deals.services.invoice_pdf import PdfRenderError
+from modules.deals.services.portal_email import PortalEmailError
+from modules.deals.services.portal_service import PortalServiceError
 from api.redis_rate_limit import flush_for_testing, rate_limit
 
 log = logging.getLogger(__name__)
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# Anchor to the apps/api root by walking up to the dir that holds templates/.
+# (Phase 3: this file moved from api/routers/ into modules/deals/routers/.)
+def _find_api_root(start: Path) -> Path:
+    for parent in start.resolve().parents:
+        if (parent / "templates").is_dir():
+            return parent
+    return start.resolve().parent.parent.parent  # fallback: original behavior
+
+
+_REPO_ROOT = _find_api_root(Path(__file__))
 _TEMPLATES = Jinja2Templates(directory=str(_REPO_ROOT / "templates"))
 
 

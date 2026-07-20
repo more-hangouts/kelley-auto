@@ -61,8 +61,8 @@ from database.models import (  # noqa: E402
 from services import (  # noqa: E402
     email_transport,
     notification_routing,
-    quote_service,
 )
+from modules.deals.services import quote_service  # noqa: E402
 from modules.scheduling.services import staff_digest_runner  # noqa: E402
 
 # ─── Test transport: capture sends instead of mailing ──────────────────────

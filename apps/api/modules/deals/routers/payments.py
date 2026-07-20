@@ -29,9 +29,9 @@ from api.rate_limit import staff_money_rate_limit
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import Payment, User
-from services import invoice_pdf, payment_service
-from services.invoice_pdf import PdfRenderError
-from services.payment_service import (
+from modules.deals.services import invoice_pdf, payment_service
+from modules.deals.services.invoice_pdf import PdfRenderError
+from modules.deals.services.payment_service import (
     AllocationInput,
     AllocationRefundInput,
     PaymentServiceError,

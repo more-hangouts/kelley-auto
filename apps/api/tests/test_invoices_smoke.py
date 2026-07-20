@@ -56,7 +56,7 @@ from database.models import (  # noqa: E402
     Invoice,
     User,
 )
-from services import invoice_service  # noqa: E402
+from modules.deals.services import invoice_service  # noqa: E402
 
 client = TestClient(app)
 
@@ -378,7 +378,7 @@ def check_invoice_pdf_renders_phase6_schedule(auth, contact_id, event_id) -> Non
         InvoiceInstallment as _InvInst,
         InvoiceLineItem as _InvLine,
     )
-    from services.invoice_pdf import (
+    from modules.deals.services.invoice_pdf import (
         _project_customer_lines,
         _render_html,
         _resolve_business_header,

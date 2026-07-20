@@ -68,7 +68,17 @@ from modules.inventory.services.catalog_service import assert_public_render_keys
 
 log = logging.getLogger(__name__)
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+# Anchor to the apps/api root by walking up to the dir that holds templates/.
+# (Phase 3: this file moved from services/ into modules/deals/services/, so a
+# fixed .parent count would be brittle across future moves.)
+def _find_api_root(start: Path) -> Path:
+    for parent in start.resolve().parents:
+        if (parent / "templates").is_dir():
+            return parent
+    return start.resolve().parent.parent  # fallback: original behavior
+
+
+_REPO_ROOT = _find_api_root(Path(__file__))
 _TEMPLATES_DIR = _REPO_ROOT / "templates"
 
 

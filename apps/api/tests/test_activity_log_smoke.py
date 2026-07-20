@@ -54,7 +54,7 @@ os.environ.setdefault(
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text as sql_text  # noqa: E402
 
-from api.routers.portal import _reset_rate_limit_state  # noqa: E402
+from modules.deals.routers.portal import _reset_rate_limit_state  # noqa: E402
 from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
@@ -69,16 +69,14 @@ from database.models import (  # noqa: E402
 )
 from services import (  # noqa: E402
     activity_log,
-    invoice_service,
-    payment_service,
-    quote_service,
 )
+from modules.deals.services import invoice_service, payment_service, quote_service  # noqa: E402
 from modules.booking.services import event_service
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )
-from services.payment_service import AllocationInput  # noqa: E402
+from modules.deals.services.payment_service import AllocationInput  # noqa: E402
 
 client = TestClient(app)
 
@@ -437,7 +435,7 @@ def check_payment_lifecycle(invoice_id, contact_id, user_id, event_id):
     # Refund partial
     db = SessionLocal()
     try:
-        from services.payment_service import AllocationRefundInput
+        from modules.deals.services.payment_service import AllocationRefundInput
 
         # The whole 60000 went to a single allocation; refund half of it
         from database.models import PaymentAllocation

@@ -66,17 +66,13 @@ from database.models import (  # noqa: E402
 )
 from services import (  # noqa: E402
     activity_log,
-    invoice_service,
-    payment_service,
-    portal_email,
-    quote_service,
-    reminder_runner,
 )
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services import invoice_service, payment_service, portal_email, quote_service, reminder_runner  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )
-from services.payment_service import AllocationInput  # noqa: E402
+from modules.deals.services.payment_service import AllocationInput  # noqa: E402
 
 # Anchor every "today" in the smoke to the shop calendar so it stays
 # consistent with the runner's APP_TIMEZONE-based default. On a UTC

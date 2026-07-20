@@ -38,7 +38,7 @@ os.environ.setdefault("RATE_LIMIT_FAIL_OPEN", "true")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from api import redis_rate_limit as rrl  # noqa: E402
-from api.routers.portal import _reset_rate_limit_state  # noqa: E402
+from modules.deals.routers.portal import _reset_rate_limit_state  # noqa: E402
 from api.server import app  # noqa: E402
 from tests.test_portal_smoke import (  # noqa: E402
     _cleanup,

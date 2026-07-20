@@ -63,9 +63,9 @@ from database.models import (  # noqa: E402
     PaymentAllocation,
     User,
 )
-from services import invoice_service, payment_service  # noqa: E402
-from services.invoice_service import InstallmentInput, LineItemInput  # noqa: E402
-from services.payment_service import (  # noqa: E402
+from modules.deals.services import invoice_service, payment_service  # noqa: E402
+from modules.deals.services.invoice_service import InstallmentInput, LineItemInput  # noqa: E402
+from modules.deals.services.payment_service import (  # noqa: E402
     AllocationInput,
     AllocationRefundInput,
     PaymentServiceError,

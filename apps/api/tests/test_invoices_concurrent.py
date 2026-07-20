@@ -64,8 +64,8 @@ from database.models import (  # noqa: E402
     Invoice,
     User,
 )
-from services import invoice_service  # noqa: E402
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services import invoice_service  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )

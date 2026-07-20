@@ -49,7 +49,7 @@ os.environ.setdefault(
 
 from database.models import Contact, Invoice, Quote  # noqa: E402
 from services.business_profile_service import BusinessProfileView  # noqa: E402
-from services.portal_email import (  # noqa: E402
+from modules.deals.services.portal_email import (  # noqa: E402
     _render_invoice_reminder,
     _render_invoice_sent,
     _render_quote_sent,

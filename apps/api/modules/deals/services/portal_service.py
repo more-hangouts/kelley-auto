@@ -48,7 +48,7 @@ from database.models import (
     QuoteLineItem,
     User,
 )
-from services import quote_service
+from modules.deals.services import quote_service
 from services.email_transport import send_rendered_safely
 from services.business_profile_service import (
     BusinessProfileError,

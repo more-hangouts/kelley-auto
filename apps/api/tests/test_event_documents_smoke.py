@@ -346,7 +346,7 @@ try:
     # have their own smoke (`tests/test_invoices_smoke.py`).
     from datetime import date as _date, timedelta as _timedelta  # noqa: E402
 
-    from services.invoice_service import (  # noqa: E402
+    from modules.deals.services.invoice_service import (  # noqa: E402
         InstallmentInput,
         LineItemInput,
         create_invoice,
@@ -451,7 +451,7 @@ try:
     # ----- Cancel canonical invoice; outstanding signals fall to false.
     db = SessionLocal()
     try:
-        from services.invoice_service import cancel_invoice  # noqa: E402
+        from modules.deals.services.invoice_service import cancel_invoice  # noqa: E402
 
         cancel_invoice(db, invoice_id=canonical_id, actor_user_id=user_id)
         db.commit()

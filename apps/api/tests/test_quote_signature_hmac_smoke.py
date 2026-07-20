@@ -48,7 +48,7 @@ from database.models import (  # noqa: E402
     QuoteLineItem,
     User,
 )
-from services import quote_service, quote_signature_hmac as h  # noqa: E402
+from modules.deals.services import quote_service, quote_signature_hmac as h  # noqa: E402
 
 
 _ids = {"contacts": [], "events": [], "quotes": [], "users": []}

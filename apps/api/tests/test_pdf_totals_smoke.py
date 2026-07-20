@@ -42,7 +42,7 @@ os.environ.setdefault(
     "test-key-not-for-production-just-smoke-testing-only-please",
 )
 
-from services.invoice_pdf import _render_html, _totals_breakdown  # noqa: E402
+from modules.deals.services.invoice_pdf import _render_html, _totals_breakdown  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

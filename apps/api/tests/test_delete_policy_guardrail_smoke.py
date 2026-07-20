@@ -56,13 +56,13 @@ EXPECTED_RAW_DELETES: set[tuple[str, str]] = {
     # Tier 3 — retention sweep:
     ("modules/messaging/services/webhook_ingest.py", "webhook_events"),
     # Tier 5 — rebuild-children inside parent transactions:
-    ("services/invoice_service.py", "invoice_order_discounts"),
-    ("services/invoice_service.py", "invoice_line_items"),
-    ("services/invoice_service.py", "invoice_installments"),
-    ("services/quote_service.py", "quote_order_discounts"),
-    ("services/quote_service.py", "quote_line_items"),
-    ("services/quote_service.py", "quote_installments"),
-    ("services/payment_service.py", "payment_allocations"),
+    ("modules/deals/services/invoice_service.py", "invoice_order_discounts"),
+    ("modules/deals/services/invoice_service.py", "invoice_line_items"),
+    ("modules/deals/services/invoice_service.py", "invoice_installments"),
+    ("modules/deals/services/quote_service.py", "quote_order_discounts"),
+    ("modules/deals/services/quote_service.py", "quote_line_items"),
+    ("modules/deals/services/quote_service.py", "quote_installments"),
+    ("modules/deals/services/payment_service.py", "payment_allocations"),
 }
 
 # Models in Tier 1 (financial soft-delete) and Tier 2 (CRM append-only). Any

@@ -61,16 +61,16 @@ from database.models import (  # noqa: E402
     InvoiceLineItem,
     QuoteLineItem,
 )
-from services import invoice_service, quote_service  # noqa: E402
+from modules.deals.services import invoice_service, quote_service  # noqa: E402
 from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
 )
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InvoiceServiceError,
     LineItemInput,
 )
-from services.quote_service import QuoteServiceError  # noqa: E402
+from modules.deals.services.quote_service import QuoteServiceError  # noqa: E402
 
 
 _PREFIX = f"TEST-P2-{uuid.uuid4().hex[:8].upper()}-"

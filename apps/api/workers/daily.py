@@ -29,7 +29,7 @@ from zoneinfo import ZoneInfo
 
 from config.settings import APP_TIMEZONE
 from database.connection import SessionLocal
-from services import reminder_runner
+from modules.deals.services import reminder_runner
 from modules.scheduling.services import attendance_close, attendance_geo_retention, attendance_pre_close, clock_selfie_retention, missing_out_punch_cron, staff_digest_runner
 from modules.messaging.services import webhook_ingest
 

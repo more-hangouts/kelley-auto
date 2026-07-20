@@ -70,16 +70,13 @@ from database.models import (  # noqa: E402
 )
 from services import (  # noqa: E402
     document_storage,
-    invoice_pdf,
-    invoice_service,
-    portal_service,
-    quote_service,
 )
+from modules.deals.services import invoice_pdf, invoice_service, portal_service, quote_service  # noqa: E402
 from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
 )
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )
@@ -518,7 +515,7 @@ def check_invoice_pdf_safe(invoice_id: int) -> None:
         InvoiceLineItem,
         InvoiceOrderDiscount,
     )
-    from services.invoice_pdf import (
+    from modules.deals.services.invoice_pdf import (
         _project_customer_lines,
         _resolve_business_header,
         _totals_breakdown,
@@ -624,7 +621,7 @@ def check_portal_dataclass_drops_internal_fields(invoice_id: int) -> None:
     ``public_code`` / ``display_text`` fields."""
     from dataclasses import fields
 
-    from services.portal_service import PortalLineItem
+    from modules.deals.services.portal_service import PortalLineItem
 
     field_names = {f.name for f in fields(PortalLineItem)}
     forbidden = {"description", "notes", "product_key", "internal_sku",
@@ -754,7 +751,7 @@ def check_quote_pdf_safe(contact_id: int, event_id: int, catalog_id: int) -> int
         from datetime import datetime, timezone
 
         from database.models import Quote, QuoteInstallment, QuoteOrderDiscount
-        from services.invoice_pdf import (
+        from modules.deals.services.invoice_pdf import (
             _project_customer_lines,
             _resolve_business_header,
             _totals_breakdown,

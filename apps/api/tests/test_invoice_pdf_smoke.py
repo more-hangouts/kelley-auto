@@ -59,7 +59,7 @@ os.environ.setdefault(
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text as sql_text  # noqa: E402
 
-from api.routers.portal import _reset_rate_limit_state  # noqa: E402
+from modules.deals.routers.portal import _reset_rate_limit_state  # noqa: E402
 from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
@@ -74,12 +74,12 @@ from database.models import (  # noqa: E402
     QuoteInvitation,
     User,
 )
-from services import invoice_pdf, invoice_service, payment_service, quote_service  # noqa: E402
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services import invoice_pdf, invoice_service, payment_service, quote_service  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )
-from services.payment_service import AllocationInput  # noqa: E402
+from modules.deals.services.payment_service import AllocationInput  # noqa: E402
 
 client = TestClient(app)
 

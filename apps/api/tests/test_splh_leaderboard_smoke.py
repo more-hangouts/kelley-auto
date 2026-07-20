@@ -36,7 +36,7 @@ from database.auth import create_access_token, hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Event, Invoice, StaffPunch, User  # noqa: E402
 from modules.analytics.services import dashboard  # noqa: E402
-from services import invoice_service  # noqa: E402
+from modules.deals.services import invoice_service  # noqa: E402
 
 client = TestClient(app)
 

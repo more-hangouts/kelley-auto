@@ -21,7 +21,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.routers.event_participants import (
+from modules.deals.routers.event_participants import (
     ParticipantCreate,
     ParticipantResponse,
     _add as _add_participant,

@@ -45,18 +45,17 @@ from decimal import ROUND_HALF_EVEN
 # rounding by construction.
 from services import (
     activity_log,
-    invoice_pdf,
     notification_routing,
-    quote_signature_hmac,
 )
+from modules.deals.services import invoice_pdf, quote_signature_hmac
 from modules.inventory.services.catalog_service import CatalogServiceError, assert_no_public_catalog_leaks
-from services.discount_snapshot import (
+from modules.deals.services.discount_snapshot import (
     DiscountRowInput,
     DiscountRowSnapshot,
     DiscountSnapshotError,
     snapshot_order_discounts,
 )
-from services.invoice_service import (  # noqa: F401  (LineItemInput re-exported for routers)
+from modules.deals.services.invoice_service import (  # noqa: F401  (LineItemInput re-exported for routers)
     CatalogLineSnapshot,
     LineItemInput,
     _catalog_snapshot,

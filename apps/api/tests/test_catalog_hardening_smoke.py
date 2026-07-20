@@ -36,7 +36,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 from api.server import app  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Event  # noqa: E402
-from services import invoice_service, portal_service, quote_service  # noqa: E402
+from modules.deals.services import invoice_service, portal_service, quote_service  # noqa: E402
 from modules.inventory.services.catalog_service import (  # noqa: E402
     FORBIDDEN_PUBLIC_RENDER_KEYS,
     CatalogItemInput,
@@ -44,7 +44,7 @@ from modules.inventory.services.catalog_service import (  # noqa: E402
     assert_public_render_keys,
     create_catalog_item,
 )
-from services.invoice_service import InstallmentInput, LineItemInput  # noqa: E402
+from modules.deals.services.invoice_service import InstallmentInput, LineItemInput  # noqa: E402
 
 
 client = TestClient(app)

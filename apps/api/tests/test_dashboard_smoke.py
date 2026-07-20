@@ -69,18 +69,14 @@ from database.models import (  # noqa: E402
     Quote,
     User,
 )
-from services import (  # noqa: E402
-    invoice_service,
-    payment_service,
-    quote_service,
-)
+from modules.deals.services import invoice_service, payment_service, quote_service  # noqa: E402
 from modules.booking.services import booking_service, event_service
 from modules.analytics.services import dashboard
-from services.invoice_service import (  # noqa: E402
+from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,
 )
-from services.payment_service import AllocationInput  # noqa: E402
+from modules.deals.services.payment_service import AllocationInput  # noqa: E402
 
 client = TestClient(app)
 
@@ -372,7 +368,7 @@ def _cancel(invoice_id: int, user_id: int):
 def _refund(payment_id: int, amount_cents: int, user_id: int):
     db = SessionLocal()
     try:
-        from services.payment_service import AllocationRefundInput
+        from modules.deals.services.payment_service import AllocationRefundInput
         from database.models import PaymentAllocation
 
         alloc = (
