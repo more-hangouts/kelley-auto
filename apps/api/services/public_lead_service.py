@@ -38,18 +38,17 @@ from config.settings import APP_TIMEZONE
 from database.models import Appointment, BusinessProfile, Event, User
 from services import (
     activity_log,
-    booking_service,
     contact_service,
-    event_service,
     lead_application_service,
 )
+from modules.booking.services import booking_service, event_service
 from modules.inventory.services import public_inventory_service
 from modules.analytics.services import meta_capi_service, storefront_analytics_service
 from modules.analytics.services.storefront_analytics_service import TrackingContext
 from services import email_transport
 from services.email_transport import send_rendered_safely
-from services.event_service import EventOverrides
-from services.event_workflow import all_statuses
+from modules.booking.services.event_service import EventOverrides
+from modules.booking.services.event_workflow import all_statuses
 from services.lead_application_service import ApplicationInput
 
 log = logging.getLogger(__name__)

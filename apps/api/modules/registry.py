@@ -37,8 +37,8 @@ from fastapi import APIRouter
 # Routers, imported at their current flat paths (unchanged in this commit).
 from api.routers import admin_archive as admin_archive_router
 from api.routers import admin_attendance as admin_attendance_router
-from api.routers import admin_booking as admin_booking_router
-from api.routers import admin_booking_settings as admin_booking_settings_router
+from modules.booking.routers import admin_booking as admin_booking_router
+from modules.booking.routers import admin_booking_settings as admin_booking_settings_router
 from api.routers import admin_cron_health as admin_cron_health_router
 from api.routers import admin_dependencies as admin_dependencies_router
 from api.routers import admin_events as admin_events_router
@@ -56,7 +56,7 @@ from api.routers import admin_staff_locations as admin_staff_locations_router
 from modules.analytics.routers import admin_storefront_analytics as admin_storefront_analytics_router
 from api.routers import admin_time_off as admin_time_off_router
 from api.routers import auth as auth_router
-from api.routers import booking as booking_router
+from modules.booking.routers import booking as booking_router
 from api.routers import business_profile as business_profile_router
 from modules.inventory.routers import catalog as catalog_router
 from api.routers import contacts as contacts_router
@@ -68,7 +68,7 @@ from modules.messaging.routers import inbox as inbox_router
 from api.routers import invoices as invoices_routers
 from api.routers import payments as payments_routers
 from api.routers import portal as portal_routers
-from api.routers import public_site as public_site_router
+from modules.booking.routers import public_site as public_site_router
 from api.routers import quotes as quotes_routers
 from api.routers import sales as sales_router
 from api.routers import sales_appointments as sales_appointments_router
@@ -82,11 +82,11 @@ from api.routers import sales_schedule as sales_schedule_router
 from api.routers import sales_search as sales_search_router
 from api.routers import sales_shift_requests as sales_shift_requests_router
 from api.routers import sales_time_off as sales_time_off_router
-from api.routers import sales_walk_ins as sales_walk_ins_router
+from modules.booking.routers import sales_walk_ins as sales_walk_ins_router
 from modules.analytics.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
 from modules.inventory.routers import vin_decode as vin_decode_router
-from api.routers import walk_in_leads as walk_in_leads_router
+from modules.booking.routers import walk_in_leads as walk_in_leads_router
 from modules.messaging.routers import web_chat as web_chat_router
 from modules.messaging.routers import webhooks_meta as webhooks_meta_router
 from modules.messaging.routers import webhooks_twilio as webhooks_twilio_router

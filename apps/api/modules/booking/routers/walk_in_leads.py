@@ -23,8 +23,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import walk_in_service
-from services.walk_in_service import (
+from modules.booking.services import walk_in_service
+from modules.booking.services.walk_in_service import (
     WalkInContactInput,
     WalkInEnrichmentInput,
     WalkInEventInput,

@@ -37,7 +37,7 @@ from sqlalchemy.orm import Session
 
 from database.models import Appointment, Event, User
 from services import activity_log, sales_staff
-from services.staff_booking_notifications import (
+from modules.booking.services.staff_booking_notifications import (
     notify_booking_assigned,
     notify_booking_cancelled,
 )

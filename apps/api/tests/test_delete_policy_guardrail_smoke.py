@@ -45,8 +45,8 @@ EXPECTED_ORM_DELETES: set[tuple[str, str]] = {
     ("services/staff_holidays_admin.py", "StaffHoliday"),
     ("services/staff_schedule.py", "StaffScheduleEntry"),
     ("services/recurring_availability.py", "RecurringUnavailability"),
-    ("api/routers/admin_booking_settings.py", "AppointmentAvailabilityRule"),
-    ("api/routers/admin_booking_settings.py", "AppointmentBlackout"),
+    ("modules/booking/routers/admin_booking_settings.py", "AppointmentAvailabilityRule"),
+    ("modules/booking/routers/admin_booking_settings.py", "AppointmentBlackout"),
     ("services/notification_subscriber_service.py", "NotificationSubscriber"),
     # Special case — activity_log breadcrumb substitutes for soft-delete:
 }

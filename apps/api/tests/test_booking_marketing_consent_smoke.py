@@ -41,7 +41,7 @@ from sqlalchemy import text as sql_text
 
 from api.server import app
 from database.connection import SessionLocal
-from services import booking_service
+from modules.booking.services import booking_service
 
 
 client = TestClient(app)

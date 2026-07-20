@@ -34,7 +34,7 @@ from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Appointment, Contact, Event, User  # noqa: E402
-from services import booking_service  # noqa: E402
+from modules.booking.services import booking_service  # noqa: E402
 
 
 client = TestClient(app)

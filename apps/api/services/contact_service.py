@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.models import Appointment, Contact, Event
-from services import booking_service
+from modules.booking.services import booking_service
 
 log = logging.getLogger(__name__)
 

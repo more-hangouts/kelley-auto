@@ -28,14 +28,12 @@ from database.models import (
     Event,
 )
 from services import (
-    booking_service,
     contact_service,
-    event_service,
-    event_workflow,
     notification_service,
 )
-from services.event_service import EventServiceError
-from services.booking_contracts import (
+from modules.booking.services import booking_service, event_service, event_workflow
+from modules.booking.services.event_service import EventServiceError
+from modules.booking.services.booking_contracts import (
     AbandonRequest,
     AcknowledgedResponse,
     AppointmentResponse,
@@ -626,7 +624,7 @@ def post_reschedule(
     # appointment was unassigned (no one to notify). Customer-initiated
     # reschedule has no staff actor on record.
     try:
-        from services.staff_booking_notifications import notify_booking_rescheduled
+        from modules.booking.services.staff_booking_notifications import notify_booking_rescheduled
 
         notify_booking_rescheduled(
             db,
@@ -727,7 +725,7 @@ def post_cancel(
     # sales assignment lifecycle uses. Skipped silently when the
     # appointment was never assigned to anyone.
     try:
-        from services.staff_booking_notifications import notify_booking_cancelled
+        from modules.booking.services.staff_booking_notifications import notify_booking_cancelled
 
         notify_booking_cancelled(db, appt, actor_user_id=None)
         db.commit()

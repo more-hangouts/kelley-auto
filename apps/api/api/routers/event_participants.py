@@ -21,9 +21,9 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import User
-from services import event_participants
+from modules.booking.services import event_participants
 from services.attendance_gate import require_floor_access
-from services.event_participants import EventParticipantError
+from modules.booking.services.event_participants import EventParticipantError
 
 router = APIRouter()
 

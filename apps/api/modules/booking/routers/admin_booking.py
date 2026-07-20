@@ -26,14 +26,12 @@ from database.models import (
     User,
 )
 from services import (
-    appointment_audit,
-    booking_service,
     buyer_journey,
-    event_service,
     notification_service,
 )
+from modules.booking.services import appointment_audit, booking_service, event_service
 from services.buyer_journey import BuyerJourneyError
-from services.event_service import EventServiceError
+from modules.booking.services.event_service import EventServiceError
 
 log = logging.getLogger(__name__)
 
@@ -433,7 +431,7 @@ def patch_appointment(
         # Tell the assigned stylist their slot just opened. Skipped
         # silently when the appointment had no assignee.
         try:
-            from services.staff_booking_notifications import (
+            from modules.booking.services.staff_booking_notifications import (
                 notify_booking_cancelled,
             )
 

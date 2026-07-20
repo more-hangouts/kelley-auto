@@ -22,14 +22,12 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import (
-    buyer_journey,
-    sales_appointments,
-)
+from services import buyer_journey
+from modules.booking.services import sales_appointments
 from modules.analytics.services import sales_activity
 from services.attendance_gate import require_floor_access
 from services.buyer_journey import BuyerJourneyError
-from services.sales_appointments import SalesActionError
+from modules.booking.services.sales_appointments import SalesActionError
 
 router = APIRouter()
 

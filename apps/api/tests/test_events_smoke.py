@@ -37,7 +37,7 @@ from database.models import (  # noqa: E402
     Contact,
     User,
 )
-from services import booking_service  # noqa: E402
+from modules.booking.services import booking_service  # noqa: E402
 
 
 client = TestClient(app)

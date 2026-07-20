@@ -30,7 +30,7 @@ from api.server import app
 from database.auth import hash_password
 from database.connection import SessionLocal
 from database.models import Appointment, User
-from services import booking_service
+from modules.booking.services import booking_service
 
 
 client = TestClient(app)

@@ -57,7 +57,7 @@ from database.models import (  # noqa: E402
     User,
 )
 from services import notification_service  # noqa: E402
-from services.staff_booking_notifications import (  # noqa: E402
+from modules.booking.services.staff_booking_notifications import (  # noqa: E402
     notify_booking_rescheduled,
 )
 

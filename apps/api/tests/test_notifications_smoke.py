@@ -38,7 +38,8 @@ from sqlalchemy import text as sql_text
 from api.server import app
 from database.connection import SessionLocal
 from database.models import Appointment, AppointmentEnrichmentResponse, NotificationJob
-from services import booking_service, notification_service
+from services import notification_service
+from modules.booking.services import booking_service
 from services.booking_tokens import cancel_url, reschedule_url
 from services.notification_templates import (
     render_booking_confirmation,
@@ -241,7 +242,7 @@ try:
     new_code = resp.json()["confirmation_code"]
     # D1: API returns the hyphenated display form; canonicalise back to
     # the stored form for direct ORM lookup.
-    from services.booking_service import normalize_confirmation_code  # noqa: E402
+    from modules.booking.services.booking_service import normalize_confirmation_code  # noqa: E402
     new_code_canon = normalize_confirmation_code(new_code)
     db = SessionLocal()
     try:

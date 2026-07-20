@@ -37,8 +37,8 @@ from database.models import (
     StaffPunch,
     User,
 )
-from services.booking_service import shop_tz
-from services.event_workflow import all_statuses
+from modules.booking.services.booking_service import shop_tz
+from modules.booking.services.event_workflow import all_statuses
 
 
 # ---------------------------------------------------------------------------

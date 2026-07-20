@@ -38,15 +38,12 @@ from database.models import (
     Event,
     WebChatScript,
 )
-from services import (
-    booking_service,
-    contact_service,
-    event_service,
-)
+from services import contact_service
+from modules.booking.services import booking_service, event_service
 from modules.analytics.services import storefront_analytics_service
 from modules.messaging.services import inbox_service
-from services.event_service import EventOverrides
-from services.event_workflow import all_statuses
+from modules.booking.services.event_service import EventOverrides
+from modules.booking.services.event_workflow import all_statuses
 
 log = logging.getLogger(__name__)
 

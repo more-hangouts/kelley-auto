@@ -134,7 +134,7 @@ def _seed_event_with_appointment(contact_id: int) -> tuple[int, int]:
 
     from config.settings import APP_TIMEZONE
     from database.models import Appointment, Event, EventParticipant
-    from services import booking_service
+    from modules.booking.services import booking_service
 
     db = SessionLocal()
     try:

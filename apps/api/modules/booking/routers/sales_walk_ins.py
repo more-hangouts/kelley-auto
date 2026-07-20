@@ -21,16 +21,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from api.routers.walk_in_leads import (
+from modules.booking.routers.walk_in_leads import (
     WalkInLeadContactPayload,
     WalkInLeadEnrichmentPayload,
     WalkInLeadEventPayload,
 )
 from database.connection import get_db
 from database.models import User
-from services import sales_staff, walk_in_service
+from services import sales_staff
+from modules.booking.services import walk_in_service
 from services.attendance_gate import require_floor_access
-from services.walk_in_service import (
+from modules.booking.services.walk_in_service import (
     WalkInContactInput,
     WalkInEnrichmentInput,
     WalkInEventInput,

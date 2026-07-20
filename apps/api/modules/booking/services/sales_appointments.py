@@ -32,9 +32,10 @@ from database.models import (
     EventParticipant,
     User,
 )
-from services import activity_log, appointment_audit, event_service
-from services.booking_service import format_confirmation_code, shop_tz
-from services.event_service import EventServiceError
+from services import activity_log
+from modules.booking.services import appointment_audit, event_service
+from modules.booking.services.booking_service import format_confirmation_code, shop_tz
+from modules.booking.services.event_service import EventServiceError
 
 INTERNAL_NOTES_PREVIEW_CHARS = 140
 RECENT_ACTIVITY_LIMIT = 20
@@ -566,7 +567,7 @@ def apply_status_action(
     # the right assignee. Idempotent re-taps that did NOT change the
     # status row skip this — `appointment_changed` is False.
     if action == "cancelled" and appointment_changed:
-        from services.staff_booking_notifications import notify_booking_cancelled
+        from modules.booking.services.staff_booking_notifications import notify_booking_cancelled
 
         notify_booking_cancelled(db, appt, actor_user_id=actor_user_id)
 

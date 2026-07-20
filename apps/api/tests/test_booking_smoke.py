@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 from api.server import app
 from database.connection import SessionLocal
 from database.models import Appointment, AppointmentSessionEvent, Contact, Event
-from services import booking_service
+from modules.booking.services import booking_service
 from services.booking_tokens import cancel_url, mint_token
 
 

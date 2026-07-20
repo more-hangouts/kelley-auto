@@ -47,9 +47,13 @@ from database.models import (
     Event,
     User,
 )
-from services import activity_log, booking_service, contact_service, event_service
+from services import (
+    activity_log,
+    contact_service,
+)
+from modules.booking.services import booking_service, event_service
 from services.email_transport import send_rendered_safely
-from services.event_service import EventOverrides, EventServiceError
+from modules.booking.services.event_service import EventOverrides, EventServiceError
 
 log = logging.getLogger(__name__)
 
@@ -303,7 +307,7 @@ def create_walk_in_lead(
     # so the picked stylist gets a "new booking on your calendar" email.
     # Admin walk-ins (no assignee) skip this — admin gets the walk-in
     # capture summary above instead.
-    from services.staff_booking_notifications import notify_booking_assigned
+    from modules.booking.services.staff_booking_notifications import notify_booking_assigned
 
     notify_booking_assigned(db, appt, actor_user_id=actor_user_id)
 

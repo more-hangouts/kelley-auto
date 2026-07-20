@@ -57,7 +57,8 @@ from database.models import (  # noqa: E402
     TimeOffRequest,
     User,
 )
-from services import auto_scheduler, booking_service  # noqa: E402
+from services import auto_scheduler  # noqa: E402
+from modules.booking.services import booking_service
 
 client = TestClient(app)
 

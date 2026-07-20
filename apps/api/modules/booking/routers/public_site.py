@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 from api.redis_rate_limit import enforce_or_raise, rate_limit
 from config import settings
 from database.connection import get_db
-from services import booking_service
+from modules.booking.services import booking_service
 from services import business_profile_service
 from services import document_storage
 from modules.analytics.services import meta_capi_service

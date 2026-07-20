@@ -58,11 +58,8 @@ from database.models import (  # noqa: E402
     StaffNotificationEvent,
     User,
 )
-from services import (  # noqa: E402
-    notification_service,
-    sales_appointments,
-    sales_assignment,
-)
+from services import notification_service  # noqa: E402
+from modules.booking.services import sales_appointments, sales_assignment
 
 _user_ids: list[int] = []
 _contact_ids: list[int] = []

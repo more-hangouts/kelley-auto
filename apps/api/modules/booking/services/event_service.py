@@ -24,7 +24,7 @@ from database.models import (
     Quote,
     User,
 )
-from services.event_workflow import (
+from modules.booking.services.event_workflow import (
     EVENT_WORKFLOWS,
     EventStatus,
     all_statuses,

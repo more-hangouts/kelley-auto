@@ -69,11 +69,11 @@ from database.models import (  # noqa: E402
 )
 from services import (  # noqa: E402
     activity_log,
-    event_service,
     invoice_service,
     payment_service,
     quote_service,
 )
+from modules.booking.services import event_service
 from services.invoice_service import (  # noqa: E402
     InstallmentInput,
     LineItemInput,

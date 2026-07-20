@@ -31,8 +31,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import sales_assignment
-from services.sales_assignment import SalesAssignmentError
+from modules.booking.services import sales_assignment
+from modules.booking.services.sales_assignment import SalesAssignmentError
 
 router = APIRouter()
 

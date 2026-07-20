@@ -36,13 +36,12 @@ from database.models import (
 )
 from services import (
     activity_log,
-    booking_service,
-    event_service,
     lead_application_service,
 )
+from modules.booking.services import booking_service, event_service
 from modules.analytics.services import storefront_analytics_service
-from services.event_service import EventOverrides, EventServiceError
-from services.event_workflow import all_statuses
+from modules.booking.services.event_service import EventOverrides, EventServiceError
+from modules.booking.services.event_workflow import all_statuses
 
 router = APIRouter()
 

@@ -53,13 +53,11 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import (
-    # noqa: E402
+from services import (  # noqa: E402
     activity_log,
     contact_service,
-    event_participants,
-    event_service,
 )
+from modules.booking.services import event_participants, event_service
 from modules.inventory.services import special_order_service
 
 _PREFIX = "D3A Arch Smoke"
