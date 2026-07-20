@@ -35,7 +35,7 @@ load_dotenv(_REPO_ROOT / ".env")
 os.environ.setdefault("APP_TIMEZONE", "America/Chicago")
 
 from database.connection import SessionLocal  # noqa: E402
-from services import contact_service  # noqa: E402
+from modules.contacts.services import contact_service  # noqa: E402
 from modules.booking.services import booking_service
 
 _CSV = _REPO_ROOT / "var" / "crm_import_package" / "customers_import_ready.csv"

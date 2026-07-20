@@ -53,10 +53,8 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import (  # noqa: E402
-    activity_log,
-    contact_service,
-)
+from services import activity_log  # noqa: E402
+from modules.contacts.services import contact_service
 from modules.booking.services import event_participants, event_service
 from modules.inventory.services import special_order_service
 

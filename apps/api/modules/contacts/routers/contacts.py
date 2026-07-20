@@ -24,8 +24,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope, require_any_scope
 from database.connection import get_db
 from database.models import Contact, User
-from services import contact_service
-from services.contact_service import ContactServiceError
+from modules.contacts.services import contact_service
+from modules.contacts.services.contact_service import ContactServiceError
 
 router = APIRouter()
 

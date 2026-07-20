@@ -307,7 +307,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
         # Capture staff-notification sends without real SMTP: swap the
         # service's mailer for a recorder. Recipients resolve to the seeded
         # business_profile.email or the active admin, so sends do fire.
-        import services.public_lead_service as _pls
+        import modules.contacts.services.public_lead_service as _pls
 
         _notify_calls: list[dict] = []
 

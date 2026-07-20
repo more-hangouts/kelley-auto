@@ -59,7 +59,7 @@ from api.routers import auth as auth_router
 from modules.booking.routers import booking as booking_router
 from api.routers import business_profile as business_profile_router
 from modules.inventory.routers import catalog as catalog_router
-from api.routers import contacts as contacts_router
+from modules.contacts.routers import contacts as contacts_router
 from modules.analytics.routers import dashboard as dashboard_router
 from api.routers import event_documents as event_documents_routers
 from api.routers import event_participants as event_participants_router

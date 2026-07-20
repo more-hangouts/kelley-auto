@@ -38,7 +38,7 @@ from database.models import (
     Event,
     WebChatScript,
 )
-from services import contact_service
+from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service
 from modules.analytics.services import storefront_analytics_service
 from modules.messaging.services import inbox_service

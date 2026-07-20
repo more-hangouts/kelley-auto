@@ -47,10 +47,8 @@ from database.models import (
     Event,
     User,
 )
-from services import (
-    activity_log,
-    contact_service,
-)
+from services import activity_log
+from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service
 from services.email_transport import send_rendered_safely
 from modules.booking.services.event_service import EventOverrides, EventServiceError

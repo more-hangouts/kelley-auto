@@ -36,11 +36,8 @@ from sqlalchemy.orm import Session
 
 from config.settings import APP_TIMEZONE
 from database.models import Appointment, BusinessProfile, Event, User
-from services import (
-    activity_log,
-    contact_service,
-    lead_application_service,
-)
+from services import activity_log
+from modules.contacts.services import contact_service, lead_application_service
 from modules.booking.services import booking_service, event_service
 from modules.inventory.services import public_inventory_service
 from modules.analytics.services import meta_capi_service, storefront_analytics_service
@@ -49,7 +46,7 @@ from services import email_transport
 from services.email_transport import send_rendered_safely
 from modules.booking.services.event_service import EventOverrides
 from modules.booking.services.event_workflow import all_statuses
-from services.lead_application_service import ApplicationInput
+from modules.contacts.services.lead_application_service import ApplicationInput
 
 log = logging.getLogger(__name__)
 

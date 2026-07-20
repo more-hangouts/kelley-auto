@@ -27,10 +27,8 @@ from database.models import (
     AppointmentVisitor,
     Event,
 )
-from services import (
-    contact_service,
-    notification_service,
-)
+from services import notification_service
+from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service, event_workflow
 from modules.booking.services.event_service import EventServiceError
 from modules.booking.services.booking_contracts import (

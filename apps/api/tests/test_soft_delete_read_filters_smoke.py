@@ -54,7 +54,7 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import contact_service  # noqa: E402
+from modules.contacts.services import contact_service  # noqa: E402
 from modules.booking.services import event_service
 from modules.inventory.services import special_order_service  # noqa: E402
 

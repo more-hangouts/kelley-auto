@@ -59,7 +59,7 @@ from database.models import (  # noqa: E402
     EventParticipant,
     User,
 )
-from services import contact_service  # noqa: E402
+from modules.contacts.services import contact_service  # noqa: E402
 from tests._attendance_helpers import (  # noqa: E402
     restore_gate,
     snapshot_and_disable_gate,

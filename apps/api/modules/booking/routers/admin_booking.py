@@ -25,12 +25,10 @@ from database.models import (
     Event,
     User,
 )
-from services import (
-    buyer_journey,
-    notification_service,
-)
+from services import notification_service
+from modules.contacts.services import buyer_journey
 from modules.booking.services import appointment_audit, booking_service, event_service
-from services.buyer_journey import BuyerJourneyError
+from modules.contacts.services.buyer_journey import BuyerJourneyError
 from modules.booking.services.event_service import EventServiceError
 
 log = logging.getLogger(__name__)

@@ -24,8 +24,13 @@ from database.auth import require_admin_scope, require_any_scope
 from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
 from database.models import Quote, User
-from services import buyer_journey, invoice_pdf, portal_email, quote_service
-from services.buyer_journey import BuyerJourneyError
+from services import (
+    invoice_pdf,
+    portal_email,
+    quote_service,
+)
+from modules.contacts.services import buyer_journey
+from modules.contacts.services.buyer_journey import BuyerJourneyError
 from services.invoice_pdf import PdfRenderError
 from services.invoice_service import LineItemInput
 from services.portal_email import PortalEmailError
