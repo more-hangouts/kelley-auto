@@ -13,63 +13,8 @@ from api.middleware.security_headers import SecurityHeadersMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from api.routers import admin_attendance as admin_attendance_router
-from api.routers import admin_booking as admin_booking_router
-from api.routers import admin_cron_health as admin_cron_health_router
-from api.routers import admin_booking_settings as admin_booking_settings_router
-from api.routers import admin_holidays as admin_holidays_router
-from api.routers import admin_me as admin_me_router
-from api.routers import (
-    admin_notification_subscribers as admin_notification_subscribers_router,
-)
-from api.routers import inbox as inbox_router
-from api.routers import webhooks_twilio as webhooks_twilio_router
-from api.routers import webhooks_meta as webhooks_meta_router
-from api.routers import web_chat as web_chat_router
-from api.routers import admin_sales_activity as admin_sales_activity_router
-from api.routers import admin_storefront_analytics as admin_storefront_analytics_router
-from api.routers import admin_sales_staff as admin_sales_staff_router
-from api.routers import admin_open_shifts as admin_open_shifts_router
-from api.routers import admin_schedule as admin_schedule_router
-from api.routers import admin_shift_requests as admin_shift_requests_router
-from api.routers import admin_shifts as admin_shifts_router
-from api.routers import admin_staff as admin_staff_router
-from api.routers import admin_staff_locations as admin_staff_locations_router
-from api.routers import admin_time_off as admin_time_off_router
-from api.routers import auth as auth_router
-from api.routers import booking as booking_router
-from api.routers import business_profile as business_profile_router
-from api.routers import catalog as catalog_router
-from api.routers import vin_decode as vin_decode_router
-from api.routers import contacts as contacts_router
-from api.routers import dashboard as dashboard_router
-from api.routers import event_documents as event_documents_routers
-from api.routers import admin_archive as admin_archive_router
-from api.routers import admin_dependencies as admin_dependencies_router
-from api.routers import admin_events as admin_events_router
-from api.routers import event_participants as event_participants_router
-from api.routers import events as events_router
-from api.routers import invoices as invoices_routers
-from api.routers import payments as payments_routers
-from api.routers import portal as portal_routers
-from api.routers import public_site as public_site_router
-from api.routers import quotes as quotes_routers
-from api.routers import sales as sales_router
-from api.routers import sales_appointments as sales_appointments_router
-from api.routers import sales_attendance as sales_attendance_router
-from api.routers import sales_auth as sales_auth_router
-from api.routers import sales_clock as sales_clock_router
-from api.routers import sales_notifications as sales_notifications_router
-from api.routers import sales_open_shifts as sales_open_shifts_router
-from api.routers import sales_schedule as sales_schedule_router
-from api.routers import sales_shift_requests as sales_shift_requests_router
-from api.routers import sales_search as sales_search_router
-from api.routers import sales_assignment as sales_assignment_router
-from api.routers import sales_walk_ins as sales_walk_ins_router
-from api.routers import sales_time_off as sales_time_off_router
-from api.routers import search as search_router
-from api.routers import special_orders as special_orders_routers
-from api.routers import walk_in_leads as walk_in_leads_router
+from modules.registry import iter_router_mounts, iter_enabled_workers
+import config.settings as settings
 from config.settings import (
     APP_ENV,
     APP_TIMEZONE,
@@ -80,9 +25,6 @@ from config.settings import (
 from services import email_transport
 from api.redis_rate_limit import close_client as close_redis_client
 from database.connection import engine
-from workers.daily import run_loop as run_daily_loop
-from workers.notifications import run_loop as run_notifications_loop
-from workers.schedule_monitor import run_loop as run_schedule_monitor_loop
 
 log = logging.getLogger(__name__)
 
@@ -116,20 +58,18 @@ async def lifespan(app: FastAPI):
     validate_config()
     _warn_if_email_delivery_disabled()
     stop_event = asyncio.Event()
-    notifications_task = asyncio.create_task(run_notifications_loop(stop_event))
-    daily_task = asyncio.create_task(run_daily_loop(stop_event))
-    schedule_monitor_task = asyncio.create_task(
-        run_schedule_monitor_loop(stop_event)
-    )
+    # Start the workers of every enabled module. With all modules enabled
+    # (production default) this is notifications, daily, schedule_monitor —
+    # the same three loops, in the same order, as before the registry.
+    worker_tasks = [
+        (worker.name, asyncio.create_task(worker.runner(stop_event)))
+        for worker in iter_enabled_workers(settings)
+    ]
     try:
         yield
     finally:
         stop_event.set()
-        for name, task in (
-            ("notifications", notifications_task),
-            ("daily", daily_task),
-            ("schedule_monitor", schedule_monitor_task),
-        ):
+        for name, task in worker_tasks:
             try:
                 await asyncio.wait_for(task, timeout=5)
             except asyncio.TimeoutError:
@@ -168,295 +108,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router.router, prefix="/api/auth", tags=["auth"])
-app.include_router(admin_me_router.router, prefix="/api/admin/me", tags=["admin-me"])
-app.include_router(
-    admin_notification_subscribers_router.router,
-    prefix="/api/admin/notification-subscribers",
-    tags=["admin-notification-subscribers"],
-)
-app.include_router(inbox_router.router, prefix="/api/inbox", tags=["inbox"])
-app.include_router(
-    web_chat_router.router, prefix="/api/web-chat", tags=["web-chat"]
-)
-app.include_router(
-    webhooks_twilio_router.router,
-    prefix="/api/webhooks/twilio",
-    tags=["webhooks-twilio"],
-)
-app.include_router(
-    webhooks_meta_router.router,
-    prefix="/api/webhooks/meta",
-    tags=["webhooks-meta"],
-)
-app.include_router(booking_router.router, prefix="/api/booking", tags=["booking"])
-app.include_router(
-    admin_booking_router.router, prefix="/api/admin/booking", tags=["admin-booking"]
-)
-app.include_router(
-    admin_booking_settings_router.router,
-    prefix="/api/admin/booking",
-    tags=["admin-booking-settings"],
-)
-app.include_router(events_router.router, prefix="/api/events", tags=["events"])
-app.include_router(
-    admin_events_router.router,
-    prefix="/api/admin/events",
-    tags=["admin-events"],
-)
-app.include_router(
-    admin_dependencies_router.router,
-    prefix="/api/admin/dependencies",
-    tags=["admin-dependencies"],
-)
-app.include_router(
-    admin_archive_router.router,
-    prefix="/api/admin",
-    tags=["admin-archive"],
-)
-app.include_router(
-    walk_in_leads_router.router,
-    prefix="/api/walk-in-leads",
-    tags=["walk-in-leads"],
-)
-app.include_router(
-    event_participants_router.router,
-    prefix="/api/events",
-    tags=["event-participants"],
-)
-app.include_router(contacts_router.router, prefix="/api/contacts", tags=["contacts"])
-app.include_router(
-    event_documents_routers.event_documents_router,
-    prefix="/api/events",
-    tags=["event-documents"],
-)
-app.include_router(
-    event_documents_routers.documents_router,
-    prefix="/api/documents",
-    tags=["event-documents"],
-)
-app.include_router(
-    invoices_routers.event_invoices_router,
-    prefix="/api/events",
-    tags=["invoices"],
-)
-app.include_router(
-    invoices_routers.invoices_router,
-    prefix="/api/invoices",
-    tags=["invoices"],
-)
-app.include_router(
-    quotes_routers.event_quotes_router,
-    prefix="/api/events",
-    tags=["quotes"],
-)
-app.include_router(
-    quotes_routers.quotes_router,
-    prefix="/api/quotes",
-    tags=["quotes"],
-)
-app.include_router(
-    payments_routers.payments_router,
-    prefix="/api/payments",
-    tags=["payments"],
-)
-app.include_router(
-    payments_routers.invoice_payments_router,
-    prefix="/api/invoices",
-    tags=["payments"],
-)
-app.include_router(
-    payments_routers.event_payments_router,
-    prefix="/api/events",
-    tags=["payments"],
-)
-app.include_router(
-    business_profile_router.router,
-    prefix="/api/business-profile",
-    tags=["business-profile"],
-)
-app.include_router(
-    dashboard_router.router,
-    prefix="/api/dashboard",
-    tags=["dashboard"],
-)
-app.include_router(
-    admin_storefront_analytics_router.router,
-    prefix="/api/admin/storefront-analytics",
-    tags=["storefront-analytics"],
-)
-app.include_router(
-    catalog_router.router,
-    prefix="/api/catalog",
-    tags=["catalog"],
-)
-app.include_router(
-    vin_decode_router.router,
-    prefix="/api/admin/vin",
-    tags=["vin"],
-)
-app.include_router(
-    public_site_router.router,
-    prefix="/api/public",
-    tags=["public-site"],
-)
-app.include_router(
-    search_router.router,
-    prefix="/api/search",
-    tags=["search"],
-)
-app.include_router(
-    special_orders_routers.event_special_orders_router,
-    prefix="/api/events",
-    tags=["special-orders"],
-)
-app.include_router(
-    special_orders_routers.special_orders_router,
-    prefix="/api/special-orders",
-    tags=["special-orders"],
-)
-app.include_router(sales_router.router, prefix="/api/sales", tags=["sales"])
-app.include_router(
-    sales_auth_router.router, prefix="/api/sales", tags=["sales-auth"]
-)
-app.include_router(
-    sales_appointments_router.router,
-    prefix="/api/sales/appointments",
-    tags=["sales-appointments"],
-)
-app.include_router(
-    admin_sales_staff_router.router,
-    prefix="/api/admin/sales-staff",
-    tags=["admin-sales-staff"],
-)
-app.include_router(
-    admin_sales_activity_router.router,
-    prefix="/api/admin/sales-activity",
-    tags=["admin-sales-activity"],
-)
-app.include_router(
-    admin_staff_router.router,
-    prefix="/api/admin/staff",
-    tags=["admin-staff"],
-)
-app.include_router(
-    admin_staff_locations_router.router,
-    prefix="/api/admin/staff-locations",
-    tags=["admin-staff-locations"],
-)
-app.include_router(
-    sales_clock_router.router,
-    prefix="/api/sales/clock",
-    tags=["sales-clock"],
-)
-app.include_router(
-    sales_attendance_router.router,
-    prefix="/api/sales/attendance",
-    tags=["sales-attendance"],
-)
-app.include_router(
-    admin_attendance_router.router,
-    prefix="/api/admin/attendance",
-    tags=["admin-attendance"],
-)
-app.include_router(
-    admin_cron_health_router.router,
-    prefix="/api/admin/cron-health",
-    tags=["admin-cron-health"],
-)
-app.include_router(
-    sales_schedule_router.router,
-    prefix="/api/sales/schedule",
-    tags=["sales-schedule"],
-)
-app.include_router(
-    sales_shift_requests_router.router,
-    prefix="/api/sales/schedule/shift-requests",
-    tags=["sales-shift-requests"],
-)
-app.include_router(
-    sales_open_shifts_router.router,
-    prefix="/api/sales/schedule/open-shifts",
-    tags=["sales-open-shifts"],
-)
-app.include_router(
-    sales_search_router.router,
-    prefix="/api/sales/search",
-    tags=["sales-search"],
-)
-app.include_router(
-    sales_notifications_router.router,
-    prefix="/api/sales/me/notifications",
-    tags=["sales-notifications"],
-)
-app.include_router(
-    sales_walk_ins_router.router,
-    prefix="/api/sales/walk-ins",
-    tags=["sales-walk-ins"],
-)
-app.include_router(
-    sales_assignment_router.router,
-    prefix="/api/sales",
-    tags=["sales-assignment"],
-)
-app.include_router(
-    sales_time_off_router.router,
-    prefix="/api/sales/time-off",
-    tags=["sales-time-off"],
-)
-app.include_router(
-    admin_shifts_router.router,
-    prefix="/api/admin/shifts",
-    tags=["admin-shifts"],
-)
-app.include_router(
-    admin_shifts_router.override_router,
-    prefix="/api/admin/shift-overrides",
-    tags=["admin-shifts"],
-)
-app.include_router(
-    admin_holidays_router.router,
-    prefix="/api/admin/holidays",
-    tags=["admin-holidays"],
-)
-app.include_router(
-    admin_time_off_router.router,
-    prefix="/api/admin/time-off",
-    tags=["admin-time-off"],
-)
-app.include_router(
-    admin_schedule_router.router,
-    prefix="/api/admin/schedule",
-    tags=["admin-schedule"],
-)
-app.include_router(
-    admin_shift_requests_router.router,
-    prefix="/api/admin/schedule/shift-requests",
-    tags=["admin-shift-requests"],
-)
-app.include_router(
-    admin_open_shifts_router.router,
-    prefix="/api/admin/schedule/open-shifts",
-    tags=["admin-open-shifts"],
-)
-
-# Phase 7 customer-facing portal. Public surface mounted at `/portal`
-# (NOT `/api/portal` — the customer never sees `/api`). Staff invitation
-# management lives at `/api/invoices/{id}/invitations` and
-# `/api/quotes/{id}/invitations`.
-app.include_router(
-    portal_routers.portal_router, prefix="/portal", tags=["portal"]
-)
-app.include_router(
-    portal_routers.invoice_invitations_router,
-    prefix="/api/invoices",
-    tags=["portal-invitations"],
-)
-app.include_router(
-    portal_routers.quote_invitations_router,
-    prefix="/api/quotes",
-    tags=["portal-invitations"],
-)
+# Mount every enabled module's routers in registration order (see
+# modules/registry.py). With all modules enabled this reproduces the
+# historical include_router sequence exactly, so the route and OpenAPI
+# contract is unchanged.
+for _mount in iter_router_mounts(settings):
+    app.include_router(_mount.router, **_mount.include_kwargs)
 
 # Widget JS is canonical at repo /widgets and served at /widgets/* in dev so the
 # embed URL matches production (where Nginx serves the same path from disk).
