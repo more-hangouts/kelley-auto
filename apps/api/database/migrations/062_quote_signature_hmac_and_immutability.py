@@ -54,7 +54,7 @@ def upgrade(connection) -> None:
         # there are signed rows the import surfaces the
         # QuoteSignatureHMACUnconfigured error — which is what we want,
         # because a CHECK constraint right below would fail anyway.
-        from modules.deals.services.quote_signature_hmac import compute_hmac  # noqa: PLC0415
+        from services.quote_signature_hmac import compute_hmac  # noqa: PLC0415
 
         rows = connection.execute(
             text(

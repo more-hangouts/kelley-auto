@@ -191,6 +191,9 @@ SUITE=(
   tests/test_notification_kind_naming_boundary_smoke.py
   # module registry / enable flags
   tests/test_module_flags_smoke.py
+  # migration-compat surface
+  tests/test_services_compat_contract_smoke.py
+  tests/test_services_compat_guard_smoke.py
 )
 
 TOTAL=${#SUITE[@]}
