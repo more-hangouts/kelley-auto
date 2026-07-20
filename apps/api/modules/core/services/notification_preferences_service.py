@@ -39,7 +39,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from database.models import NotificationPreference, User
-from services.notification_routing import ROLE_DEFAULTS
+from modules.core.services.notification_routing import ROLE_DEFAULTS
 
 
 # ─── Labels + categories ───────────────────────────────────────────────────

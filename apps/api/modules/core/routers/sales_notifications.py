@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import notification_preferences_service as prefs_service
+from modules.core.services import notification_preferences_service as prefs_service
 
 router = APIRouter()
 

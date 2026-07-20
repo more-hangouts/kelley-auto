@@ -52,7 +52,7 @@ def upgrade(connection) -> None:
     # IntegrationTokenCryptoUnconfigured if INTEGRATION_TOKEN_KEYS is
     # missing — which is the right safety: do not let the schema advance
     # past plaintext without a key committed to .env.
-    from services.integration_tokens import encrypt  # noqa: PLC0415
+    from modules.core.services.integration_tokens import encrypt  # noqa: PLC0415
 
     rows = connection.execute(
         text(

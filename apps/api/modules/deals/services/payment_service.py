@@ -37,9 +37,9 @@ from database.models import (
     RefundEvent,
     User,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.analytics.services import storefront_analytics_service
-from services.email_transport import send_rendered_safely
+from modules.core.services.email_transport import send_rendered_safely
 
 
 def _event_ids_for_invoices(
@@ -323,7 +323,7 @@ def _send_payment_received_emails(
         return
 
     from config.settings import ADMIN_BASE_URL
-    from services import notification_templates
+    from modules.core.services import notification_templates
 
     for owner_id, owner in owners_by_id.items():
         rendered = notification_templates.render_staff_payment_received(

@@ -574,7 +574,7 @@ try:
     print("size limit + rollback ok")
 
     # ----- path traversal rejected at storage layer -----
-    from services import document_storage
+    from modules.core.services import document_storage
 
     try:
         document_storage.resolve_path("../etc/passwd")

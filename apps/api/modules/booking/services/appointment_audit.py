@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from services import activity_log
+from modules.core.services import activity_log
 
 
 def log_notes_edited(

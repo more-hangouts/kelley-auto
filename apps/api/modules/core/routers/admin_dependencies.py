@@ -25,8 +25,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import record_dependencies
-from services.record_dependencies import (
+from modules.core.services import record_dependencies
+from modules.core.services.record_dependencies import (
     RecordNotFoundError,
     UnsupportedEntityTypeError,
 )

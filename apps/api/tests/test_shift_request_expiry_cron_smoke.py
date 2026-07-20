@@ -35,7 +35,7 @@ from database.models import (  # noqa: E402
     StaffShiftRequest,
     User,
 )
-from services import cron_state  # noqa: E402
+from modules.core.services import cron_state  # noqa: E402
 from modules.scheduling.services import shift_request_expiry_cron
 from zoneinfo import ZoneInfo  # noqa: E402
 

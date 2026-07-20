@@ -53,7 +53,7 @@ from database.models import (  # noqa: E402
     Invoice,
     User,
 )
-from services import record_dependencies  # noqa: E402
+from modules.core.services import record_dependencies  # noqa: E402
 
 client = TestClient(app)
 

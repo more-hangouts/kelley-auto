@@ -53,7 +53,7 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import activity_log  # noqa: E402
+from modules.core.services import activity_log  # noqa: E402
 from modules.contacts.services import contact_service
 from modules.booking.services import event_participants, event_service
 from modules.inventory.services import special_order_service
@@ -579,7 +579,7 @@ def check_special_order_archive_restore() -> None:
 def check_archive_reason_validation() -> None:
     """An unrecognized reason raises ArchiveReasonError before any
     mutation happens."""
-    from services import record_dependencies
+    from modules.core.services import record_dependencies
 
     contact_id = _seed_contact("BadReason")
     db = SessionLocal()

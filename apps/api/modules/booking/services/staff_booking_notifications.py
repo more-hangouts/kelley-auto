@@ -48,7 +48,7 @@ def notify_booking_assigned(
     if appt.assigned_user_id is None:
         return
     from config.settings import ADMIN_BASE_URL
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,
@@ -75,7 +75,7 @@ def notify_booking_cancelled(
     if appt.assigned_user_id is None:
         return
     from config.settings import ADMIN_BASE_URL
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,
@@ -119,7 +119,7 @@ def notify_booking_rescheduled(
     if appt.assigned_user_id is None:
         return
     from config.settings import ADMIN_BASE_URL
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,

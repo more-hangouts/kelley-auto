@@ -47,7 +47,7 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import User  # noqa: E402
-from services import sales_auth  # noqa: E402
+from modules.core.services import sales_auth  # noqa: E402
 
 client = TestClient(app)
 

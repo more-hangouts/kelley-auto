@@ -30,12 +30,12 @@ from config.settings import (
     SMTP_FROM_EMAIL,
 )
 from database.models import Appointment, NotificationJob, User
-from services.email_transport import (
+from modules.core.services.email_transport import (
     EmailMessagePayload,
     EmailTransport,
     get_email_transport,
 )
-from services.notification_templates import (
+from modules.core.services.notification_templates import (
     EMAIL_RENDERERS,
     SMS_RENDERERS,
     RenderedEmail,
@@ -67,7 +67,7 @@ from services.notification_templates import (
     render_time_off_requested_to_owner,
     render_welcome_new_user,
 )
-from services.sms_transport import SmsTransport, get_sms_transport
+from modules.core.services.sms_transport import SmsTransport, get_sms_transport
 
 log = logging.getLogger(__name__)
 

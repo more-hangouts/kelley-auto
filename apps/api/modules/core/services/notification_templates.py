@@ -23,10 +23,10 @@ from config.settings import (
     WIDGET_PUBLIC_BASE_URL,
 )
 from database.models import Appointment
-from services.confirmation_codes import format_confirmation_code
-from services.booking_tokens import cancel_url, reschedule_url
-from services.email_transport import EmailMessagePayload
-from services.sms_transport import SmsMessagePayload
+from modules.core.services.confirmation_codes import format_confirmation_code
+from modules.core.services.booking_tokens import cancel_url, reschedule_url
+from modules.core.services.email_transport import EmailMessagePayload
+from modules.core.services.sms_transport import SmsMessagePayload
 
 
 _PARTY_LABEL = {
@@ -58,7 +58,16 @@ class RenderedEmail:
 # {{ jinja }} placeholders. We render that compiled file at send time — MJML is
 # the design tool, Jinja does the variable fill. Autoescape guards the customer
 # name against HTML injection.
-_EMAIL_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "emails"
+# Anchor to the apps/api root by walking up to the dir holding templates/
+# (Phase 3: moved from services/ into modules/core/services/).
+def _api_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "templates").is_dir():
+            return parent
+    return Path(__file__).resolve().parent.parent
+
+
+_EMAIL_TEMPLATE_DIR = _api_root() / "templates" / "emails"
 _email_jinja = Environment(
     loader=FileSystemLoader(str(_EMAIL_TEMPLATE_DIR)),
     autoescape=select_autoescape(["html"]),
@@ -1170,7 +1179,7 @@ def render_admin_missing_clock_out(
 def _format_time_off_window_text(
     request_starts_at: datetime, request_ends_at: datetime
 ) -> str:
-    from services.business_time import to_business_local
+    from modules.core.services.business_time import to_business_local
 
     start_local = to_business_local(request_starts_at)
     end_local = to_business_local(request_ends_at)

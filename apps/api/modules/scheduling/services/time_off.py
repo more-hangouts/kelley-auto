@@ -36,9 +36,9 @@ from database.models import (
     TimeOffRequest,
     User,
 )
-from services import email_transport, notification_templates
-from services.business_time import to_business_local
-from services.email_transport import EmailMessagePayload
+from modules.core.services import email_transport, notification_templates
+from modules.core.services.business_time import to_business_local
+from modules.core.services.email_transport import EmailMessagePayload
 
 log = logging.getLogger(__name__)
 

@@ -24,7 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import OpenShiftPost, User
-from services.business_time import shop_tz, to_business_local
+from modules.core.services.business_time import shop_tz, to_business_local
 
 
 class OpenShiftPostError(Exception):

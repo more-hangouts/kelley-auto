@@ -45,9 +45,19 @@ log = logging.getLogger(__name__)
 # header `<img src="cid:kelley-logo">` in services/notification_templates.py
 # :_wrap_html resolves. Sourced from the Kelley brand wordmark (logo-dark.png).
 EMAIL_LOGO_CID = "kelley-logo"
-EMAIL_LOGO_PATH = (
-    Path(__file__).resolve().parent.parent / "assets" / "email" / "kelley-wordmark.png"
-)
+
+
+# Anchor to the apps/api root by walking up to the dir holding assets/ (Phase 3:
+# this file moved from services/ into modules/core/services/, so a fixed .parent
+# count would be brittle).
+def _api_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "assets").is_dir():
+            return parent
+    return Path(__file__).resolve().parent.parent
+
+
+EMAIL_LOGO_PATH = _api_root() / "assets" / "email" / "kelley-wordmark.png"
 
 
 @dataclass

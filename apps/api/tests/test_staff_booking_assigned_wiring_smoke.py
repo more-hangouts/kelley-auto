@@ -56,7 +56,7 @@ from database.models import (  # noqa: E402
     StaffNotificationEvent,
     User,
 )
-from services import notification_service  # noqa: E402
+from modules.core.services import notification_service  # noqa: E402
 from modules.booking.services import sales_assignment, walk_in_service
 from modules.booking.services.walk_in_service import (  # noqa: E402
     WalkInContactInput,

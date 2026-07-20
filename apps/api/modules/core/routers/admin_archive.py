@@ -44,10 +44,7 @@ from database.models import (
     SpecialOrder,
     User,
 )
-from services import (
-    activity_log as activity_log_service,
-    record_dependencies,
-)
+from modules.core.services import activity_log as activity_log_service, record_dependencies
 from modules.contacts.services import contact_service
 from modules.booking.services import event_participants as event_participants_service, event_service
 from modules.inventory.services import special_order_service

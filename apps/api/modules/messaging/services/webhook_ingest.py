@@ -39,7 +39,7 @@ from sqlalchemy.orm import Session
 
 from config.settings import WEBHOOK_EVENTS_RETENTION_DAYS
 from database.models import WebhookEvent
-from services import cron_state
+from modules.core.services import cron_state
 
 log = logging.getLogger(__name__)
 

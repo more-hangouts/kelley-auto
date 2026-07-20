@@ -24,7 +24,7 @@ from database.connection import get_db
 from database.models import CatalogItem, User
 from modules.inventory.services import vin as vin_util
 from modules.inventory.services import vin_decode, vin_ocr
-from services.upload_validation import (
+from modules.core.services.upload_validation import (
     HEAD_BYTES_NEEDED,
     UploadValidationError,
     validate_magic_bytes,

@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from database.auth import hash_password, verify_password
 from database.models import User
-from services.email_transport import EmailMessagePayload
+from modules.core.services.email_transport import EmailMessagePayload
 
 log = logging.getLogger(__name__)
 
@@ -128,8 +128,8 @@ def _send_account_locked_email(user: User) -> None:
     if not user.email or user.pin_locked_until is None:
         return
     try:
-        from services import email_transport
-        from services.notification_templates import render_account_locked
+        from modules.core.services import email_transport
+        from modules.core.services.notification_templates import render_account_locked
 
         rendered = render_account_locked(
             staff_user=user,

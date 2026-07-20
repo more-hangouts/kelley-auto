@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import RecurringUnavailability
-from services.business_time import shop_tz
+from modules.core.services.business_time import shop_tz
 
 
 class RecurringAvailabilityError(Exception):

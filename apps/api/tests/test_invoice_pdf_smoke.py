@@ -497,7 +497,7 @@ def check_render_failure_path(invoice_id: int):
     # Pre-cleanup: remove any prior file at the target key so we can
     # assert the failure path doesn't create one
     try:
-        from services import document_storage
+        from modules.core.services import document_storage
         target_path = document_storage.resolve_path(target_key)
         if target_path.exists():
             target_path.unlink()
@@ -530,7 +530,7 @@ def check_render_failure_path(invoice_id: int):
         weasyprint.HTML.write_pdf = original
 
     # The final cache key file must NOT exist (no partial poisoning)
-    from services import document_storage
+    from modules.core.services import document_storage
     target_path = document_storage.resolve_path(target_key)
     assert not target_path.exists(), "no partial PDF should sit at the cache key"
 

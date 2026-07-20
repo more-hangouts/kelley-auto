@@ -43,7 +43,7 @@ from database.models import (
     StaffPunch,
     StaffPunchAuditEvent,
 )
-from services import cron_state, document_storage
+from modules.core.services import cron_state, document_storage
 
 log = logging.getLogger(__name__)
 

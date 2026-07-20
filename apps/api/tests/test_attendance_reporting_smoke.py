@@ -50,7 +50,7 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import BusinessProfile, StaffPunch, User  # noqa: E402
-from services.business_time import business_date, shop_tz  # noqa: E402
+from modules.core.services.business_time import business_date, shop_tz  # noqa: E402
 
 client = TestClient(app)
 

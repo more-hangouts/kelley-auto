@@ -23,7 +23,7 @@ from database.auth import (
 )
 from database.connection import SessionLocal, get_db
 from database.models import User
-from services import password_reset
+from modules.core.services import password_reset
 
 router = APIRouter()
 

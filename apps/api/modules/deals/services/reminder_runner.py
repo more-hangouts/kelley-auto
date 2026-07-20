@@ -51,7 +51,7 @@ from database.models import (
     InvoiceInvitation,
     Quote,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.deals.services import invoice_service, portal_email
 from modules.deals.services.portal_email import PortalEmailError
 

@@ -48,7 +48,7 @@ from database.models import (  # noqa: E402
     StaffNotificationEvent,
     User,
 )
-from services import notification_routing  # noqa: E402
+from modules.core.services import notification_routing  # noqa: E402
 
 
 SEED_PREFIX = "smoke-notif-prefs"

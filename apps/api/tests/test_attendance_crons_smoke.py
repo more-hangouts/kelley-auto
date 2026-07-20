@@ -66,10 +66,7 @@ from database.models import (  # noqa: E402
     StaffPunchAuditEvent,
     User,
 )
-from services import (  # noqa: E402
-    cron_state,
-    document_storage,
-)
+from modules.core.services import cron_state, document_storage  # noqa: E402
 from modules.scheduling.services import attendance_close, attendance_pre_close, clock_selfie, clock_selfie_retention  # noqa: E402
 
 client = TestClient(app)

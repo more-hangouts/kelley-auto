@@ -49,8 +49,8 @@ from database.models import (
     User,
 )
 from modules.deals.services import quote_service
-from services.email_transport import send_rendered_safely
-from services.business_profile_service import (
+from modules.core.services.email_transport import send_rendered_safely
+from modules.core.services.business_profile_service import (
     BusinessProfileError,
     BusinessProfileView,
     get_profile,
@@ -433,7 +433,7 @@ def stamp_invoice_view(db: Session, public_key: str) -> bool:
     router maps False to 404 silently — view tracking on a revoked link
     must not leak liveness signal).
     """
-    from services import activity_log  # local to avoid import cycle
+    from modules.core.services import activity_log  # local to avoid import cycle
 
     invitation = _fetch_invoice_invitation(db, public_key)
     if invitation is None:
@@ -470,7 +470,7 @@ def stamp_invoice_view(db: Session, public_key: str) -> bool:
 
 
 def stamp_quote_view(db: Session, public_key: str) -> bool:
-    from services import activity_log  # local to avoid import cycle
+    from modules.core.services import activity_log  # local to avoid import cycle
 
     invitation = _fetch_quote_invitation(db, public_key)
     if invitation is None:
@@ -557,7 +557,7 @@ def _send_quote_signed_email(db: Session, *, quote: Quote) -> None:
     customer_name = (contact.display_name if contact else None) or "Customer"
 
     from config.settings import ADMIN_BASE_URL
-    from services import notification_templates
+    from modules.core.services import notification_templates
 
     rendered = notification_templates.render_staff_quote_signed(
         staff_user=owner,
@@ -800,7 +800,7 @@ def revoke_invoice_invitation(
                 "invitation_id": row.id,
             },
         )
-        from services import activity_log  # local to avoid import cycle
+        from modules.core.services import activity_log  # local to avoid import cycle
         invoice = db.get(Invoice, row.invoice_id)
         if invoice is not None:
             activity_log.log_activity(
@@ -849,7 +849,7 @@ def revoke_quote_invitation(
                 "invitation_id": row.id,
             },
         )
-        from services import activity_log  # local to avoid import cycle
+        from modules.core.services import activity_log  # local to avoid import cycle
         quote = db.get(Quote, row.quote_id)
         if quote is not None:
             activity_log.log_activity(
@@ -959,7 +959,7 @@ def resend_invoice_invitation(
             "invitation_id": row.id,
         },
     )
-    from services import activity_log  # local to avoid import cycle
+    from modules.core.services import activity_log  # local to avoid import cycle
     invoice = db.get(Invoice, row.invoice_id)
     if invoice is not None:
         activity_log.log_activity(
@@ -1014,7 +1014,7 @@ def resend_quote_invitation(
             "invitation_id": row.id,
         },
     )
-    from services import activity_log  # local to avoid import cycle
+    from modules.core.services import activity_log  # local to avoid import cycle
     quote = db.get(Quote, row.quote_id)
     if quote is not None:
         activity_log.log_activity(

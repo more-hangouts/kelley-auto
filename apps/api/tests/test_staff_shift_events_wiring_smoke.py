@@ -59,9 +59,7 @@ from database.models import (  # noqa: E402
     StaffScheduleEntry,
     User,
 )
-from services import (  # noqa: E402
-    notification_service,
-)
+from modules.core.services import notification_service  # noqa: E402
 from modules.scheduling.services import staff_schedule  # noqa: E402
 
 SEED_PREFIX = "smoke-shift-events"

@@ -43,7 +43,7 @@ from config.settings import DOCUMENT_UPLOAD_MAX_MB  # noqa: E402
 from database.auth import create_access_token, hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Event, EventDocument, User  # noqa: E402
-from services import document_storage  # noqa: E402
+from modules.core.services import document_storage  # noqa: E402
 
 
 client = TestClient(app)

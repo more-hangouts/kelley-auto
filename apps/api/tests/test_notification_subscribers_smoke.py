@@ -45,8 +45,8 @@ from sqlalchemy import text as sql_text  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import StaffNotificationEvent, User  # noqa: E402
-from services import notification_routing  # noqa: E402
-from services import notification_subscriber_service as svc  # noqa: E402
+from modules.core.services import notification_routing  # noqa: E402
+from modules.core.services import notification_subscriber_service as svc  # noqa: E402
 
 SEED_PREFIX = "smoke-notif-subscribers"
 KIND = "admin.new_booking"  # in ROLE_DEFAULTS['admin'] and SUBSCRIBABLE_KINDS

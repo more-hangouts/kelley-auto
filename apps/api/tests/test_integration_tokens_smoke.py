@@ -45,7 +45,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 
 from database.connection import SessionLocal  # noqa: E402
 from database.models import IntegrationToken  # noqa: E402
-from services import integration_tokens as itok  # noqa: E402
+from modules.core.services import integration_tokens as itok  # noqa: E402
 
 
 _TEST_PROVIDER = f"c1-smoke-{uuid.uuid4().hex[:8]}"
@@ -155,7 +155,7 @@ try:
         )
         db.commit()
 
-        logger = logging.getLogger("services.integration_tokens")
+        logger = logging.getLogger("modules.core.services.integration_tokens")
         captured: list[logging.LogRecord] = []
 
         class _Capture(logging.Handler):

@@ -85,7 +85,7 @@ def record_event(
 
     timing = TIMING_MODE.get(kind, "real_time")
     if timing in ("real_time", "real_time_and_digest"):
-        from services.notification_service import (
+        from modules.core.services.notification_service import (
             enqueue_staff_job,
             has_staff_email_renderer,
         )
@@ -184,7 +184,7 @@ def recipients_for(
     # Layer 4: the subscriber registry. Local import keeps the module load
     # acyclic (the subscriber service imports the prefs catalog, which is
     # routing-adjacent) — same pattern as record_event's deferred import.
-    from services.notification_subscriber_service import subscribers_for_kind
+    from modules.core.services.notification_subscriber_service import subscribers_for_kind
 
     for sub in subscribers_for_kind(db, event.kind):
         _add(sub.user_id, sub.email)

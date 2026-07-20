@@ -58,8 +58,8 @@ from database.models import (
     QuoteLineItem,
     QuoteOrderDiscount,
 )
-from services import document_storage
-from services.business_profile_service import (
+from modules.core.services import document_storage
+from modules.core.services.business_profile_service import (
     BusinessProfileError,
     BusinessProfileView,
     get_profile,

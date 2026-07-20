@@ -51,7 +51,7 @@ from database.models import (
     User,
 )
 from modules.scheduling.services import recurring_availability, staff_schedule
-from services.business_time import shop_tz
+from modules.core.services.business_time import shop_tz
 from modules.scheduling.services.staff_schedule import StaffScheduleError
 
 

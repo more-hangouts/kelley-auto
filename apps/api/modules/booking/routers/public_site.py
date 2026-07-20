@@ -33,13 +33,13 @@ from api.redis_rate_limit import enforce_or_raise, rate_limit
 from config import settings
 from database.connection import get_db
 from modules.booking.services import booking_service
-from services import business_profile_service
-from services import document_storage
+from modules.core.services import business_profile_service
+from modules.core.services import document_storage
 from modules.analytics.services import meta_capi_service
 from modules.inventory.services import public_inventory_service as inventory
 from modules.contacts.services import public_lead_service
 from modules.analytics.services import storefront_analytics_service
-from services.business_profile_service import BusinessProfileError
+from modules.core.services.business_profile_service import BusinessProfileError
 from modules.inventory.services.public_inventory_service import InventoryFilters
 from modules.contacts.services.public_lead_service import LeadInput, PublicLeadError
 from modules.analytics.services.storefront_analytics_service import TrackingContext

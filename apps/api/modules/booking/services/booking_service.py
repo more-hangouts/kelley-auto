@@ -63,7 +63,7 @@ def to_utc(dt: datetime) -> datetime:
 
 # normalize_phone_e164 is a core primitive (services/phone.py); re-exported
 # here so booking_service.normalize_phone_e164 stays a valid call site.
-from services.phone import normalize_phone_e164  # noqa: E402,F401
+from modules.core.services.phone import normalize_phone_e164  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ def _generate_code() -> str:
 # (services/confirmation_codes.py) — code *generation* below stays booking.
 # Re-exported so booking_service.{normalize,format}_confirmation_code call
 # sites keep working.
-from services.confirmation_codes import (  # noqa: E402,F401
+from modules.core.services.confirmation_codes import (  # noqa: E402,F401
     format_confirmation_code,
     normalize_confirmation_code,
 )

@@ -77,7 +77,7 @@ def _install_capture(monkeypatch_target):
     """Patch services.email_transport.get_email_transport in BOTH the
     transport module and the staff_digest_runner namespace (which
     imports send_rendered_safely directly)."""
-    from services import email_transport
+    from modules.core.services import email_transport
 
     capture = _Capture()
     email_transport.get_email_transport = lambda: capture  # type: ignore

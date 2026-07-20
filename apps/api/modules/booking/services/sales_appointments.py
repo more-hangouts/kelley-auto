@@ -32,7 +32,7 @@ from database.models import (
     EventParticipant,
     User,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.booking.services import appointment_audit, event_service
 from modules.booking.services.booking_service import format_confirmation_code, shop_tz
 from modules.booking.services.event_service import EventServiceError

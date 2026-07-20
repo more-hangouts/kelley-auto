@@ -79,7 +79,7 @@ def notify_shift_added(
     ``subject_id`` routing — the renderer reads from payload, not
     from the entry row.
     """
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,
@@ -107,7 +107,7 @@ def notify_shift_edited(
     a second DB lookup — by the time the worker dispatches, the row
     only reflects the new state.
     """
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,
@@ -137,7 +137,7 @@ def notify_shift_deleted(
     requires the entry row to exist; retract preserves it. Payload
     carries the published-shift snapshot for the renderer.
     """
-    from services import notification_routing
+    from modules.core.services import notification_routing
 
     notification_routing.record_event(
         db,

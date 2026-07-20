@@ -22,7 +22,7 @@ from typing import Any, BinaryIO
 from sqlalchemy.orm import Session
 
 from database.models import BusinessProfile
-from services import document_storage
+from modules.core.services import document_storage
 
 log = logging.getLogger(__name__)
 

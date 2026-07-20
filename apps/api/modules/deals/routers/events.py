@@ -34,7 +34,7 @@ from database.models import (
     Quote,
     User,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.contacts.services import lead_application_service
 from modules.booking.services import booking_service, event_service
 from modules.analytics.services import storefront_analytics_service

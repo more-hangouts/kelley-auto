@@ -30,7 +30,7 @@ import io
 
 from PIL import Image, UnidentifiedImageError
 
-from services import document_storage
+from modules.core.services import document_storage
 
 SELFIE_MAX_BYTES = 1_000_000  # 1 MB strict
 SELFIE_MIN_BYTES = 200  # absurd-small guard; a real WebP is ~kB minimum

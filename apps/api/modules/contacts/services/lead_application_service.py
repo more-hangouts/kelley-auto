@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from database.models import LeadApplication
-from services import activity_log
+from modules.core.services import activity_log
 from modules.contacts.services import lead_pii_crypto
 
 log = logging.getLogger(__name__)

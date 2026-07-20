@@ -647,7 +647,7 @@ def archive_special_order(
     ``'ordered'`` or ``'received'`` — staff cancel-by-status first,
     then archive. This keeps "in flight" rows out of the Recycle Bin
     where someone might restore them mid-shipment."""
-    from services import activity_log, record_dependencies
+    from modules.core.services import activity_log, record_dependencies
 
     record_dependencies.validate_archive_reason(reason)
 
@@ -706,7 +706,7 @@ def restore_special_order(
 
     Refuses when the parent event is archived (same orphan rule the
     pipeline already enforces on participants)."""
-    from services import activity_log, record_dependencies
+    from modules.core.services import activity_log, record_dependencies
 
     row = db.get(SpecialOrder, special_order_id)
     if row is None:

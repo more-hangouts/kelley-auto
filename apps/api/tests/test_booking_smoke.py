@@ -33,7 +33,7 @@ from api.server import app
 from database.connection import SessionLocal
 from database.models import Appointment, AppointmentSessionEvent, Contact, Event
 from modules.booking.services import booking_service
-from services.booking_tokens import cancel_url, mint_token
+from modules.core.services.booking_tokens import cancel_url, mint_token
 
 
 client = TestClient(app)

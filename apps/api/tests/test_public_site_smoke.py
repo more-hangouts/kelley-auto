@@ -334,7 +334,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
         print("public business-profile ok")
 
         # --- hours write -> public read round-trip (save/restore) ----------
-        from services import business_profile_service  # noqa: E402
+        from modules.core.services import business_profile_service  # noqa: E402
 
         _hdb = SessionLocal()
         try:

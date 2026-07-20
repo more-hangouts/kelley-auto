@@ -43,10 +43,7 @@ from decimal import ROUND_HALF_EVEN
 # Shared with invoice_service: identical dataclass shape and identical
 # per-line money math. Pulling them in keeps the two services agreeing on
 # rounding by construction.
-from services import (
-    activity_log,
-    notification_routing,
-)
+from modules.core.services import activity_log, notification_routing
 from modules.deals.services import invoice_pdf, quote_signature_hmac
 from modules.inventory.services.catalog_service import CatalogServiceError, assert_no_public_catalog_leaks
 from modules.deals.services.discount_snapshot import (

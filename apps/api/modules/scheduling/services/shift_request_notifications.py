@@ -21,8 +21,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database.models import StaffScheduleEntry, User
-from services import notification_routing
-from services.business_time import to_business_local
+from modules.core.services import notification_routing
+from modules.core.services.business_time import to_business_local
 
 
 def _window(entry: StaffScheduleEntry | None) -> str:

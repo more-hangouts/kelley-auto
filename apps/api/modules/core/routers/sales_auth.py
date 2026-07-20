@@ -27,7 +27,7 @@ from database.auth import (
 )
 from database.connection import get_db
 from database.models import User
-from services import sales_auth
+from modules.core.services import sales_auth
 
 router = APIRouter()
 

@@ -54,8 +54,8 @@ from database.models import (  # noqa: E402
     StaffNotificationEvent,
     User,
 )
-from services import notification_routing  # noqa: E402
-from services import notification_service  # noqa: E402
+from modules.core.services import notification_routing  # noqa: E402
+from modules.core.services import notification_service  # noqa: E402
 
 
 # All seeded data shares this prefix so cleanup can target it without

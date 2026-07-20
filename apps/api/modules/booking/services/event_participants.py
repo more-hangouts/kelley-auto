@@ -20,7 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.models import Event, EventParticipant
-from services import activity_log
+from modules.core.services import activity_log
 from modules.contacts.services import contact_service
 from modules.booking.services import booking_service
 
@@ -146,7 +146,7 @@ def archive_event_participant(
     Refuses if the participant is the sole active quinceañera on its
     event, or if it backs an active invoice or quote via
     ``event_participant_id`` (the dependency report enforces both)."""
-    from services import record_dependencies  # avoid import cycle
+    from modules.core.services import record_dependencies  # avoid import cycle
 
     record_dependencies.validate_archive_reason(reason)
 
@@ -209,7 +209,7 @@ def restore_event_participant(
       - the participant's role is ``'quinceanera'`` and another
         active live quinceañera already occupies the event slot.
     """
-    from services import record_dependencies
+    from modules.core.services import record_dependencies
 
     participant = db.get(EventParticipant, participant_id)
     if participant is None:

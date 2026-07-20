@@ -38,7 +38,7 @@ from database.models import (
     InvoiceOrderDiscount,
     Quote,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.inventory.services.catalog_service import (
     CatalogServiceError,
     assert_no_catalog_leak,

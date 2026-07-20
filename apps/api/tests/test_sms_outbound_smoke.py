@@ -43,7 +43,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Conversation, User  # noqa: E402
 from modules.messaging.services import inbox_service  # noqa: E402
-from services.sms_transport import SmsSendResult  # noqa: E402
+from modules.core.services.sms_transport import SmsSendResult  # noqa: E402
 
 _TAG = uuid.uuid4().hex[:8]
 _PHONE = f"+1830555{_TAG[:4].translate(str.maketrans('abcdef', '012345'))}"[:12]
@@ -130,9 +130,9 @@ def test_opt_out_blocks() -> None:
         conv_id = _make_sms_conversation(db, opted_out=True)
         sent = mock.Mock()
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
-            "services.sms_transport.sms_transport_configured", return_value=True
+            "modules.core.services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
-            "services.sms_transport.get_sms_transport"
+            "modules.core.services.sms_transport.get_sms_transport"
         ) as get_tx:
             get_tx.return_value.send_result = sent
             try:
@@ -157,9 +157,9 @@ def test_quiet_hours_then_override() -> None:
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
             "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=True
         ), mock.patch(
-            "services.sms_transport.sms_transport_configured", return_value=True
+            "modules.core.services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
-            "services.sms_transport.get_sms_transport"
+            "modules.core.services.sms_transport.get_sms_transport"
         ) as get_tx:
             get_tx.return_value.send_result.return_value = ok_result
 
@@ -204,9 +204,9 @@ def test_send_failure_rolls_back() -> None:
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
             "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=False
         ), mock.patch(
-            "services.sms_transport.sms_transport_configured", return_value=True
+            "modules.core.services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
-            "services.sms_transport.get_sms_transport"
+            "modules.core.services.sms_transport.get_sms_transport"
         ) as get_tx:
             get_tx.return_value.send_result.return_value = fail
             try:
@@ -238,9 +238,9 @@ def test_delivery_status_monotonic() -> None:
         with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
             "modules.messaging.services.inbox_service.in_sms_quiet_hours", return_value=False
         ), mock.patch(
-            "services.sms_transport.sms_transport_configured", return_value=True
+            "modules.core.services.sms_transport.sms_transport_configured", return_value=True
         ), mock.patch(
-            "services.sms_transport.get_sms_transport"
+            "modules.core.services.sms_transport.get_sms_transport"
         ) as get_tx:
             get_tx.return_value.send_result.return_value = ok_result
             inbox_service.send_reply(db, conv_id, body="hi", user_id=_admin_id(db))

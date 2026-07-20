@@ -46,7 +46,7 @@ from sqlalchemy.orm import Session
 from config.settings import PUBLIC_SITE_URL
 from database.auth import hash_password
 from database.models import PasswordResetToken, User
-from services.email_transport import EmailMessagePayload, get_email_transport
+from modules.core.services.email_transport import EmailMessagePayload, get_email_transport
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def _render_email(user: User, reset_url: str) -> EmailMessagePayload:
     ``render_password_reset_request``; this thin wrapper exists so the
     request flow above keeps its narrow internal contract.
     """
-    from services.notification_templates import render_password_reset_request
+    from modules.core.services.notification_templates import render_password_reset_request
 
     rendered = render_password_reset_request(
         user=user, reset_url=reset_url, ttl_minutes=TOKEN_TTL_MINUTES
@@ -123,7 +123,7 @@ def _send_password_changed_email(user: User, changed_at: datetime) -> None:
     operation. The exception trace lands in logs so an operator can
     re-notify out-of-band if it matters."""
     try:
-        from services.notification_templates import render_password_changed
+        from modules.core.services.notification_templates import render_password_changed
 
         rendered = render_password_changed(user=user, changed_at=changed_at)
         get_email_transport().send(

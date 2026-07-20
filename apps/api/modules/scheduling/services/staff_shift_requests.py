@@ -37,7 +37,7 @@ from database.models import (
     User,
 )
 from modules.scheduling.services import open_shifts, shift_request_notifications, staff_schedule
-from services.business_time import to_business_local
+from modules.core.services.business_time import to_business_local
 from modules.scheduling.services.open_shifts import OpenShiftPostError
 from modules.scheduling.services.staff_schedule import StaffScheduleError
 

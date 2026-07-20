@@ -61,7 +61,7 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import PasswordResetToken, User  # noqa: E402
-from services import password_reset  # noqa: E402
+from modules.core.services import password_reset  # noqa: E402
 
 
 client = TestClient(app)

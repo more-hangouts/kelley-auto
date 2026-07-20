@@ -52,7 +52,7 @@ from api.server import app  # noqa: E402
 from config.settings import RESCHEDULE_TOKEN_SECRET  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Appointment  # noqa: E402
-from services.booking_tokens import (  # noqa: E402
+from modules.core.services.booking_tokens import (  # noqa: E402
     ALGORITHM,
     InvalidBookingToken,
     _DEFAULT_TTL_DAYS,

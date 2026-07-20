@@ -27,7 +27,7 @@ from database.models import (
     AppointmentVisitor,
     Event,
 )
-from services import notification_service
+from modules.core.services import notification_service
 from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service, event_workflow
 from modules.booking.services.event_service import EventServiceError
@@ -45,7 +45,7 @@ from modules.booking.services.booking_contracts import (
     SessionEventRequest,
     ThemeResponse,
 )
-from services.booking_tokens import (
+from modules.core.services.booking_tokens import (
     InvalidBookingToken,
     cancel_url,
     ensure_not_revoked,

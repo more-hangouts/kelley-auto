@@ -15,7 +15,7 @@ from database.auth import (
 )
 from database.connection import get_db
 from database.models import User
-from services.password_reset import notify_password_changed
+from modules.core.services.password_reset import notify_password_changed
 
 router = APIRouter()
 

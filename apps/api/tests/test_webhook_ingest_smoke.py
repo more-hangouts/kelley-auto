@@ -44,7 +44,7 @@ from sqlalchemy import text as sql_text  # noqa: E402
 
 from database.connection import SessionLocal  # noqa: E402
 from database.models import WebhookEvent  # noqa: E402
-from services import cron_state
+from modules.core.services import cron_state
 from modules.messaging.services import webhook_ingest  # noqa: E402
 
 

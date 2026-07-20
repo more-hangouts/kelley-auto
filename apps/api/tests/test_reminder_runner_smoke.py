@@ -64,9 +64,7 @@ from database.models import (  # noqa: E402
     Quote,
     User,
 )
-from services import (  # noqa: E402
-    activity_log,
-)
+from modules.core.services import activity_log  # noqa: E402
 from modules.deals.services import invoice_service, payment_service, portal_email, quote_service, reminder_runner  # noqa: E402
 from modules.deals.services.invoice_service import (  # noqa: E402
     InstallmentInput,

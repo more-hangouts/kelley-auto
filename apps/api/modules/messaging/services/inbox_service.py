@@ -48,8 +48,8 @@ from database.models import (
     ConversationRead,
     Event,
 )
-from services import business_time, notification_routing
-from services.phone import normalize_phone_e164
+from modules.core.services import business_time, notification_routing
+from modules.core.services.phone import normalize_phone_e164
 
 log = logging.getLogger(__name__)
 
@@ -767,7 +767,7 @@ def _send_sms_reply(
     allow_quiet_hours: bool,
 ) -> dict:
     from config.settings import SMS_SENDING_ENABLED
-    from services import sms_transport
+    from modules.core.services import sms_transport
 
     if not SMS_SENDING_ENABLED:
         raise InboxError("sms_sending_disabled", http_status=503)

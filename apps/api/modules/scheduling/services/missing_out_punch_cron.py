@@ -22,7 +22,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from services import cron_state
+from modules.core.services import cron_state
 from modules.scheduling.services import staff_schedule
 
 log = logging.getLogger(__name__)

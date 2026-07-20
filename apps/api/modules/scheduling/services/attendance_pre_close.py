@@ -38,13 +38,10 @@ from database.models import (
     StaffPunch,
     User,
 )
-from services import (
-    cron_state,
-    email_transport,
-)
+from modules.core.services import cron_state, email_transport
 from modules.scheduling.services import clock_in, shift_resolver
-from services.business_time import business_now, shop_tz, to_business_local
-from services.email_transport import EmailMessagePayload
+from modules.core.services.business_time import business_now, shop_tz, to_business_local
+from modules.core.services.email_transport import EmailMessagePayload
 
 log = logging.getLogger(__name__)
 

@@ -63,8 +63,8 @@ from database.models import (
     User,
 )
 from modules.scheduling.services import recurring_availability
-from services.business_time import business_now, shop_tz
-from services.email_transport import send_rendered_safely
+from modules.core.services.business_time import business_now, shop_tz
+from modules.core.services.email_transport import send_rendered_safely
 
 
 class StaffScheduleError(Exception):
@@ -119,7 +119,7 @@ def _send_schedule_published_emails(
     """
     if not published_ids:
         return
-    from services import notification_templates  # local to avoid cycles
+    from modules.core.services import notification_templates  # local to avoid cycles
 
     entries = (
         db.query(StaffScheduleEntry)
@@ -171,7 +171,7 @@ def _send_missing_clock_out_emails(
     ``services/missing_out_punch_cron`` after the commit."""
     if not flipped_entry_ids:
         return
-    from services import notification_templates  # local to avoid cycles
+    from modules.core.services import notification_templates  # local to avoid cycles
 
     admin_emails = _admin_recipient_emails(db)
     entries = (
@@ -1861,7 +1861,7 @@ def resend_published_week(
     for entry in entries:
         by_user.setdefault(entry.user_id, []).append(entry)
 
-    from services.notification_service import enqueue_staff_job
+    from modules.core.services.notification_service import enqueue_staff_job
 
     recipients: list[int] = []
     jobs_enqueued = 0

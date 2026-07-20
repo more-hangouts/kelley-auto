@@ -47,10 +47,10 @@ from database.models import (
     Event,
     User,
 )
-from services import activity_log
+from modules.core.services import activity_log
 from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service
-from services.email_transport import send_rendered_safely
+from modules.core.services.email_transport import send_rendered_safely
 from modules.booking.services.event_service import EventOverrides, EventServiceError
 
 log = logging.getLogger(__name__)
@@ -284,7 +284,7 @@ def create_walk_in_lead(
     # services/notification_routing), so this call writes the row
     # without fanning out to notification_jobs — the real-time send
     # path above is the canonical sender.
-    from services import notification_routing  # local to avoid cycles
+    from modules.core.services import notification_routing  # local to avoid cycles
 
     notification_routing.record_event(
         db,
@@ -351,7 +351,7 @@ def _send_walk_in_lead_admin_emails(
         return
 
     from config.settings import ADMIN_BASE_URL
-    from services import notification_templates
+    from modules.core.services import notification_templates
 
     rendered = notification_templates.render_admin_walk_in_lead_created(
         captured_by=captured_by,

@@ -39,7 +39,7 @@ from database.models import (
     NotificationSubscription,
     User,
 )
-from services.notification_preferences_service import KIND_DESCRIPTORS
+from modules.core.services.notification_preferences_service import KIND_DESCRIPTORS
 
 
 # ─── Subscribable kinds ─────────────────────────────────────────────────────

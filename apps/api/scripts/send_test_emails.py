@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.settings import EMAIL_DEV_REDIRECT
 from database.models import Appointment, Contact, Payment, TimeOffRequest, User
-from services.email_transport import (
+from modules.core.services.email_transport import (
     EmailMessagePayload,
     get_email_transport,
 )
@@ -205,7 +205,7 @@ def _fake_time_off_request(
 
 
 def _render_booking_confirmation() -> EmailMessagePayload:
-    from services.notification_templates import render_booking_confirmation
+    from modules.core.services.notification_templates import render_booking_confirmation
 
     appt = _fake_appointment()
     rendered = render_booking_confirmation(appt)
@@ -218,7 +218,7 @@ def _render_booking_confirmation() -> EmailMessagePayload:
 
 
 def _render_booking_thank_you() -> EmailMessagePayload:
-    from services.notification_templates import render_booking_thank_you
+    from modules.core.services.notification_templates import render_booking_thank_you
 
     appt = _fake_appointment()
     appt.status = "attended"
@@ -235,7 +235,7 @@ def _render_booking_thank_you() -> EmailMessagePayload:
 
 
 def _render_booking_no_show_followup() -> EmailMessagePayload:
-    from services.notification_templates import render_booking_no_show_followup
+    from modules.core.services.notification_templates import render_booking_no_show_followup
 
     appt = _fake_appointment()
     appt.status = "no_show"
@@ -253,7 +253,7 @@ def _render_booking_no_show_followup() -> EmailMessagePayload:
 
 
 def _render_booking_reminder() -> EmailMessagePayload:
-    from services.notification_templates import render_reminder
+    from modules.core.services.notification_templates import render_reminder
 
     appt = _fake_appointment()
     # Reminder fires ~24h before the slot, so move the fixture closer.
@@ -269,7 +269,7 @@ def _render_booking_reminder() -> EmailMessagePayload:
 
 
 def _render_booking_reschedule_confirmation() -> EmailMessagePayload:
-    from services.notification_templates import render_reschedule_confirmation
+    from modules.core.services.notification_templates import render_reschedule_confirmation
 
     appt = _fake_appointment()
     # The fixture represents the NEW slot the customer rescheduled to.
@@ -288,7 +288,7 @@ def _render_booking_reschedule_confirmation() -> EmailMessagePayload:
 
 
 def _render_booking_cancellation_confirmation() -> EmailMessagePayload:
-    from services.notification_templates import render_cancellation_confirmation
+    from modules.core.services.notification_templates import render_cancellation_confirmation
 
     appt = _fake_appointment()
     appt.status = "cancelled"
@@ -304,7 +304,7 @@ def _render_booking_cancellation_confirmation() -> EmailMessagePayload:
 
 
 def _render_staff_booking_assigned() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_booking_assigned
+    from modules.core.services.notification_templates import render_staff_booking_assigned
 
     user = _fake_staff_user()
     appt = _fake_appointment()
@@ -323,7 +323,7 @@ def _render_staff_booking_assigned() -> EmailMessagePayload:
 
 
 def _render_staff_booking_rescheduled() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_booking_rescheduled
+    from modules.core.services.notification_templates import render_staff_booking_rescheduled
 
     user = _fake_staff_user()
     appt = _fake_appointment()
@@ -346,7 +346,7 @@ def _render_staff_booking_rescheduled() -> EmailMessagePayload:
 
 
 def _render_staff_booking_cancelled() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_booking_cancelled
+    from modules.core.services.notification_templates import render_staff_booking_cancelled
 
     user = _fake_staff_user()
     appt = _fake_appointment()
@@ -368,7 +368,7 @@ def _render_staff_booking_cancelled() -> EmailMessagePayload:
 
 
 def _render_admin_walk_in_lead_created() -> EmailMessagePayload:
-    from services.notification_templates import render_admin_walk_in_lead_created
+    from modules.core.services.notification_templates import render_admin_walk_in_lead_created
 
     captured_by = _fake_staff_user()
     captured_by.role = "admin"
@@ -394,7 +394,7 @@ def _render_admin_walk_in_lead_created() -> EmailMessagePayload:
 
 
 def _render_admin_new_booking() -> EmailMessagePayload:
-    from services.notification_templates import render_internal_new_booking
+    from modules.core.services.notification_templates import render_internal_new_booking
 
     appt = _fake_appointment()
     rendered = render_internal_new_booking(appt)
@@ -407,7 +407,7 @@ def _render_admin_new_booking() -> EmailMessagePayload:
 
 
 def _render_staff_quote_signed() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_quote_signed
+    from modules.core.services.notification_templates import render_staff_quote_signed
 
     user = _fake_staff_user()
     user.full_name = "Alex Rivera"
@@ -430,7 +430,7 @@ def _render_staff_quote_signed() -> EmailMessagePayload:
 
 
 def _render_digest_staff_daily() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_daily_digest
+    from modules.core.services.notification_templates import render_staff_daily_digest
 
     user = _fake_staff_user()
     today = date.today()
@@ -474,7 +474,7 @@ def _render_digest_staff_daily() -> EmailMessagePayload:
 
 
 def _render_digest_staff_weekly() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_weekly_digest
+    from modules.core.services.notification_templates import render_staff_weekly_digest
 
     user = _fake_staff_user()
     today = date.today()
@@ -504,7 +504,7 @@ def _render_digest_staff_weekly() -> EmailMessagePayload:
 
 
 def _render_digest_admin_daily() -> EmailMessagePayload:
-    from services.notification_templates import render_admin_daily_digest
+    from modules.core.services.notification_templates import render_admin_daily_digest
 
     admin = _fake_staff_user()
     admin.role = "admin"
@@ -564,7 +564,7 @@ def _render_manual_resend_schedule() -> EmailMessagePayload:
     recipient. Same template as #17 staff.schedule_published; the kind
     name documents that the trigger is manual, not the publish event.
     """
-    from services.notification_templates import render_schedule_published
+    from modules.core.services.notification_templates import render_schedule_published
 
     user = _fake_staff_user()
     today = date.today()
@@ -589,7 +589,7 @@ def _render_manual_resend_schedule() -> EmailMessagePayload:
 
 
 def _render_staff_payment_received() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_payment_received
+    from modules.core.services.notification_templates import render_staff_payment_received
 
     user = _fake_staff_user()
     user.full_name = "Alex Rivera"
@@ -614,7 +614,7 @@ def _render_staff_payment_received() -> EmailMessagePayload:
 
 
 def _render_staff_pin_reset() -> EmailMessagePayload:
-    from services.notification_templates import render_pin_reset
+    from modules.core.services.notification_templates import render_pin_reset
 
     user = _fake_staff_user()
     set_pin_url = (
@@ -631,7 +631,7 @@ def _render_staff_pin_reset() -> EmailMessagePayload:
 
 
 def _render_payment_receipt() -> EmailMessagePayload:
-    from services.notification_templates import render_payment_receipt
+    from modules.core.services.notification_templates import render_payment_receipt
 
     contact = _fake_contact()
     payment = _fake_payment()
@@ -649,7 +649,7 @@ def _render_payment_receipt() -> EmailMessagePayload:
 
 
 def _render_staff_schedule_published() -> EmailMessagePayload:
-    from services.notification_templates import render_schedule_published
+    from modules.core.services.notification_templates import render_schedule_published
 
     user = _fake_staff_user()
     today = date.today()
@@ -673,7 +673,7 @@ def _render_staff_schedule_published() -> EmailMessagePayload:
 
 
 def _render_staff_shift_added() -> EmailMessagePayload:
-    from services.notification_templates import render_shift_added
+    from modules.core.services.notification_templates import render_shift_added
 
     user = _fake_staff_user()
     rendered = render_shift_added(staff_user=user, shift=_fake_shift(day_offset=2))
@@ -686,7 +686,7 @@ def _render_staff_shift_added() -> EmailMessagePayload:
 
 
 def _render_staff_shift_edited() -> EmailMessagePayload:
-    from services.notification_templates import render_shift_edited
+    from modules.core.services.notification_templates import render_shift_edited
 
     user = _fake_staff_user()
     old_shift = _fake_shift(day_offset=4, hour=15)
@@ -708,7 +708,7 @@ def _render_staff_shift_edited() -> EmailMessagePayload:
 
 
 def _render_staff_shift_deleted() -> EmailMessagePayload:
-    from services.notification_templates import render_shift_deleted
+    from modules.core.services.notification_templates import render_shift_deleted
 
     user = _fake_staff_user()
     rendered = render_shift_deleted(staff_user=user, shift=_fake_shift(day_offset=6))
@@ -721,7 +721,7 @@ def _render_staff_shift_deleted() -> EmailMessagePayload:
 
 
 def _render_admin_time_off_requested() -> EmailMessagePayload:
-    from services.notification_templates import render_time_off_requested_to_owner
+    from modules.core.services.notification_templates import render_time_off_requested_to_owner
 
     stylist = _fake_staff_user()
     admin = _fake_staff_user()
@@ -738,7 +738,7 @@ def _render_admin_time_off_requested() -> EmailMessagePayload:
 
 
 def _render_staff_time_off_approved() -> EmailMessagePayload:
-    from services.notification_templates import render_time_off_decided_to_staff
+    from modules.core.services.notification_templates import render_time_off_decided_to_staff
 
     stylist = _fake_staff_user()
     admin = _fake_staff_user()
@@ -759,7 +759,7 @@ def _render_staff_time_off_approved() -> EmailMessagePayload:
 
 
 def _render_staff_time_off_denied() -> EmailMessagePayload:
-    from services.notification_templates import render_time_off_decided_to_staff
+    from modules.core.services.notification_templates import render_time_off_decided_to_staff
 
     stylist = _fake_staff_user()
     admin = _fake_staff_user()
@@ -781,7 +781,7 @@ def _render_staff_time_off_denied() -> EmailMessagePayload:
 
 
 def _render_staff_time_off_amended() -> EmailMessagePayload:
-    from services.notification_templates import render_time_off_amended_to_staff
+    from modules.core.services.notification_templates import render_time_off_amended_to_staff
 
     stylist = _fake_staff_user()
     admin = _fake_staff_user()
@@ -809,7 +809,7 @@ def _render_staff_time_off_amended() -> EmailMessagePayload:
 
 
 def _render_staff_missing_clock_out() -> EmailMessagePayload:
-    from services.notification_templates import render_staff_missing_clock_out
+    from modules.core.services.notification_templates import render_staff_missing_clock_out
 
     user = _fake_staff_user()
     shift = _fake_shift(day_offset=-1, hour=15)
@@ -828,7 +828,7 @@ def _render_staff_missing_clock_out() -> EmailMessagePayload:
 
 
 def _render_admin_missing_clock_out() -> EmailMessagePayload:
-    from services.notification_templates import render_admin_missing_clock_out
+    from modules.core.services.notification_templates import render_admin_missing_clock_out
 
     user = _fake_staff_user()
     admin = _fake_staff_user()
@@ -850,7 +850,7 @@ def _render_admin_missing_clock_out() -> EmailMessagePayload:
 
 
 def _render_staff_welcome_sales() -> EmailMessagePayload:
-    from services.notification_templates import render_welcome_new_user
+    from modules.core.services.notification_templates import render_welcome_new_user
 
     user = _fake_staff_user()  # role="sales"
     setup_url = (
@@ -872,7 +872,7 @@ def _render_staff_welcome_sales() -> EmailMessagePayload:
 
 
 def _render_admin_password_changed() -> EmailMessagePayload:
-    from services.notification_templates import render_password_changed
+    from modules.core.services.notification_templates import render_password_changed
 
     user = _fake_staff_user()
     user.role = "admin"
@@ -890,7 +890,7 @@ def _render_admin_password_changed() -> EmailMessagePayload:
 
 
 def _render_admin_password_reset_request() -> EmailMessagePayload:
-    from services.notification_templates import render_password_reset_request
+    from modules.core.services.notification_templates import render_password_reset_request
 
     user = _fake_staff_user()
     user.role = "admin"
@@ -911,7 +911,7 @@ def _render_admin_password_reset_request() -> EmailMessagePayload:
 
 
 def _render_staff_account_locked() -> EmailMessagePayload:
-    from services.notification_templates import render_account_locked
+    from modules.core.services.notification_templates import render_account_locked
 
     user = _fake_staff_user()
     locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -925,7 +925,7 @@ def _render_staff_account_locked() -> EmailMessagePayload:
 
 
 def _render_staff_role_changed() -> EmailMessagePayload:
-    from services.notification_templates import render_role_changed
+    from modules.core.services.notification_templates import render_role_changed
 
     user = _fake_staff_user()
     admin = _fake_staff_user()
@@ -948,7 +948,7 @@ def _render_staff_role_changed() -> EmailMessagePayload:
 
 
 def _render_staff_welcome_admin() -> EmailMessagePayload:
-    from services.notification_templates import render_welcome_new_user
+    from modules.core.services.notification_templates import render_welcome_new_user
 
     user = _fake_staff_user()
     user.role = "admin"

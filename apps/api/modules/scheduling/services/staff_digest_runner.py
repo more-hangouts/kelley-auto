@@ -56,9 +56,9 @@ from database.models import (
     TimeOffRequest,
     User,
 )
-from services import notification_routing, notification_templates
-from services.business_time import shop_tz
-from services.email_transport import send_rendered_safely
+from modules.core.services import notification_routing, notification_templates
+from modules.core.services.business_time import shop_tz
+from modules.core.services.email_transport import send_rendered_safely
 from modules.scheduling.services.staff_schedule import _entry_to_shift_dict
 
 log = logging.getLogger(__name__)

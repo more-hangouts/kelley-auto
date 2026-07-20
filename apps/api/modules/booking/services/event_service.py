@@ -266,7 +266,7 @@ def change_event_status(
     # single source of truth. The legacy event_status_change_events
     # table stays around because the kanban depends on it; we just
     # double-write here.
-    from services import activity_log  # local to avoid import cycle
+    from modules.core.services import activity_log  # local to avoid import cycle
     activity_log.log_activity(
         db,
         event_id=event.id,
@@ -335,7 +335,7 @@ def archive_event(
     Refuses if the dependency report has any blocking active dependency
     (active invoice / quote / recorded payment). The activity_log row
     anchors to the event itself."""
-    from services import activity_log, record_dependencies
+    from modules.core.services import activity_log, record_dependencies
 
     record_dependencies.validate_archive_reason(reason)
 
@@ -390,7 +390,7 @@ def restore_event(
     restoring an event whose customer is in the Recycle Bin would
     leave a row that the admin pipeline immediately filters out via
     the Contact-side join in ``get_board_data``."""
-    from services import activity_log, record_dependencies
+    from modules.core.services import activity_log, record_dependencies
 
     event = db.get(Event, event_id)
     if event is None:

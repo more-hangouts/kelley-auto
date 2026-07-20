@@ -34,7 +34,7 @@ from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import BusinessProfile, StaffPunch, User
 from modules.scheduling.services import clock_in, clock_selfie
-from services.business_time import business_date, shop_tz
+from modules.core.services.business_time import business_date, shop_tz
 from modules.scheduling.services.clock_in import ClockInError
 from modules.scheduling.services.clock_selfie import SelfieStorageError
 
@@ -99,7 +99,7 @@ class StatusResponse(BaseModel):
 
 
 def _to_punch_response(punch: StaffPunch) -> PunchResponse:
-    from services.business_time import to_business_local
+    from modules.core.services.business_time import to_business_local
 
     return PunchResponse(
         id=punch.id,

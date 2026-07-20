@@ -519,7 +519,7 @@ def archive_contact(
     contact's most recent event when one exists; logs a warning and
     skips the audit row when the contact never had an event (per Gate
     1 of the CRM record deletion plan)."""
-    from services import activity_log, record_dependencies  # local imports avoid cycles
+    from modules.core.services import activity_log, record_dependencies  # local imports avoid cycles
 
     record_dependencies.validate_archive_reason(reason)
 
@@ -589,7 +589,7 @@ def restore_contact(
     ``phone_e164`` of this row, restore is blocked with
     ``restore_phone_collision``. Without this guard the flush would
     raise an opaque IntegrityError."""
-    from services import activity_log, record_dependencies
+    from modules.core.services import activity_log, record_dependencies
 
     contact = db.get(Contact, contact_id)
     if contact is None:

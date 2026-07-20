@@ -462,7 +462,7 @@ def main() -> None:
     # Cron health row written.
     db = SessionLocal()
     try:
-        from services.cron_state import SCHEDULE_NO_SHOW, all_states
+        from modules.core.services.cron_state import SCHEDULE_NO_SHOW, all_states
 
         states = {s["name"]: s for s in all_states(db)}
         assert SCHEDULE_NO_SHOW in states, (

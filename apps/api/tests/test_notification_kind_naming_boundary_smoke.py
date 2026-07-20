@@ -49,12 +49,12 @@ os.environ.setdefault(
     "test-key-not-for-production-just-smoke-testing-only-please",
 )
 
-from services.notification_routing import (  # noqa: E402
+from modules.core.services.notification_routing import (  # noqa: E402
     INTRINSIC_TARGETING,
     ROLE_DEFAULTS,
     TIMING_MODE,
 )
-from services.notification_service import STAFF_EMAIL_RENDERERS  # noqa: E402
+from modules.core.services.notification_service import STAFF_EMAIL_RENDERERS  # noqa: E402
 
 
 # Legacy enqueue keys used by services.notification_service.enqueue_for_*

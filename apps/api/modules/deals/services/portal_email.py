@@ -33,12 +33,12 @@ from database.models import (
     Quote,
     QuoteInvitation,
 )
-from services.business_profile_service import (
+from modules.core.services.business_profile_service import (
     BusinessProfileError,
     BusinessProfileView,
     get_profile,
 )
-from services.email_transport import (
+from modules.core.services.email_transport import (
     EmailMessagePayload,
     EmailTransport,
     get_email_transport,

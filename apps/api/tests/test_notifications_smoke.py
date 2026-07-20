@@ -38,10 +38,10 @@ from sqlalchemy import text as sql_text
 from api.server import app
 from database.connection import SessionLocal
 from database.models import Appointment, AppointmentEnrichmentResponse, NotificationJob
-from services import notification_service
+from modules.core.services import notification_service
 from modules.booking.services import booking_service
-from services.booking_tokens import cancel_url, reschedule_url
-from services.notification_templates import (
+from modules.core.services.booking_tokens import cancel_url, reschedule_url
+from modules.core.services.notification_templates import (
     render_booking_confirmation,
     render_reminder,
 )
@@ -337,7 +337,7 @@ finally:
 # ---------------------------------------------------------------------------
 
 from sqlalchemy import text as _t
-from services.notification_service import enqueue_for_new_booking
+from modules.core.services.notification_service import enqueue_for_new_booking
 from database.models import Contact, Event, EventParticipant, EventStatusChangeEvent
 
 

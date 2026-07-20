@@ -35,7 +35,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from database.models import Appointment, EventParticipant, Invoice, Quote
-from services import activity_log
+from modules.core.services import activity_log
 
 
 class BuyerJourneyError(Exception):

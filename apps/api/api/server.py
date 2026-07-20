@@ -22,7 +22,7 @@ from config.settings import (
     CORS_ORIGINS,
     validate_config,
 )
-from services import email_transport
+from modules.core.services import email_transport
 from api.redis_rate_limit import close_client as close_redis_client
 from database.connection import engine
 

@@ -25,7 +25,7 @@ from database.models import (
     Event,
     User,
 )
-from services import notification_service
+from modules.core.services import notification_service
 from modules.contacts.services import buyer_journey
 from modules.booking.services import appointment_audit, booking_service, event_service
 from modules.contacts.services.buyer_journey import BuyerJourneyError

@@ -43,7 +43,7 @@ from database.models import (  # noqa: E402
     EventStatusChangeEvent,
     User,
 )
-from services import activity_log  # noqa: E402
+from modules.core.services import activity_log  # noqa: E402
 from modules.booking.services import booking_service
 from tests._attendance_helpers import (  # noqa: E402
     restore_gate,

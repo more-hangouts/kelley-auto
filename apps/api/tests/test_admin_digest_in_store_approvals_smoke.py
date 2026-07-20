@@ -58,10 +58,7 @@ from database.models import (  # noqa: E402
     QuoteLineItem,
     User,
 )
-from services import (  # noqa: E402
-    email_transport,
-    notification_routing,
-)
+from modules.core.services import email_transport, notification_routing  # noqa: E402
 from modules.deals.services import quote_service  # noqa: E402
 from modules.scheduling.services import staff_digest_runner  # noqa: E402
 

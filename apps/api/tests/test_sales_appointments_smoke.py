@@ -54,10 +54,7 @@ from database.models import (  # noqa: E402
     EventParticipant,
     User,
 )
-from services import (
-    activity_log,
-    sales_auth,
-)  # noqa: E402
+from modules.core.services import activity_log, sales_auth  # noqa: E402
 from modules.booking.services import booking_service
 
 client = TestClient(app)

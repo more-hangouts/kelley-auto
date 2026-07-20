@@ -27,9 +27,9 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import business_profile_service, document_storage
-from services.business_profile_service import BusinessProfileError
-from services.upload_validation import (
+from modules.core.services import business_profile_service, document_storage
+from modules.core.services.business_profile_service import BusinessProfileError
+from modules.core.services.upload_validation import (
     HEAD_BYTES_NEEDED,
     UploadValidationError,
     validate_magic_bytes,

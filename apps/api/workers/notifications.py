@@ -13,9 +13,9 @@ import asyncio
 import logging
 
 from database.connection import SessionLocal
-from services.email_transport import get_email_transport
-from services.notification_service import claim_due_jobs, dispatch_job
-from services.sms_transport import get_sms_transport
+from modules.core.services.email_transport import get_email_transport
+from modules.core.services.notification_service import claim_due_jobs, dispatch_job
+from modules.core.services.sms_transport import get_sms_transport
 
 log = logging.getLogger(__name__)
 

@@ -68,9 +68,7 @@ from database.models import (  # noqa: E402
     InvoiceLineItem,
     QuoteLineItem,
 )
-from services import (  # noqa: E402
-    document_storage,
-)
+from modules.core.services import document_storage  # noqa: E402
 from modules.deals.services import invoice_pdf, invoice_service, portal_service, quote_service  # noqa: E402
 from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,

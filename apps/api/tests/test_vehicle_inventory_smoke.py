@@ -42,7 +42,7 @@ from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem, User  # noqa: E402
 from PIL import Image  # noqa: E402
 
-from services import document_storage  # noqa: E402
+from modules.core.services import document_storage  # noqa: E402
 from modules.inventory.services.catalog_service import public_vehicle_dto  # noqa: E402
 
 client = TestClient(app)

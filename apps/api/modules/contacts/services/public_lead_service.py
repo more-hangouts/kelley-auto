@@ -36,14 +36,14 @@ from sqlalchemy.orm import Session
 
 from config.settings import APP_TIMEZONE
 from database.models import Appointment, BusinessProfile, Event, User
-from services import activity_log
+from modules.core.services import activity_log
 from modules.contacts.services import contact_service, lead_application_service
 from modules.booking.services import booking_service, event_service
 from modules.inventory.services import public_inventory_service
 from modules.analytics.services import meta_capi_service, storefront_analytics_service
 from modules.analytics.services.storefront_analytics_service import TrackingContext
-from services import email_transport
-from services.email_transport import send_rendered_safely
+from modules.core.services import email_transport
+from modules.core.services.email_transport import send_rendered_safely
 from modules.booking.services.event_service import EventOverrides
 from modules.booking.services.event_workflow import all_statuses
 from modules.contacts.services.lead_application_service import ApplicationInput
@@ -101,7 +101,7 @@ def _notify_staff_of_lead(
             reason = "delivery_disabled_null_transport"
         else:
             from config.settings import ADMIN_BASE_URL
-            from services import notification_templates
+            from modules.core.services import notification_templates
 
             rendered = notification_templates.render_public_lead_notification(
                 is_new=is_new,
@@ -201,7 +201,7 @@ def _send_customer_confirmation(
 
     ok = False
     try:
-        from services import notification_templates
+        from modules.core.services import notification_templates
 
         vehicle_label = None
         if vehicle is not None:

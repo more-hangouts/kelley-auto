@@ -42,8 +42,8 @@ from sqlalchemy.orm import Session
 from database.auth import hash_password, require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import sales_auth
-from services.email_transport import EmailMessagePayload
+from modules.core.services import sales_auth
+from modules.core.services.email_transport import EmailMessagePayload
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -242,8 +242,8 @@ def _send_role_changed_email_safe(
     if not staff_user.email:
         return
     try:
-        from services import email_transport
-        from services.notification_templates import render_role_changed
+        from modules.core.services import email_transport
+        from modules.core.services.notification_templates import render_role_changed
 
         rendered = render_role_changed(
             staff_user=staff_user,
