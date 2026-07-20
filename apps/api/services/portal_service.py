@@ -55,7 +55,7 @@ from services.business_profile_service import (
     BusinessProfileView,
     get_profile,
 )
-from services.catalog_service import assert_public_render_keys, customer_line_view
+from modules.inventory.services.catalog_service import assert_public_render_keys, customer_line_view
 
 log = logging.getLogger(__name__)
 

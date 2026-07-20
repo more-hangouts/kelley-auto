@@ -75,7 +75,7 @@ from services import (  # noqa: E402
     portal_service,
     quote_service,
 )
-from services.catalog_service import (  # noqa: E402
+from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
 )

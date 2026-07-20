@@ -42,8 +42,8 @@ from services import (
     contact_service,
     event_service,
     lead_application_service,
-    public_inventory_service,
 )
+from modules.inventory.services import public_inventory_service
 from modules.analytics.services import meta_capi_service, storefront_analytics_service
 from modules.analytics.services.storefront_analytics_service import TrackingContext
 from services import email_transport

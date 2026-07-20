@@ -55,7 +55,7 @@ from api.server import app  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem, User  # noqa: E402
-from services.catalog_service import (  # noqa: E402
+from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
     find_catalog_items,

@@ -28,7 +28,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database.models import CatalogItem
-from services.catalog_service import public_vehicle_dto
+from modules.inventory.services.catalog_service import public_vehicle_dto
 
 # Statuses a car may appear in on the public LIST. 'available' is the
 # default; 'pending' (deal in progress, still shown) is allowed when asked

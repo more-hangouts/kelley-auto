@@ -64,13 +64,14 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import invoice_service, special_order_service  # noqa: E402
-from services.catalog_service import (  # noqa: E402
+from services import invoice_service  # noqa: E402
+from modules.inventory.services import special_order_service  # noqa: E402
+from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
 )
 from services.invoice_service import LineItemInput  # noqa: E402
-from services.special_order_service import (  # noqa: E402
+from modules.inventory.services.special_order_service import (  # noqa: E402
     CreateSpecialOrderInput,
     SpecialOrderError,
 )

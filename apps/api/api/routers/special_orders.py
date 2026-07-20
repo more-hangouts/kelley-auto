@@ -24,8 +24,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import special_order_service
-from services.special_order_service import (
+from modules.inventory.services import special_order_service
+from modules.inventory.services.special_order_service import (
     CreateSpecialOrderInput,
     SpecialOrderError,
 )

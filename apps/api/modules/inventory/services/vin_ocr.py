@@ -21,7 +21,7 @@ from io import BytesIO
 import pytesseract
 from PIL import Image, ImageOps
 
-from services import vin as vin_util
+from modules.inventory.services import vin as vin_util
 
 log = logging.getLogger(__name__)
 

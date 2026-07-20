@@ -39,7 +39,7 @@ from database.models import (
     Quote,
 )
 from services import activity_log
-from services.catalog_service import (
+from modules.inventory.services.catalog_service import (
     CatalogServiceError,
     assert_no_catalog_leak,
     assert_no_public_catalog_leaks,

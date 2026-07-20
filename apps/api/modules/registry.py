@@ -58,7 +58,7 @@ from api.routers import admin_time_off as admin_time_off_router
 from api.routers import auth as auth_router
 from api.routers import booking as booking_router
 from api.routers import business_profile as business_profile_router
-from api.routers import catalog as catalog_router
+from modules.inventory.routers import catalog as catalog_router
 from api.routers import contacts as contacts_router
 from modules.analytics.routers import dashboard as dashboard_router
 from api.routers import event_documents as event_documents_routers
@@ -85,7 +85,7 @@ from api.routers import sales_time_off as sales_time_off_router
 from api.routers import sales_walk_ins as sales_walk_ins_router
 from modules.analytics.routers import search as search_router
 from api.routers import special_orders as special_orders_routers
-from api.routers import vin_decode as vin_decode_router
+from modules.inventory.routers import vin_decode as vin_decode_router
 from api.routers import walk_in_leads as walk_in_leads_router
 from modules.messaging.routers import web_chat as web_chat_router
 from modules.messaging.routers import webhooks_meta as webhooks_meta_router

@@ -51,7 +51,7 @@ from database.models import (  # noqa: E402
     SpecialOrder,
     User,
 )
-from services import special_order_service  # noqa: E402
+from modules.inventory.services import special_order_service  # noqa: E402
 
 client = TestClient(app)
 

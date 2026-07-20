@@ -49,7 +49,7 @@ from services import (
     notification_routing,
     quote_signature_hmac,
 )
-from services.catalog_service import CatalogServiceError, assert_no_public_catalog_leaks
+from modules.inventory.services.catalog_service import CatalogServiceError, assert_no_public_catalog_leaks
 from services.discount_snapshot import (
     DiscountRowInput,
     DiscountRowSnapshot,

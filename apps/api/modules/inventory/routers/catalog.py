@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope, require_any_scope
 from database.connection import get_db
 from database.models import CatalogItem, User
-from services.pricing import price_breakdown
-from services.catalog_service import (
+from modules.inventory.services.pricing import price_breakdown
+from modules.inventory.services.catalog_service import (
     CATEGORY_GROUPS,
     CatalogItemInput,
     CatalogServiceError,

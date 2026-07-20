@@ -62,7 +62,7 @@ from database.models import (  # noqa: E402
     QuoteLineItem,
 )
 from services import invoice_service, quote_service  # noqa: E402
-from services.catalog_service import (  # noqa: E402
+from modules.inventory.services.catalog_service import (  # noqa: E402
     CatalogItemInput,
     create_catalog_item,
 )

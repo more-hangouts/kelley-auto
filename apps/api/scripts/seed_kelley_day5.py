@@ -38,11 +38,11 @@ os.environ.setdefault("APP_TIMEZONE", "America/Chicago")
 
 from sqlalchemy import select  # noqa: E402
 
-from api.routers.catalog import CatalogItemCreate  # noqa: E402
+from modules.inventory.routers.catalog import CatalogItemCreate  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem  # noqa: E402
 from services import business_profile_service  # noqa: E402
-from services.catalog_service import create_catalog_item  # noqa: E402
+from modules.inventory.services.catalog_service import create_catalog_item  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

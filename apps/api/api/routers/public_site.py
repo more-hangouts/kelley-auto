@@ -36,11 +36,11 @@ from services import booking_service
 from services import business_profile_service
 from services import document_storage
 from modules.analytics.services import meta_capi_service
-from services import public_inventory_service as inventory
+from modules.inventory.services import public_inventory_service as inventory
 from services import public_lead_service
 from modules.analytics.services import storefront_analytics_service
 from services.business_profile_service import BusinessProfileError
-from services.public_inventory_service import InventoryFilters
+from modules.inventory.services.public_inventory_service import InventoryFilters
 from services.public_lead_service import LeadInput, PublicLeadError
 from modules.analytics.services.storefront_analytics_service import TrackingContext
 

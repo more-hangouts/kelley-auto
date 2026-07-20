@@ -22,8 +22,8 @@ from config.settings import VEHICLE_PHOTO_MAX_MB
 from database.auth import require_any_scope
 from database.connection import get_db
 from database.models import CatalogItem, User
-from services import vin as vin_util
-from services import vin_decode, vin_ocr
+from modules.inventory.services import vin as vin_util
+from modules.inventory.services import vin_decode, vin_ocr
 from services.upload_validation import (
     HEAD_BYTES_NEEDED,
     UploadValidationError,

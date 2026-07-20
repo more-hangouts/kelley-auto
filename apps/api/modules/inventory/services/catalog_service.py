@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session
 from config.settings import PUBLIC_API_BASE_URL, VEHICLE_PHOTO_MAX_MB
 from database.models import CatalogItem
 from services import document_storage
-from services import vin as vin_util
+from modules.inventory.services import vin as vin_util
 from services.upload_validation import (
     HEAD_BYTES_NEEDED,
     UploadValidationError,

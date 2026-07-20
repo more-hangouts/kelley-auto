@@ -42,7 +42,7 @@ from sqlalchemy import select  # noqa: E402
 
 from database.connection import SessionLocal  # noqa: E402
 from database.models import CatalogItem  # noqa: E402
-from services.catalog_service import CatalogServiceError, add_vehicle_photo  # noqa: E402
+from modules.inventory.services.catalog_service import CatalogServiceError, add_vehicle_photo  # noqa: E402
 
 _PKG = _REPO_ROOT / "var" / "crm_import_package"
 _MANIFEST = _PKG / "inventory_photo_manifest.csv"
