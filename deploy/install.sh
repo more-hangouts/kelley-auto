@@ -12,6 +12,36 @@
 # database. Rollback commands are printed at the end.
 set -euo pipefail
 
+# Poll a single HTTP endpoint until it answers 2xx/3xx, up to a finite deadline.
+# Fresh-restarted uvicorn/next take a few seconds to bind their sockets, so a
+# one-shot curl races the restart; retry on a short interval instead of a fixed
+# sleep and succeed the moment the endpoint is ready.
+# Args: <label> <url>. Honors READINESS_TIMEOUT / READINESS_INTERVAL (seconds).
+wait_for_endpoint() {
+  local label="$1" url="$2"
+  local timeout="${READINESS_TIMEOUT:-30}" interval="${READINESS_INTERVAL:-1}"
+  local elapsed=0 code
+  while true; do
+    code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 3 "$url" 2>/dev/null || true)"
+    if [[ "$code" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "    $label ready ($code) after ${elapsed}s"
+      return 0
+    fi
+    if (( elapsed >= timeout )); then
+      echo "    $label NOT ready after ${timeout}s (last: ${code:-no-response})" >&2
+      return 1
+    fi
+    sleep "$interval"
+    elapsed=$(( elapsed + interval ))
+  done
+}
+
+# Allow sourcing the file to unit-test wait_for_endpoint without running any of
+# the privileged install steps:  INSTALL_SH_LIB=1 source deploy/install.sh
+if [[ "${INSTALL_SH_LIB:-0}" == "1" ]]; then
+  return 0
+fi
+
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   echo "error: must run as root (use: sudo bash deploy/install.sh)" >&2
   exit 1
@@ -71,13 +101,23 @@ systemctl restart kelley-backend kelley-public
 echo "==> reload caddy"
 systemctl reload caddy
 
-# 7. Report.
+# 7. Report + bounded readiness polling.
 echo "==> status"
 systemctl --no-pager --lines=5 status kelley-backend kelley-public caddy || true
 echo
-echo "==> local health checks"
-curl -fsS -o /dev/null -w 'api    /api/health -> %{http_code}\n' http://127.0.0.1:8000/api/health || echo "    api health FAILED"
-curl -fsS -o /dev/null -w 'public 127.0.0.1:3000 -> %{http_code}\n' http://127.0.0.1:3000/ || echo "    storefront FAILED"
+
+echo "==> waiting for services to become ready (up to ${READINESS_TIMEOUT:-30}s each)"
+ready=0
+wait_for_endpoint "api    /api/health" "http://127.0.0.1:8000/api/health" || ready=1
+wait_for_endpoint "public 127.0.0.1:3000" "http://127.0.0.1:3000/" || ready=1
+if (( ready != 0 )); then
+  echo >&2
+  echo "==> readiness check FAILED — inspect with:" >&2
+  echo "    systemctl status kelley-backend kelley-public --no-pager" >&2
+  echo "    journalctl -u kelley-backend -u kelley-public --since '-2 min' --no-pager" >&2
+  echo "    (units are installed; if this is a real failure, use the rollback below)" >&2
+  exit 1
+fi
 
 cat <<EOF
 
