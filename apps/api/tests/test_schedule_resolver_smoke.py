@@ -61,13 +61,8 @@ from database.models import (  # noqa: E402
     TimeOffRequest,
     User,
 )
-from services import (  # noqa: E402
-    attendance_close,
-    attendance_pre_close,
-    clock_in,
-    shift_resolver,
-)
-from services.clock_in import ClockInError  # noqa: E402
+from modules.scheduling.services import attendance_close, attendance_pre_close, clock_in, shift_resolver  # noqa: E402
+from modules.scheduling.services.clock_in import ClockInError  # noqa: E402
 
 _user_ids: list[int] = []
 _location_ids: list[int] = []

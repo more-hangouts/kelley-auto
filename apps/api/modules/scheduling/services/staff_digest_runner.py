@@ -59,7 +59,7 @@ from database.models import (
 from services import notification_routing, notification_templates
 from services.business_time import shop_tz
 from services.email_transport import send_rendered_safely
-from services.staff_schedule import _entry_to_shift_dict
+from modules.scheduling.services.staff_schedule import _entry_to_shift_dict
 
 log = logging.getLogger(__name__)
 

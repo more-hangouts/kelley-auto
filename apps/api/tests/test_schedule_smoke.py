@@ -64,8 +64,8 @@ from database.models import (  # noqa: E402
     TimeOffRequest,
     User,
 )
-from services import shift_resolver, staff_schedule  # noqa: E402
-from services.staff_schedule import StaffScheduleError  # noqa: E402
+from modules.scheduling.services import shift_resolver, staff_schedule  # noqa: E402
+from modules.scheduling.services.staff_schedule import StaffScheduleError  # noqa: E402
 
 client = TestClient(app)
 

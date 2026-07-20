@@ -67,13 +67,10 @@ from database.models import (  # noqa: E402
     User,
 )
 from services import (  # noqa: E402
-    attendance_close,
-    attendance_pre_close,
-    clock_selfie,
-    clock_selfie_retention,
     cron_state,
     document_storage,
 )
+from modules.scheduling.services import attendance_close, attendance_pre_close, clock_selfie, clock_selfie_retention  # noqa: E402
 
 client = TestClient(app)
 

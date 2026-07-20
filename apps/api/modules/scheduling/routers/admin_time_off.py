@@ -28,8 +28,8 @@ from config.settings import APP_TIMEZONE
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import time_off
-from services.time_off import TimeOffServiceError
+from modules.scheduling.services import time_off
+from modules.scheduling.services.time_off import TimeOffServiceError
 
 router = APIRouter()
 

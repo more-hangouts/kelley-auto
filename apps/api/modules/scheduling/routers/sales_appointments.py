@@ -25,7 +25,7 @@ from database.models import User
 from services import buyer_journey
 from modules.booking.services import sales_appointments
 from modules.analytics.services import sales_activity
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 from services.buyer_journey import BuyerJourneyError
 from modules.booking.services.sales_appointments import SalesActionError
 

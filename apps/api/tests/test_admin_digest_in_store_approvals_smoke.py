@@ -62,8 +62,8 @@ from services import (  # noqa: E402
     email_transport,
     notification_routing,
     quote_service,
-    staff_digest_runner,
 )
+from modules.scheduling.services import staff_digest_runner  # noqa: E402
 
 # ─── Test transport: capture sends instead of mailing ──────────────────────
 

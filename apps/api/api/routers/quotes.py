@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from database.auth import require_admin_scope, require_any_scope
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
 from database.models import Quote, User
 from services import buyer_journey, invoice_pdf, portal_email, quote_service

@@ -46,7 +46,7 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import StaffScheduleEntry, TimeOffRequest, User  # noqa: E402
-from services import recurring_availability, staff_schedule  # noqa: E402
+from modules.scheduling.services import recurring_availability, staff_schedule  # noqa: E402
 
 client = TestClient(app)
 

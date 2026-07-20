@@ -32,7 +32,7 @@ from database.models import (  # noqa: E402
     StaffShiftRequest,
     User,
 )
-from services import staff_schedule  # noqa: E402
+from modules.scheduling.services import staff_schedule  # noqa: E402
 
 _user_ids: list[int] = []
 _post_ids: list[int] = []

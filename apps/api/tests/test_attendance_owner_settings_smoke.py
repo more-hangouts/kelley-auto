@@ -47,7 +47,7 @@ from api.server import app  # noqa: E402
 from database.auth import create_access_token, hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import BusinessProfile, User  # noqa: E402
-from services.clock_selfie import validate_selfie_bytes  # noqa: E402
+from modules.scheduling.services.clock_selfie import validate_selfie_bytes  # noqa: E402
 
 client = TestClient(app)
 

@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from config.settings import DOCUMENT_UPLOAD_MAX_MB
 from database.auth import require_any_scope
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
 from database.models import Event, EventDocument, Invoice, User
 from services import document_storage

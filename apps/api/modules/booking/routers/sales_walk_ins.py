@@ -30,7 +30,7 @@ from database.connection import get_db
 from database.models import User
 from services import sales_staff
 from modules.booking.services import walk_in_service
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 from modules.booking.services.walk_in_service import (
     WalkInContactInput,
     WalkInEnrichmentInput,

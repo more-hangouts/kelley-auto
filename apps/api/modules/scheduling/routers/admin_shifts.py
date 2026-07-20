@@ -22,8 +22,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import staff_shifts_admin
-from services.staff_shifts_admin import StaffShiftAdminError
+from modules.scheduling.services import staff_shifts_admin
+from modules.scheduling.services.staff_shifts_admin import StaffShiftAdminError
 
 router = APIRouter()
 

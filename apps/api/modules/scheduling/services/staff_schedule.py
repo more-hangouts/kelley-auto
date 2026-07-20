@@ -62,7 +62,7 @@ from database.models import (
     TimeOffRequest,
     User,
 )
-from services import recurring_availability
+from modules.scheduling.services import recurring_availability
 from services.business_time import business_now, shop_tz
 from services.email_transport import send_rendered_safely
 
@@ -236,7 +236,7 @@ def _send_shift_added_event(
     exist at record time; this is called AFTER ``db.flush()`` so the
     insert is visible to the intrinsic-targeting lookup.
     """
-    from services import staff_schedule_notifications
+    from modules.scheduling.services import staff_schedule_notifications
 
     staff_schedule_notifications.notify_shift_added(
         db,
@@ -1224,7 +1224,7 @@ def update_published_entry(
 
     new_shift = _entry_to_shift_dict(entry)
     if old_shift != new_shift:
-        from services import staff_schedule_notifications
+        from modules.scheduling.services import staff_schedule_notifications
 
         staff_schedule_notifications.notify_shift_edited(
             db,
@@ -1274,7 +1274,7 @@ def retract_published_entry(
 
     shift_snapshot = _entry_to_shift_dict(entry)
 
-    from services import staff_schedule_notifications
+    from modules.scheduling.services import staff_schedule_notifications
 
     staff_schedule_notifications.notify_shift_deleted(
         db,

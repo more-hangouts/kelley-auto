@@ -36,10 +36,10 @@ from database.models import (
     StaffShiftRequestEvent,
     User,
 )
-from services import open_shifts, shift_request_notifications, staff_schedule
+from modules.scheduling.services import open_shifts, shift_request_notifications, staff_schedule
 from services.business_time import to_business_local
-from services.open_shifts import OpenShiftPostError
-from services.staff_schedule import StaffScheduleError
+from modules.scheduling.services.open_shifts import OpenShiftPostError
+from modules.scheduling.services.staff_schedule import StaffScheduleError
 
 
 # Stable error codes mapped to HTTP statuses by the routers.

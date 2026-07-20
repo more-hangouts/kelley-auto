@@ -59,7 +59,7 @@ from database.models import (
     StaffPunchCorrectionRequest,
     User,
 )
-from services import clock_in
+from modules.scheduling.services import clock_in
 from services.business_time import business_date, business_now, shop_tz, to_business_local
 
 

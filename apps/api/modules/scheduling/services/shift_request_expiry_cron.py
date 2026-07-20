@@ -11,7 +11,8 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from services import cron_state, staff_shift_requests
+from services import cron_state
+from modules.scheduling.services import staff_shift_requests
 
 log = logging.getLogger(__name__)
 

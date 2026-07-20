@@ -36,9 +36,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import StaffLocation, StaffPunch
-from services import shift_resolver, staff_schedule
+from modules.scheduling.services import shift_resolver, staff_schedule
 from services.business_time import business_date, business_now, shop_tz, to_business_local
-from services.shift_resolver import ResolvedShift
+from modules.scheduling.services.shift_resolver import ResolvedShift
 
 
 def _coerce_ip(raw: str | None) -> str | None:

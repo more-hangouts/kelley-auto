@@ -40,7 +40,7 @@ from database.models import (  # noqa: E402
     StaffScheduleEntry,
     User,
 )
-from services import staff_schedule  # noqa: E402
+from modules.scheduling.services import staff_schedule  # noqa: E402
 
 client = TestClient(app)
 

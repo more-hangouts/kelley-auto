@@ -23,9 +23,9 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import recurring_availability, shift_resolver, staff_schedule
-from services.recurring_availability import RecurringAvailabilityError
-from services.staff_schedule import StaffScheduleError
+from modules.scheduling.services import recurring_availability, shift_resolver, staff_schedule
+from modules.scheduling.services.recurring_availability import RecurringAvailabilityError
+from modules.scheduling.services.staff_schedule import StaffScheduleError
 
 router = APIRouter()
 

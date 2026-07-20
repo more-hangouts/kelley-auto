@@ -51,8 +51,8 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import StaffSchedulePreset, User  # noqa: E402
-from services import staff_schedule_presets  # noqa: E402
-from services.staff_schedule_presets import StaffSchedulePresetError  # noqa: E402
+from modules.scheduling.services import staff_schedule_presets  # noqa: E402
+from modules.scheduling.services.staff_schedule_presets import StaffSchedulePresetError  # noqa: E402
 
 client = TestClient(app)
 

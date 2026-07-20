@@ -57,7 +57,7 @@ from database.models import (  # noqa: E402
     TimeOffRequest,
     User,
 )
-from services import auto_scheduler  # noqa: E402
+from modules.scheduling.services import auto_scheduler  # noqa: E402
 from modules.booking.services import booking_service
 
 client = TestClient(app)
@@ -206,7 +206,7 @@ def _entries_for(week_start: date, user_ids: list[int]) -> list[dict]:
     """Pull all schedule entries in the week for the smoke user set,
     via the admin /week endpoint. Filters out any rows belonging to
     other test runs by user_id."""
-    from services import staff_schedule
+    from modules.scheduling.services import staff_schedule
 
     db = SessionLocal()
     try:

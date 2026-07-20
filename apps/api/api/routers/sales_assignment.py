@@ -25,7 +25,7 @@ from database.connection import get_db
 from database.models import User
 from services import sales_staff
 from modules.booking.services import sales_assignment
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 from modules.booking.services.sales_assignment import SalesAssignmentError
 
 router = APIRouter()

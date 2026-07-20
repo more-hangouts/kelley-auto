@@ -57,7 +57,7 @@ from database.models import (  # noqa: E402
     StaffScheduleEntry,
     User,
 )
-from services import staff_schedule  # noqa: E402
+from modules.scheduling.services import staff_schedule  # noqa: E402
 
 client = TestClient(app)
 
@@ -299,7 +299,7 @@ def main() -> None:
     # Mimic the early-return branch by passing a single bogus id that
     # doesn't intersect any active user. `user_ids=[]` is the literal
     # short-circuit; we exercise it via a positive but empty filter.
-    from services import staff_schedule as svc
+    from modules.scheduling.services import staff_schedule as svc
 
     db = SessionLocal()
     try:

@@ -55,7 +55,7 @@ from database.models import (  # noqa: E402
     StaffScheduleEntry,
     User,
 )
-from services import staff_digest_runner  # noqa: E402
+from modules.scheduling.services import staff_digest_runner  # noqa: E402
 
 
 SEED_PREFIX = "smoke-digest-runner"

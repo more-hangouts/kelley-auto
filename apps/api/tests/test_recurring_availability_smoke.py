@@ -60,15 +60,11 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import RecurringUnavailability, User  # noqa: E402
-from services import (  # noqa: E402
-    recurring_availability,
-    shift_resolver,
-    staff_schedule,
-)
-from services.recurring_availability import (  # noqa: E402
+from modules.scheduling.services import recurring_availability, shift_resolver, staff_schedule  # noqa: E402
+from modules.scheduling.services.recurring_availability import (  # noqa: E402
     RecurringAvailabilityError,
 )
-from services.staff_schedule import StaffScheduleError  # noqa: E402
+from modules.scheduling.services.staff_schedule import StaffScheduleError  # noqa: E402
 
 client = TestClient(app)
 

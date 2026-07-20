@@ -35,7 +35,8 @@ from database.models import (  # noqa: E402
     StaffShiftRequest,
     User,
 )
-from services import cron_state, shift_request_expiry_cron  # noqa: E402
+from services import cron_state  # noqa: E402
+from modules.scheduling.services import shift_request_expiry_cron
 from zoneinfo import ZoneInfo  # noqa: E402
 
 _user_ids: list[int] = []
@@ -186,7 +187,7 @@ def main() -> None:
         # is tempting, but this smoke needs cron_run_state too. Instead use
         # real tick data for stamping, then assert row state by ids after
         # a direct deterministic pass.
-        from services import staff_shift_requests
+        from modules.scheduling.services import staff_shift_requests
 
         with cron_state.record_run(cron_state.SCHEDULE_REQUEST_EXPIRY) as run:
             result = staff_shift_requests.expire_due(db, now=now)
@@ -226,7 +227,7 @@ def main() -> None:
     print("===== expiry cron idempotent second run =====")
     db = SessionLocal()
     try:
-        from services import staff_shift_requests
+        from modules.scheduling.services import staff_shift_requests
 
         second = staff_shift_requests.expire_due(db, now=now)
         db.commit()

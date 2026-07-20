@@ -63,7 +63,7 @@ from database.models import (  # noqa: E402
     TimeOffRequest,
     User,
 )
-from services import clock_in, missing_out_punch_cron, staff_schedule  # noqa: E402
+from modules.scheduling.services import clock_in, missing_out_punch_cron, staff_schedule  # noqa: E402
 
 client = TestClient(app)
 
@@ -728,8 +728,8 @@ def main() -> None:
     # which the locks themselves are designed to handle once both
     # sides take SELECT FOR UPDATE on the relevant rows.
     print("===== publish/approve race fixes =====")
-    from services import time_off
-    from services.time_off import TimeOffServiceError
+    from modules.scheduling.services import time_off
+    from modules.scheduling.services.time_off import TimeOffServiceError
 
     sales_f_id = _make_user(role="sales")
     db = SessionLocal()

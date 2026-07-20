@@ -31,8 +31,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import attendance_review
-from services.attendance_review import AttendanceReviewError
+from modules.scheduling.services import attendance_review
+from modules.scheduling.services.attendance_review import AttendanceReviewError
 
 router = APIRouter()
 

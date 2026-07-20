@@ -38,9 +38,9 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from services import auto_scheduler, staff_schedule, staff_schedule_presets
-from services.staff_schedule import StaffScheduleError
-from services.staff_schedule_presets import StaffSchedulePresetError
+from modules.scheduling.services import auto_scheduler, staff_schedule, staff_schedule_presets
+from modules.scheduling.services.staff_schedule import StaffScheduleError
+from modules.scheduling.services.staff_schedule_presets import StaffSchedulePresetError
 
 router = APIRouter()
 

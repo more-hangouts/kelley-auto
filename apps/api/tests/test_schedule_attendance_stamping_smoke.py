@@ -63,7 +63,7 @@ from database.models import (  # noqa: E402
     StaffScheduleEntry,
     User,
 )
-from services import clock_in, no_show_cron, staff_schedule  # noqa: E402
+from modules.scheduling.services import clock_in, no_show_cron, staff_schedule  # noqa: E402
 
 client = TestClient(app)
 

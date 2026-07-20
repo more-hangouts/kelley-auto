@@ -30,7 +30,7 @@ from database.models import (
     StaffShiftOverride,
     User,
 )
-from services import shift_resolver
+from modules.scheduling.services import shift_resolver
 from services.business_time import shop_tz
 
 

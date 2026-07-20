@@ -40,11 +40,11 @@ sys.path.insert(0, str(_REPO_ROOT))
 # (relative_path, model_class_name) for db.delete() / session.delete() calls.
 EXPECTED_ORM_DELETES: set[tuple[str, str]] = {
     # Tier 4 — operational config:
-    ("services/staff_shifts_admin.py", "StaffShift"),
-    ("services/staff_shifts_admin.py", "StaffShiftOverride"),
-    ("services/staff_holidays_admin.py", "StaffHoliday"),
-    ("services/staff_schedule.py", "StaffScheduleEntry"),
-    ("services/recurring_availability.py", "RecurringUnavailability"),
+    ("modules/scheduling/services/staff_shifts_admin.py", "StaffShift"),
+    ("modules/scheduling/services/staff_shifts_admin.py", "StaffShiftOverride"),
+    ("modules/scheduling/services/staff_holidays_admin.py", "StaffHoliday"),
+    ("modules/scheduling/services/staff_schedule.py", "StaffScheduleEntry"),
+    ("modules/scheduling/services/recurring_availability.py", "RecurringUnavailability"),
     ("modules/booking/routers/admin_booking_settings.py", "AppointmentAvailabilityRule"),
     ("modules/booking/routers/admin_booking_settings.py", "AppointmentBlackout"),
     ("services/notification_subscriber_service.py", "NotificationSubscriber"),

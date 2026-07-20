@@ -41,7 +41,7 @@ from database.auth import (  # noqa: E402
 )
 from database.connection import SessionLocal  # noqa: E402
 from database.models import StaffLocation, StaffPunch, User  # noqa: E402
-from services.clock_in import EARTH_RADIUS_M, haversine_m  # noqa: E402
+from modules.scheduling.services.clock_in import EARTH_RADIUS_M, haversine_m  # noqa: E402
 
 client = TestClient(app)
 

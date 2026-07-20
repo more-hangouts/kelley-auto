@@ -38,7 +38,11 @@ from database.models import (
     StaffPunch,
     User,
 )
-from services import clock_in, cron_state, email_transport, shift_resolver
+from services import (
+    cron_state,
+    email_transport,
+)
+from modules.scheduling.services import clock_in, shift_resolver
 from services.business_time import business_now, shop_tz, to_business_local
 from services.email_transport import EmailMessagePayload
 

@@ -59,7 +59,8 @@ from database.models import (  # noqa: E402
     StaffPunch,
     User,
 )
-from services import clock_selfie, document_storage  # noqa: E402
+from services import document_storage  # noqa: E402
+from modules.scheduling.services import clock_selfie
 
 client = TestClient(app)
 

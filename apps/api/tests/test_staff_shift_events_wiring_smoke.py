@@ -61,8 +61,8 @@ from database.models import (  # noqa: E402
 )
 from services import (  # noqa: E402
     notification_service,
-    staff_schedule,
 )
+from modules.scheduling.services import staff_schedule  # noqa: E402
 
 SEED_PREFIX = "smoke-shift-events"
 SHOP_TZ = ZoneInfo(os.environ["APP_TIMEZONE"])
@@ -440,7 +440,7 @@ def main() -> None:
     # 5. Dispatcher renders all three end-to-end against payload
     # ============================================================
     for expected_kind, subject_id, expected_phrase in (
-        ("staff.shift_added", entry2_id, "new bella"),
+        ("staff.shift_added", entry2_id, "new kelley autoplex"),
         ("staff.shift_edited", edit_id, "updated"),
         ("staff.shift_deleted", retract_id, "removed"),
     ):

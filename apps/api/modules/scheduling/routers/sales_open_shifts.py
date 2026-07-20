@@ -20,9 +20,9 @@ from sqlalchemy.orm import Session
 from database.auth import require_sales_scope
 from database.connection import get_db
 from database.models import User
-from services import open_shifts, staff_shift_requests
-from services.open_shifts import OpenShiftPostError
-from services.staff_shift_requests import StaffShiftRequestError
+from modules.scheduling.services import open_shifts, staff_shift_requests
+from modules.scheduling.services.open_shifts import OpenShiftPostError
+from modules.scheduling.services.staff_shift_requests import StaffShiftRequestError
 
 router = APIRouter()
 

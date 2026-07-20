@@ -28,7 +28,7 @@ from api.routers.event_participants import (
 )
 from database.connection import get_db
 from database.models import User
-from services.attendance_gate import require_floor_access
+from modules.scheduling.services.attendance_gate import require_floor_access
 
 router = APIRouter()
 

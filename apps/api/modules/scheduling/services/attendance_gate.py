@@ -37,7 +37,7 @@ from sqlalchemy.orm import Session
 from database.auth import get_current_user_with_scope
 from database.connection import get_db
 from database.models import BusinessProfile, User
-from services import clock_in
+from modules.scheduling.services import clock_in
 
 # Mirror of `database.auth._VALID_SCOPES` to keep this module's
 # Depends graph standalone; the scope set is small and frozen, so a

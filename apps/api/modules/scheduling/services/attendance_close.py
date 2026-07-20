@@ -55,9 +55,10 @@ from database.models import (
     StaffPunchAuditEvent,
     User,
 )
-from services import clock_in, cron_state, shift_resolver, staff_schedule
+from services import cron_state
+from modules.scheduling.services import clock_in, shift_resolver, staff_schedule
 from services.business_time import business_now, shop_tz, to_business_local
-from services.shift_resolver import ResolvedShift
+from modules.scheduling.services.shift_resolver import ResolvedShift
 
 log = logging.getLogger(__name__)
 

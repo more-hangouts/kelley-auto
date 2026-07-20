@@ -50,9 +50,9 @@ from database.models import (
     TimeOffRequest,
     User,
 )
-from services import recurring_availability, staff_schedule
+from modules.scheduling.services import recurring_availability, staff_schedule
 from services.business_time import shop_tz
-from services.staff_schedule import StaffScheduleError
+from modules.scheduling.services.staff_schedule import StaffScheduleError
 
 
 # Weekday tokens accepted in `open_days`. ISO weekday: Mon=1 … Sun=7.

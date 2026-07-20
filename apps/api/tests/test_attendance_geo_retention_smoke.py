@@ -58,7 +58,8 @@ from database.models import (  # noqa: E402
     User,
 )
 from database.auth import hash_password  # noqa: E402
-from services import attendance_geo_retention, cron_state  # noqa: E402
+from services import cron_state  # noqa: E402
+from modules.scheduling.services import attendance_geo_retention
 
 
 _user_ids: list[int] = []

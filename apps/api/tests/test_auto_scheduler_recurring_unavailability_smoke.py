@@ -40,7 +40,7 @@ from config.settings import APP_TIMEZONE  # noqa: E402
 from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import User  # noqa: E402
-from services import auto_scheduler, recurring_availability  # noqa: E402
+from modules.scheduling.services import auto_scheduler, recurring_availability  # noqa: E402
 
 _user_ids: list[int] = []
 
@@ -168,7 +168,7 @@ def main() -> None:
     # Pull the generated week back and inspect the stylist's entries.
     db = SessionLocal()
     try:
-        from services import staff_schedule
+        from modules.scheduling.services import staff_schedule
 
         body = staff_schedule.list_week(db, week_start=week_start)
     finally:
