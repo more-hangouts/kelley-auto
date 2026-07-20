@@ -83,7 +83,7 @@ from modules.core.routers import sales_search as sales_search_router
 from modules.scheduling.routers import sales_shift_requests as sales_shift_requests_router
 from modules.scheduling.routers import sales_time_off as sales_time_off_router
 from modules.booking.routers import sales_walk_ins as sales_walk_ins_router
-from modules.analytics.routers import search as search_router
+from modules.core.routers import search as search_router
 from modules.deals.routers import special_orders as special_orders_routers
 from modules.inventory.routers import vin_decode as vin_decode_router
 from modules.booking.routers import walk_in_leads as walk_in_leads_router

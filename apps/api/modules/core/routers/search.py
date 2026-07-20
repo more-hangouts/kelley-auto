@@ -23,8 +23,8 @@ from sqlalchemy.orm import Session
 from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
-from modules.analytics.services import search_service
-from modules.analytics.services.search_service import (
+from modules.core.services import search_service
+from modules.core.services.search_service import (
     ALLOWED_TYPES,
     DEFAULT_LIMIT,
     MAX_LIMIT,
