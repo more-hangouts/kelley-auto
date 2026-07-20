@@ -72,6 +72,33 @@ META_CAPI_API_VERSION = os.getenv("META_CAPI_API_VERSION", "v21.0")
 STOREFRONT_ANALYTICS_ENABLED = (
     os.getenv("STOREFRONT_ANALYTICS_ENABLED", "true").lower() == "true"
 )
+
+# ---------------------------------------------------------------------------
+# API module enable flags (Phase 3). Each optional domain module's routers and
+# workers are gated by one of these. All default true, so production behavior is
+# unchanged unless someone explicitly opts a module out. Disabling a module only
+# stops its routers from mounting and its workers from starting — every module
+# package still imports unconditionally (models stay registered, string
+# relationships resolve). core and contacts are kernel modules with no flag and
+# can never be disabled. Read by modules/registry.py via getattr(settings, ...).
+# ---------------------------------------------------------------------------
+MODULE_MESSAGING_ENABLED = (
+    os.getenv("MODULE_MESSAGING_ENABLED", "true").lower() == "true"
+)
+MODULE_DEALS_ENABLED = os.getenv("MODULE_DEALS_ENABLED", "true").lower() == "true"
+MODULE_INVENTORY_ENABLED = (
+    os.getenv("MODULE_INVENTORY_ENABLED", "true").lower() == "true"
+)
+MODULE_SCHEDULING_ENABLED = (
+    os.getenv("MODULE_SCHEDULING_ENABLED", "true").lower() == "true"
+)
+MODULE_BOOKING_ENABLED = (
+    os.getenv("MODULE_BOOKING_ENABLED", "true").lower() == "true"
+)
+MODULE_ANALYTICS_ENABLED = (
+    os.getenv("MODULE_ANALYTICS_ENABLED", "true").lower() == "true"
+)
+
 GOOGLE_ADS_CONVERSION_ID = os.getenv("GOOGLE_ADS_CONVERSION_ID") or None
 GOOGLE_ADS_CONVERSION_LABEL = os.getenv("GOOGLE_ADS_CONVERSION_LABEL") or None
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None

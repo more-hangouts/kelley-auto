@@ -189,6 +189,8 @@ SUITE=(
   tests/test_dashboard_smoke.py
   tests/test_notifications_smoke.py
   tests/test_notification_kind_naming_boundary_smoke.py
+  # module registry / enable flags
+  tests/test_module_flags_smoke.py
 )
 
 TOTAL=${#SUITE[@]}
