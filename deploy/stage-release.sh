@@ -94,11 +94,29 @@ else
 fi
 
 # --- build storefront into the versioned .next dir (never the live .next) ---
+# Next.js only honors a distDir RELATIVE to the storefront project root, so we
+# build into a relative staging dir there and then move the result into the
+# absolute release dir. The relative staging path is unique per-sha and lives
+# under apps/storefront/ (gitignored), never overlapping the live `.next`.
 echo "==> build storefront -> $STORE_OUT"
 if [[ -n "${BUILD_CMD_STOREFRONT:-}" ]]; then
   STORE_OUT="$STORE_OUT" bash -c "$BUILD_CMD_STOREFRONT"
 else
-  ( cd "$ROOT/apps/storefront" && NEXT_DIST_DIR="$STORE_OUT" pnpm exec next build )
+  STORE_REL=".next-stage-$SHA"
+  STORE_STAGE_ABS="$ROOT/apps/storefront/$STORE_REL"
+  rm -rf "$STORE_STAGE_ABS"
+  # `next build` rewrites next-env.d.ts and tsconfig.json's `include` to point
+  # at the build's types dir. Snapshot both and restore them afterward so the
+  # working tree is left pristine (these are tracked files).
+  SF="$ROOT/apps/storefront"
+  cp "$SF/next-env.d.ts" "$SF/.next-env.d.ts.bak" 2>/dev/null || true
+  cp "$SF/tsconfig.json" "$SF/.tsconfig.json.bak" 2>/dev/null || true
+  ( cd "$SF" && NEXT_DIST_DIR="$STORE_REL" pnpm exec next build )
+  [[ -f "$SF/.next-env.d.ts.bak" ]] && mv "$SF/.next-env.d.ts.bak" "$SF/next-env.d.ts"
+  [[ -f "$SF/.tsconfig.json.bak" ]] && mv "$SF/.tsconfig.json.bak" "$SF/tsconfig.json"
+  [[ -s "$STORE_STAGE_ABS/BUILD_ID" ]] || { echo "error: storefront build produced no BUILD_ID at $STORE_STAGE_ABS" >&2; exit 4; }
+  rm -rf "$STORE_OUT"
+  mv "$STORE_STAGE_ABS" "$STORE_OUT"
 fi
 
 # --- structural verification ---
@@ -149,12 +167,20 @@ echo "==> preview HTTP checks"
 ADMIN_PORT="${STAGE_ADMIN_PORT:-5174}"
 STORE_PORT="${STAGE_STORE_PORT:-3001}"
 pids=()
-cleanup() { for p in "${pids[@]:-}"; do kill "$p" 2>/dev/null || true; done; }
+# next only honors a RELATIVE distDir, so preview it through a temporary
+# relative symlink under apps/storefront/ that points at the release dir.
+PREVIEW_LINK_REL=".next-preview-$SHA"
+PREVIEW_LINK_ABS="$ROOT/apps/storefront/$PREVIEW_LINK_REL"
+cleanup() {
+  for p in "${pids[@]:-}"; do kill "$p" 2>/dev/null || true; done
+  rm -f "$PREVIEW_LINK_ABS"
+}
 trap cleanup EXIT
 
 ( cd "$ROOT/apps/admin" && pnpm exec vite preview --outDir "$ADMIN_OUT" --port "$ADMIN_PORT" --strictPort --host 127.0.0.1 ) >/dev/null 2>&1 &
 pids+=($!)
-( cd "$ROOT/apps/storefront" && NEXT_DIST_DIR="$STORE_OUT" pnpm exec next start -p "$STORE_PORT" -H 127.0.0.1 ) >/dev/null 2>&1 &
+rm -f "$PREVIEW_LINK_ABS"; ln -s "$STORE_OUT" "$PREVIEW_LINK_ABS"
+( cd "$ROOT/apps/storefront" && NEXT_DIST_DIR="$PREVIEW_LINK_REL" pnpm exec next start -p "$STORE_PORT" -H 127.0.0.1 ) >/dev/null 2>&1 &
 pids+=($!)
 
 # reuse install.sh's bounded readiness poller

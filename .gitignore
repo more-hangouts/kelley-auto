@@ -19,6 +19,8 @@ build/
 /releases/
 apps/storefront/.next-current
 apps/storefront/.next-releases/
+apps/storefront/.next-stage-*
+apps/storefront/.next-preview-*
 
 # ---- E2E generated artifacts ----
 apps/admin/e2e/.build/
