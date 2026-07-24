@@ -512,6 +512,7 @@ def _contact_summary(db: Session, conv: Conversation) -> dict | None:
         "phone": c.phone or c.phone_e164,
         "email": c.email,
         "sms_opted_out": c.sms_opted_out_at is not None,
+        "sms_consent": c.sms_consent_at is not None,
     }
 
 
@@ -555,6 +556,15 @@ def _serialize_conversation(
     opted_out = bool(meta.get("sms_opted_out_at")) or bool(
         contact and contact.get("sms_opted_out")
     )
+    # Consent for the composer state mirrors the send-path guard: form consent
+    # on the contact OR a customer-originated inbound message in the thread.
+    consent_ok = bool(
+        (contact and contact.get("sms_consent"))
+        or conv.last_inbound_at is not None
+    )
+    reply_enabled, reply_disabled_reason = _reply_state(
+        conv, contact_opted_out=opted_out, consent_ok=consent_ok
+    )
     return {
         "id": conv.id,
         "channel": conv.channel,
@@ -584,20 +594,32 @@ def _serialize_conversation(
             <= web_chat_active_window()
         ),
         # Whether the composer can actually deliver on this channel today.
-        # Web chat is always live; SMS is live once A2P sending is enabled and
-        # the recipient hasn't opted out; Meta stays gated.
-        "reply_enabled": _reply_enabled(conv, contact_opted_out=opted_out),
+        # Web chat is always live; SMS is live once A2P sending is enabled, the
+        # recipient hasn't opted out, and consent/inbound-reply holds; Meta
+        # stays gated. reply_disabled_reason is a slug the UI maps to copy.
+        "reply_enabled": reply_enabled,
+        "reply_disabled_reason": reply_disabled_reason,
     }
 
 
-def _reply_enabled(conv: Conversation, *, contact_opted_out: bool) -> bool:
+def _reply_state(
+    conv: Conversation, *, contact_opted_out: bool, consent_ok: bool
+) -> tuple[bool, str | None]:
+    """Return (reply_enabled, disabled_reason) for this channel. The reason is
+    a stable slug the UI maps to copy; None when the composer is live."""
     if conv.channel == "web_chat":
-        return True
+        return True, None
     if conv.channel == "sms":
         from config.settings import SMS_SENDING_ENABLED
 
-        return bool(SMS_SENDING_ENABLED) and not contact_opted_out
-    return False
+        if not SMS_SENDING_ENABLED:
+            return False, "sms_sending_disabled"
+        if contact_opted_out:
+            return False, "recipient_opted_out"
+        if not consent_ok:
+            return False, "consent_required"
+        return True, None
+    return False, "channel_send_not_supported"
 
 
 def list_conversations(
@@ -758,6 +780,24 @@ def send_reply(
     raise InboxError("channel_send_not_supported", http_status=501)
 
 
+def _sms_consent_ok(conv: Conversation, contact: Contact | None) -> bool:
+    """Whether an outbound SMS is permitted on consent grounds.
+
+    Policy (matches the A2P registration and contacts.sms_consent_at doc):
+    a business-initiated text needs express consent, BUT replying inside a
+    thread the customer started themselves is the standard TCPA/established-
+    business-relationship reply case and doesn't require the form checkbox.
+
+    So: allow if the contact has recorded ``sms_consent_at`` OR this
+    conversation has at least one inbound message (``last_inbound_at`` is set
+    on every inbound — see record_inbound_message). Opt-out is handled
+    separately and always wins.
+    """
+    if contact is not None and contact.sms_consent_at is not None:
+        return True
+    return conv.last_inbound_at is not None
+
+
 def _send_sms_reply(
     db: Session,
     conv: Conversation,
@@ -781,6 +821,11 @@ def _send_sms_reply(
     )
     if opted_out:
         raise InboxError("recipient_opted_out", http_status=409)
+
+    # Consent gate: business-initiated texts need express consent; replying to
+    # a customer-originated thread is the TCPA reply case and is allowed.
+    if not _sms_consent_ok(conv, contact):
+        raise InboxError("consent_required", http_status=409)
 
     if not allow_quiet_hours and in_sms_quiet_hours():
         # Recoverable: the UI offers a "send anyway" that re-calls with

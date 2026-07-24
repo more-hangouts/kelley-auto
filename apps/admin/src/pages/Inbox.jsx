@@ -337,12 +337,18 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
   const [quietPrompt, setQuietPrompt] = useState(false)
   const isWebChat = detail.channel === 'web_chat'
   const canReply = detail.reply_enabled ?? isWebChat
+  // Prefer the server's reply_disabled_reason (authoritative); fall back to the
+  // legacy heuristics for older payloads.
   const composerReason =
-    detail.contact?.sms_opted_out || detail.opted_out
-      ? 'This customer opted out — messaging is disabled for them.'
-      : detail.channel === 'sms'
-        ? 'Texting turns on once outbound SMS is enabled. Inbound messages are logged here now.'
-        : 'Replies to Facebook/Instagram turn on once Meta approves messaging. Inbound messages are logged here now.'
+    detail.reply_disabled_reason === 'consent_required'
+      ? 'No SMS consent on file. You can text once they opt in on a form, or reply here after they text you first.'
+      : detail.reply_disabled_reason === 'recipient_opted_out' ||
+          detail.contact?.sms_opted_out ||
+          detail.opted_out
+        ? 'This customer opted out — messaging is disabled for them.'
+        : detail.channel === 'sms'
+          ? 'Texting turns on once outbound SMS is enabled. Inbound messages are logged here now.'
+          : 'Replies to Facebook/Instagram turn on once Meta approves messaging. Inbound messages are logged here now.'
 
   function errorCodeOf(err) {
     return err?.response?.data?.detail?.code
@@ -350,6 +356,7 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
   function errorMessageOf(err) {
     const d = err?.response?.data?.detail
     if (d?.code === 'recipient_opted_out') return 'This customer opted out — you can’t text them.'
+    if (d?.code === 'consent_required') return 'No SMS consent on file — they must opt in, or text you first, before you can message them.'
     if (d?.code === 'sms_send_failed') return d.message ? `Carrier rejected it: ${d.message}` : 'The carrier rejected the message.'
     if (d?.code === 'sms_not_configured') return 'SMS isn’t configured yet.'
     return "Couldn't send — try again."

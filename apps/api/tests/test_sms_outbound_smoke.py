@@ -62,11 +62,29 @@ def _admin_id(db) -> int:
     )
 
 
-def _make_sms_conversation(db, *, opted_out: bool = False) -> int:
+def _make_sms_conversation(
+    db,
+    *,
+    opted_out: bool = False,
+    consent: bool = True,
+    has_inbound: bool = False,
+) -> int:
+    """Create an SMS conversation fixture.
+
+    Defaults to ``consent=True`` so the pre-existing send-path tests exercise
+    their intended branch (quiet hours, failure rollback, etc.) rather than
+    tripping the consent guard. The dedicated consent tests pass
+    ``consent=False`` with/without ``has_inbound`` to exercise that gate.
+    """
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
     contact = Contact(
         display_name=f"SMS Out {_TAG}",
         phone=_PHONE,
         phone_e164=_PHONE,
+        sms_consent_at=now if consent else None,
+        sms_consent_source="test" if consent else None,
     )
     db.add(contact)
     db.flush()
@@ -78,12 +96,11 @@ def _make_sms_conversation(db, *, opted_out: bool = False) -> int:
         contact_id=contact.id,
         status="open",
     )
+    if has_inbound:
+        # A customer-originated inbound message is signalled by last_inbound_at.
+        conv.last_inbound_at = now
     if opted_out:
-        from datetime import datetime, timezone
-
-        conv.conversation_metadata = {
-            "sms_opted_out_at": datetime.now(timezone.utc).isoformat()
-        }
+        conv.conversation_metadata = {"sms_opted_out_at": now.isoformat()}
     db.add(conv)
     db.flush()
     return conv.id
@@ -147,6 +164,81 @@ def test_opt_out_blocks() -> None:
     finally:
         db.close()
     print("opt-out blocks ok")
+
+
+def _consent_mocks():
+    """Common patches: sending enabled, transport configured, transport mocked
+    so a consent decision is reached without any real send."""
+    return (
+        mock.patch("config.settings.SMS_SENDING_ENABLED", True),
+        mock.patch(
+            "modules.core.services.sms_transport.sms_transport_configured",
+            return_value=True,
+        ),
+        mock.patch("modules.core.services.sms_transport.get_sms_transport"),
+    )
+
+
+def test_consent_required_blocks() -> None:
+    """No form consent AND no inbound message → consent_required, no send."""
+    db = SessionLocal()
+    try:
+        conv_id = _make_sms_conversation(db, consent=False, has_inbound=False)
+        sent = mock.Mock()
+        m_enabled, m_conf, m_tx = _consent_mocks()
+        with m_enabled, m_conf, m_tx as get_tx:
+            get_tx.return_value.send_result = sent
+            try:
+                inbox_service.send_reply(
+                    db, conv_id, body="hi", user_id=_admin_id(db), allow_quiet_hours=True
+                )
+                raise AssertionError("expected consent_required")
+            except inbox_service.InboxError as exc:
+                _assert(exc.code == "consent_required", "consent required", exc.code)
+        sent.assert_not_called()  # never attempted the send
+        db.rollback()
+    finally:
+        db.close()
+    print("consent required blocks ok")
+
+
+def test_consent_recorded_allows() -> None:
+    """Contact has sms_consent_at → send proceeds even with no inbound."""
+    db = SessionLocal()
+    try:
+        conv_id = _make_sms_conversation(db, consent=True, has_inbound=False)
+        ok_result = SmsSendResult(ok=True, provider_message_id=f"SM{_TAG}c", status="queued")
+        m_enabled, m_conf, m_tx = _consent_mocks()
+        with m_enabled, m_conf, m_tx as get_tx:
+            get_tx.return_value.send_result.return_value = ok_result
+            result = inbox_service.send_reply(
+                db, conv_id, body="hi", user_id=_admin_id(db), allow_quiet_hours=True
+            )
+            _assert(result["message"]["status"] == "sent", "consent send", result)
+        db.rollback()
+    finally:
+        db.close()
+    print("consent recorded allows ok")
+
+
+def test_inbound_thread_allows_without_form_consent() -> None:
+    """No form consent BUT the customer texted first (last_inbound_at set) →
+    the TCPA reply case is allowed."""
+    db = SessionLocal()
+    try:
+        conv_id = _make_sms_conversation(db, consent=False, has_inbound=True)
+        ok_result = SmsSendResult(ok=True, provider_message_id=f"SM{_TAG}i", status="queued")
+        m_enabled, m_conf, m_tx = _consent_mocks()
+        with m_enabled, m_conf, m_tx as get_tx:
+            get_tx.return_value.send_result.return_value = ok_result
+            result = inbox_service.send_reply(
+                db, conv_id, body="hi", user_id=_admin_id(db), allow_quiet_hours=True
+            )
+            _assert(result["message"]["status"] == "sent", "inbound reply send", result)
+        db.rollback()
+    finally:
+        db.close()
+    print("inbound thread allows ok")
 
 
 def test_quiet_hours_then_override() -> None:
@@ -275,6 +367,9 @@ if __name__ == "__main__":
     try:
         test_gated_off()
         test_opt_out_blocks()
+        test_consent_required_blocks()
+        test_consent_recorded_allows()
+        test_inbound_thread_allows_without_form_consent()
         test_quiet_hours_then_override()
         test_send_failure_rolls_back()
         test_delivery_status_monotonic()
