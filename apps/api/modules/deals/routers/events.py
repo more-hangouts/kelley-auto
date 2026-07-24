@@ -99,6 +99,11 @@ class EventStatusPatch(BaseModel):
 class ContactSummary(BaseModel):
     id: int
     display_name: str
+    # SMS eligibility signals for the shared Message action (Phase 8). Default
+    # False so board-card construction (no Contact row in hand) stays valid;
+    # the detail path populates them from the loaded Contact.
+    sms_consent: bool = False
+    sms_opted_out: bool = False
 
 
 class OwnerSummary(BaseModel):
@@ -440,6 +445,8 @@ def get_board(
                         primary_contact=ContactSummary(
                             id=c.primary_contact_id,
                             display_name=c.primary_contact_name,
+                            sms_consent=c.primary_contact_sms_consent,
+                            sms_opted_out=c.primary_contact_sms_opted_out,
                         ),
                         owner=OwnerSummary(id=c.owner_user_id, full_name=c.owner_name)
                         if c.owner_user_id is not None
@@ -900,7 +907,10 @@ def _to_event_response(db: Session, event: Event) -> EventResponse:
         status=event.status,
         status_changed_at=event.status_changed_at,
         primary_contact=ContactSummary(
-            id=contact.id, display_name=contact.display_name
+            id=contact.id,
+            display_name=contact.display_name,
+            sms_consent=contact.sms_consent_at is not None,
+            sms_opted_out=contact.sms_opted_out_at is not None,
         ),
         owner=OwnerSummary(id=owner.id, full_name=owner.full_name) if owner else None,
         notes=event.notes,

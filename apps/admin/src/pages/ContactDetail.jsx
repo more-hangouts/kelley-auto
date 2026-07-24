@@ -29,7 +29,9 @@ import dayjs from 'dayjs'
 import ContactEditDialog from '../components/ContactEditDialog'
 import RecordDependenciesDialog from '../components/RecordDependenciesDialog'
 import CallContact from '../components/CallContact'
+import ContactActions from '../components/ContactActions'
 import ContactCallTimeline from '../components/ContactCallTimeline'
+import SmsActivityTimeline from '../components/SmsActivityTimeline'
 import { archiveContact, getContact } from '../services/api'
 
 // Phase 3 destination for `contact` palette results. Read-only by
@@ -197,7 +199,18 @@ export default function ContactDetail() {
             Contact
           </Typography>
         </Stack>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <ContactActions
+            contact={{
+              id: data.id,
+              display_name: data.display_name,
+              phone: data.phone,
+              phone_e164: data.phone_e164,
+              sms_consent: data.sms_consent,
+              sms_opted_out: data.sms_opted_out,
+            }}
+            source="contact_detail"
+          />
           <Button
             variant="outlined"
             size="small"
@@ -395,6 +408,8 @@ export default function ContactDetail() {
       </Paper>
 
       <ContactCallTimeline contactId={data.id} />
+
+      <SmsActivityTimeline contactId={data.id} />
 
       <ContactEditDialog
         open={editOpen}

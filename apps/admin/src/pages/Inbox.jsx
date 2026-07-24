@@ -340,7 +340,7 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
   // Prefer the server's reply_disabled_reason (authoritative); fall back to the
   // legacy heuristics for older payloads.
   const composerReason =
-    detail.reply_disabled_reason === 'consent_required'
+    detail.reply_disabled_reason === 'recipient_no_sms_consent'
       ? 'No SMS consent on file. You can text once they opt in on a form, or reply here after they text you first.'
       : detail.reply_disabled_reason === 'recipient_opted_out' ||
           detail.contact?.sms_opted_out ||
@@ -356,7 +356,8 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
   function errorMessageOf(err) {
     const d = err?.response?.data?.detail
     if (d?.code === 'recipient_opted_out') return 'This customer opted out — you can’t text them.'
-    if (d?.code === 'consent_required') return 'No SMS consent on file — they must opt in, or text you first, before you can message them.'
+    if (d?.code === 'recipient_no_sms_consent') return 'No SMS consent on file — they must opt in, or text you first, before you can message them.'
+    if (d?.code === 'recipient_has_no_valid_phone') return 'This contact has no valid phone number on file.'
     if (d?.code === 'sms_send_failed') return d.message ? `Carrier rejected it: ${d.message}` : 'The carrier rejected the message.'
     if (d?.code === 'sms_not_configured') return 'SMS isn’t configured yet.'
     return "Couldn't send — try again."

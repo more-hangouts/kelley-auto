@@ -82,10 +82,12 @@ getBusinessProfile
 getCallActivitySummary
 getCatalogPriceBreakdown
 getContact
+getContactMessages
 getCronHealth
 getDocumentCounts
 getEvent
 getEventBoard
+getEventMessages
 getEventJourney
 getEventWorkflow
 getHoursVariance
@@ -219,6 +221,7 @@ sendQuote
 sendStaffPasswordReset
 setScheduleEntryNotes
 setSubscriberActive
+startSmsConversation
 testStaffLocationGeofence
 unapplyAllocation
 unlockSalesStaff

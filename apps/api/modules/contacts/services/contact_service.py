@@ -455,6 +455,8 @@ def list_contacts(
             "event_count": counts.get(c.id, 0),
             "created_at": c.created_at,
             "updated_at": c.updated_at,
+            "sms_consent": c.sms_consent_at is not None,
+            "sms_opted_out": c.sms_opted_out_at is not None,
         }
         for c in contacts
     ]

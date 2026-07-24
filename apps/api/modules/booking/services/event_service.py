@@ -449,6 +449,8 @@ class BoardCard:
     status_changed_at: datetime
     primary_contact_id: int
     primary_contact_name: str
+    primary_contact_sms_consent: bool
+    primary_contact_sms_opted_out: bool
     owner_user_id: int | None
     owner_name: str | None
     last_appointment_at: datetime | None
@@ -607,6 +609,8 @@ def get_board_data(db: Session, *, event_type: str = "vehicle_sale") -> list[Boa
             Event.status_changed_at,
             Event.primary_contact_id,
             Contact.display_name.label("contact_name"),
+            (Contact.sms_consent_at.isnot(None)).label("contact_sms_consent"),
+            (Contact.sms_opted_out_at.isnot(None)).label("contact_sms_opted_out"),
             Event.owner_user_id,
             User.full_name.label("owner_name"),
             last_appt_subq.c.last_appointment_at,
@@ -669,6 +673,8 @@ def get_board_data(db: Session, *, event_type: str = "vehicle_sale") -> list[Boa
                 status_changed_at=r.status_changed_at,
                 primary_contact_id=r.primary_contact_id,
                 primary_contact_name=r.contact_name,
+                primary_contact_sms_consent=bool(r.contact_sms_consent),
+                primary_contact_sms_opted_out=bool(r.contact_sms_opted_out),
                 owner_user_id=r.owner_user_id,
                 owner_name=r.owner_name,
                 last_appointment_at=r.last_appointment_at,

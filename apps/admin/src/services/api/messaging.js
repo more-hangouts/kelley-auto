@@ -62,3 +62,27 @@ export async function getInboxUnreadCount() {
   const { data } = await api.get('/inbox/unread-count')
   return data
 }
+
+// Phase 8: create or reuse the canonical SMS conversation for a contact.
+// Idempotent + race-safe; does NOT send. Returns { conversation_id, created,
+// contact, eligibility: { eligible, reason } }. Never pass a phone number —
+// the server derives it from the contact record.
+export async function startSmsConversation(contactId, eventId = null) {
+  const { data } = await api.post('/inbox/conversations/sms', {
+    contact_id: contactId,
+    event_id: eventId,
+  })
+  return data
+}
+
+// Read-only SMS-message feeds for the contact / deal activity timelines
+// (canonical ConversationMessage rows; no synthetic activity is written).
+export async function getContactMessages(contactId) {
+  const { data } = await api.get(`/inbox/contacts/${contactId}/messages`)
+  return data
+}
+
+export async function getEventMessages(eventId) {
+  const { data } = await api.get(`/inbox/events/${eventId}/messages`)
+  return data
+}

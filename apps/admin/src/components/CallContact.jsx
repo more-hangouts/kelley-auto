@@ -8,11 +8,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Link,
   Stack,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
@@ -212,7 +214,21 @@ export default function CallContact({
   if (!dialNumber) return children || <span>—</span>
 
   const trigger =
-    variant === 'button' ? (
+    variant === 'icon' ? (
+      <Tooltip title="Call contact" arrow>
+        <span>
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={handleCall}
+            disabled={pending}
+            aria-label="Call contact"
+          >
+            {pending ? <CircularProgress size={16} /> : <PhoneOutlinedIcon fontSize="small" />}
+          </IconButton>
+        </span>
+      </Tooltip>
+    ) : variant === 'button' ? (
       <Button
         size="small"
         variant="outlined"

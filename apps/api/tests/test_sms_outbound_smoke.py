@@ -179,8 +179,8 @@ def _consent_mocks():
     )
 
 
-def test_consent_required_blocks() -> None:
-    """No form consent AND no inbound message → consent_required, no send."""
+def test_no_sms_consent_blocks() -> None:
+    """No form consent AND no inbound message → recipient_no_sms_consent, no send."""
     db = SessionLocal()
     try:
         conv_id = _make_sms_conversation(db, consent=False, has_inbound=False)
@@ -192,9 +192,9 @@ def test_consent_required_blocks() -> None:
                 inbox_service.send_reply(
                     db, conv_id, body="hi", user_id=_admin_id(db), allow_quiet_hours=True
                 )
-                raise AssertionError("expected consent_required")
+                raise AssertionError("expected recipient_no_sms_consent")
             except inbox_service.InboxError as exc:
-                _assert(exc.code == "consent_required", "consent required", exc.code)
+                _assert(exc.code == "recipient_no_sms_consent", "consent required", exc.code)
         sent.assert_not_called()  # never attempted the send
         db.rollback()
     finally:
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     try:
         test_gated_off()
         test_opt_out_blocks()
-        test_consent_required_blocks()
+        test_no_sms_consent_blocks()
         test_consent_recorded_allows()
         test_inbound_thread_allows_without_form_consent()
         test_quiet_hours_then_override()

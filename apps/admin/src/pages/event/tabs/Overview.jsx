@@ -27,6 +27,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 import LeadJourneyPanel from './LeadJourneyPanel'
 import AddParticipantDialog from '../../../components/AddParticipantDialog'
 import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
+import ContactActions from '../../../components/ContactActions'
 import ContactEditDialog from '../../../components/ContactEditDialog'
 import ParticipantTagDialog from '../../../components/ParticipantTagDialog'
 import RecordDependenciesDialog from '../../../components/RecordDependenciesDialog'
@@ -65,7 +66,7 @@ function KV({ label, value }) {
       >
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ flex: 1 }}>
+      <Typography variant="body2" component="div" sx={{ flex: 1 }}>
         {value || '—'}
       </Typography>
     </Stack>
@@ -654,6 +655,24 @@ export default function Overview() {
         <KV label="Name" value={event.primary_contact?.display_name} />
         <KV label="Phone" value={event.primary_contact_phone} />
         <KV label="Email" value={event.primary_contact_email} />
+        {event.primary_contact?.id && (
+          <KV
+            label="Actions"
+            value={
+              <ContactActions
+                contact={{
+                  id: event.primary_contact.id,
+                  display_name: event.primary_contact.display_name,
+                  phone: event.primary_contact_phone,
+                  sms_consent: event.primary_contact.sms_consent,
+                  sms_opted_out: event.primary_contact.sms_opted_out,
+                }}
+                eventId={event.id}
+                source="deal_overview"
+              />
+            }
+          />
+        )}
       </Section>
 
       {event.event_type === 'vehicle_sale' && (

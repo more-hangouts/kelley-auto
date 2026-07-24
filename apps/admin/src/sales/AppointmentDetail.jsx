@@ -22,6 +22,7 @@ import {
 } from '@mui/material'
 
 import AddParticipantDialog from '../components/AddParticipantDialog'
+import ContactActions from '../components/ContactActions'
 import ParticipantTagDialog from '../components/ParticipantTagDialog'
 import {
   salesGetAppointmentDetail,
@@ -425,6 +426,18 @@ export default function AppointmentDetail() {
         )}
         <Field label="Phone" value={a.phone} />
         <Field label="Email" value={a.email} />
+        {data.contact?.id && (
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ minWidth: 110 }}>
+              Contact
+            </Typography>
+            <ContactActions
+              contact={data.contact}
+              eventId={data.event?.id}
+              source="appointment_detail"
+            />
+          </Stack>
+        )}
         {data.participants.length > 0 && (
           <>
             <Divider sx={{ my: 1 }} />
