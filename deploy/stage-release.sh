@@ -32,6 +32,18 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="${ROOT:-$(cd "$SELF_DIR/.." && pwd)}"
 RELEASE_ROOT="${RELEASE_ROOT:-$ROOT/releases}"
 
+# Resolve a node binary robustly (nvm node is not on the default/sudo PATH).
+resolve_node() {
+  if [[ -n "${NODE_BIN:-}" && -x "$NODE_BIN" ]]; then echo "$NODE_BIN"; return 0; fi
+  local nvm_node="/home/deploy/.nvm/versions/node/v20.20.2/bin/node"
+  if [[ -x "$nvm_node" ]]; then echo "$nvm_node"; return 0; fi
+  local newest
+  newest="$(ls -d /home/deploy/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1)"
+  if [[ -n "$newest" && -x "$newest" ]]; then echo "$newest"; return 0; fi
+  command -v node 2>/dev/null || return 1
+}
+NODE="$(resolve_node)" || { echo "error: could not find node (set NODE_BIN)" >&2; exit 1; }
+
 SHA=""
 VERIFY_ONLY=0
 SKIP_E2E=0
@@ -153,7 +165,7 @@ chmod -R a+rX "$REL_DIR"
 echo "==> writing manifest + checksums"
 CHECKSUMS="$REL_DIR/.checksums.sha256"
 ( cd "$REL_DIR" && find admin storefront-next -type f -print0 | sort -z | xargs -0 sha256sum > "$CHECKSUMS" )
-node -e '
+"$NODE" -e '
   const fs = require("fs");
   const [rel, sha, buildId, csPath, manifestPath] = process.argv.slice(1);
   const checksums = {};
@@ -215,7 +227,7 @@ else
 fi
 
 # --- mark validated ---
-node -e '
+"$NODE" -e '
   const fs = require("fs");
   const p = process.argv[1];
   const m = JSON.parse(fs.readFileSync(p, "utf8"));

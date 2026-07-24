@@ -37,6 +37,22 @@ REL_ID="${1:-}"
 
 fail() { echo "error: $*" >&2; exit 1; }
 
+# Resolve a node binary. Under sudo the PATH is root's and does not include the
+# deploy user's nvm node, so `node` is often not found. Prefer an explicit
+# NODE_BIN, then the deploy user's pinned nvm node (same path the systemd unit
+# hard-codes), then whatever is on PATH.
+resolve_node() {
+  if [[ -n "${NODE_BIN:-}" && -x "$NODE_BIN" ]]; then echo "$NODE_BIN"; return 0; fi
+  local nvm_node="/home/deploy/.nvm/versions/node/v20.20.2/bin/node"
+  if [[ -x "$nvm_node" ]]; then echo "$nvm_node"; return 0; fi
+  # newest nvm node, if the pinned version moved
+  local newest
+  newest="$(ls -d /home/deploy/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1)"
+  if [[ -n "$newest" && -x "$newest" ]]; then echo "$newest"; return 0; fi
+  command -v node 2>/dev/null || return 1
+}
+NODE="$(resolve_node)" || fail "could not find a node binary (set NODE_BIN=/path/to/node)"
+
 # --- validate release id (strict allowlist) ---
 [[ -n "$REL_ID" ]] || fail "usage: promote-release.sh <release-id>"
 [[ "$REL_ID" =~ ^([0-9a-f]{40}|phase2-baseline)$ ]] || fail "invalid release id: '$REL_ID'"
@@ -61,7 +77,7 @@ STORE_SRC="$REL_REAL/storefront-next"
 
 # --- checksum spot-check (first 20 files) ---
 echo "==> verifying checksums (sample)"
-node -e '
+"$NODE" -e '
   const fs=require("fs"), cp=require("child_process"), path=require("path");
   const [dir,manifest]=process.argv.slice(1);
   const m=JSON.parse(fs.readFileSync(manifest,"utf8"));
