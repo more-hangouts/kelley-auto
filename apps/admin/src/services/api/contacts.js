@@ -60,6 +60,20 @@ export async function listCallAttempts(contactId) {
   return data
 }
 
+// Twilio Voice click-to-call bridge (business-number call path). Asks the
+// server to ring the rep first, then bridge to the contact so the contact
+// sees the business number instead of the rep's personal cell. Logs a call
+// attempt server-side just like the native path. payload: { rep_phone?,
+// event_id?, idempotency_key? }. Returns { call_attempt_id, provider_call_sid,
+// ... }. 503 when Twilio voice isn't configured; the UI falls back to tel:.
+export async function startBridgeCall(contactId, payload) {
+  const { data } = await api.post(
+    `/contacts/${contactId}/call-attempts/bridge`,
+    payload,
+  )
+  return data
+}
+
 // Manager/admin call-activity reporting (business-local day).
 export async function getCallActivitySummary(params = {}) {
   const { data } = await api.get('/admin/call-activity/summary', { params })

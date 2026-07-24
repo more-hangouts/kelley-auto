@@ -1,6 +1,7 @@
 # Frozen public export surface of services/api — Phase 4 baseline.
-# 227 named exports + the default axios instance. Generated from the
-# pre-split monolithic services/api.js at commit 95aa3d3.
+# 228 named exports + the default axios instance. Generated from the
+# pre-split monolithic services/api.js at commit 95aa3d3; startBridgeCall
+# (Twilio Voice click-to-call bridge) added post-baseline.
 #
 # The guard at scripts/check-api-exports.mjs asserts the union of named
 # exports across services/api/*.js (client + all domain modules, minus the
@@ -221,6 +222,7 @@ sendQuote
 sendStaffPasswordReset
 setScheduleEntryNotes
 setSubscriberActive
+startBridgeCall
 startSmsConversation
 testStaffLocationGeofence
 unapplyAllocation

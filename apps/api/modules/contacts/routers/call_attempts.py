@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from config import settings
 from database.auth import require_any_scope
 from database.connection import get_db
 from database.models import Contact, User
@@ -51,6 +52,15 @@ class CallAttemptCreate(BaseModel):
 class CallAttemptPatch(BaseModel):
     outcome: OutcomeLiteral | None = None
     notes: str | None = Field(default=None, max_length=2000)
+
+
+class BridgeCallCreate(BaseModel):
+    # Optional per-device callback number for the rep leg; when omitted the
+    # server uses TWILIO_VOICE_REP_FALLBACK_NUMBER. Identity still comes from
+    # the token — this only chooses which phone Twilio rings first.
+    rep_phone: str | None = Field(default=None, max_length=40)
+    event_id: int | None = None
+    idempotency_key: str | None = Field(default=None, max_length=64)
 
 
 def _load_contact(db: Session, contact_id: int) -> Contact:
@@ -85,6 +95,61 @@ def create_call_attempt(
     # 201 on fresh create; 200 on an idempotent replay of the same key.
     body = svc.serialize(attempt)
     body["created"] = created
+    return body
+
+
+@router.post("/{contact_id}/call-attempts/bridge", status_code=201)
+def start_bridge_call(
+    contact_id: int,
+    payload: BridgeCallCreate,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+) -> dict:
+    """Twilio Voice click-to-call bridge (business-number call path).
+
+    Logs a call attempt (same tracking as the native ``tel:`` path) and asks
+    Twilio to ring the rep, then bridge to the contact so the contact sees the
+    business number. Auth mirrors call logging: the salesperson identity comes
+    from the token, never the body. Returns ``call_attempt_id`` and, when Twilio
+    accepted the first leg, ``provider_call_sid``.
+    """
+    contact = _load_contact(db, contact_id)
+
+    rep_phone = payload.rep_phone or settings.TWILIO_VOICE_REP_FALLBACK_NUMBER
+    if not rep_phone:
+        raise HTTPException(status_code=422, detail="rep_phone_missing")
+
+    try:
+        attempt, result = svc.start_bridge_call(
+            db,
+            contact=contact,
+            user=user,
+            rep_number=rep_phone,
+            event_id=payload.event_id,
+            idempotency_key=payload.idempotency_key,
+        )
+    except svc.CallAttemptError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.http_status, detail=exc.code) from exc
+
+    if not result.ok:
+        # The attempt was logged, but Twilio didn't accept the outbound call.
+        # Roll back the logged row so a failed bridge doesn't leave a phantom
+        # call in the manager reports, and surface the provider reason.
+        db.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "bridge_call_failed",
+                "provider_error": result.error_message,
+            },
+        )
+
+    db.commit()
+    body = svc.serialize(attempt)
+    body["call_attempt_id"] = attempt.id
+    body["provider_call_sid"] = result.provider_call_sid
+    body["provider_status"] = result.status
     return body
 
 

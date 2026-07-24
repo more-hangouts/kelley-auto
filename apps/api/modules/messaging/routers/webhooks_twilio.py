@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from api.redis_rate_limit import enforce_or_raise
 from config import settings
 from database.connection import get_db
-from modules.messaging.services import inbox_service, webhook_ingest
+from modules.messaging.services import inbox_service, voice_transport, webhook_ingest
 from modules.messaging.services.twilio_signature import verify_signature
 
 log = logging.getLogger(__name__)
@@ -181,3 +181,48 @@ async def delivery_status(
     )
     db.commit()
     return Response(status_code=204)
+
+
+@router.post("/voice/bridge")
+async def voice_bridge(request: Request) -> Response:
+    """TwiML callback for the click-to-call bridge (business-number call path).
+
+    Twilio requests this when the REP answers the first leg; the response tells
+    Twilio to dial the CONTACT, presenting the business voice number as caller
+    ID. The contact number is NOT read from the request — it is carried inside
+    the ``token`` query param, a signed short-lived JWT minted when the bridge
+    was started. The route dials only the number that token authorizes, so it
+    can never be coerced into dialing an arbitrary number:
+
+      1. Twilio signature verified against the public URL (when required).
+      2. ``token`` decoded + validated (signature, expiry, purpose); the
+         authorized ``dial`` number comes out of the verified claims.
+      3. Reply with ``<Dial callerId=BUSINESS><Number>CONTACT</Number></Dial>``.
+
+    Any failure returns an empty ``<Response/>`` (Twilio hangs up cleanly)
+    rather than an error — a forged or expired token simply results in no call,
+    never a dial to an attacker-chosen number.
+    """
+    form_multi = await request.form()
+    form = {k: (str(v) if v is not None else "") for k, v in form_multi.items()}
+
+    if settings.INBOUND_SMS_REQUIRE_SIGNATURE:
+        if not settings.TWILIO_AUTH_TOKEN or not verify_signature(
+            settings.TWILIO_AUTH_TOKEN,
+            _public_url(request),
+            form,
+            request.headers.get("X-Twilio-Signature"),
+        ):
+            log.warning("voice_bridge: signature verification failed")
+            return _twiml()
+
+    token = request.query_params.get("token") or ""
+    try:
+        claims = voice_transport.verify_bridge_token(token)
+    except voice_transport.InvalidBridgeToken:
+        # Forged/expired/replayed token → dial nothing (empty TwiML hangs up).
+        log.warning("voice_bridge: invalid or expired bridge token")
+        return _twiml()
+
+    twiml = voice_transport.build_bridge_twiml(dial_number=claims["dial"])
+    return Response(content=twiml, media_type="application/xml")

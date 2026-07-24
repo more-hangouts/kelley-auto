@@ -119,6 +119,78 @@ def log_call_attempt(
     return attempt, True
 
 
+def start_bridge_call(
+    db: Session,
+    *,
+    contact: Contact,
+    user: User,
+    rep_number: str,
+    event_id: int | None = None,
+    idempotency_key: str | None = None,
+) -> tuple[ContactCallAttempt, "object"]:
+    """Twilio Voice click-to-call bridge (business-number call path).
+
+    Logs a call attempt for the CONTACT's number (reusing ``log_call_attempt``,
+    so the same tracking/idempotency/attribution applies and managers see the
+    call in the exact same place as native-dialer calls), then asks Twilio to
+    ring the rep first and bridge to the contact. ``source`` is stamped
+    ``twilio_bridge`` so the two call paths are distinguishable in reporting.
+
+    Returns ``(attempt, VoiceCallResult)``. The Twilio call is only attempted on
+    a fresh attempt; an idempotent replay (same key) skips re-dialing and
+    returns a ``not_configured``/``ok=False`` placeholder-free result carrying
+    the reason so the caller can decide. Raises ``CallAttemptError`` only for
+    input problems (missing contact phone); Twilio failures come back as a
+    non-ok result, never an exception.
+
+    Imports of the voice transport are local so the analytics module has no
+    hard import dependency on the messaging module at load time.
+    """
+    from modules.messaging.services import voice_transport
+
+    contact_number = normalize_phone_e164(contact.phone_e164 or contact.phone or "")
+    if not contact_number:
+        raise CallAttemptError("contact_phone_missing", http_status=422)
+
+    rep_dial = normalize_phone_e164(rep_number or "")
+    if not rep_dial:
+        raise CallAttemptError("rep_phone_missing", http_status=422)
+
+    if not voice_transport.voice_transport_configured():
+        raise CallAttemptError("voice_not_configured", http_status=503)
+
+    attempt, created = log_call_attempt(
+        db,
+        contact=contact,
+        user=user,
+        raw_phone=contact_number,
+        event_id=event_id,
+        source="twilio_bridge",
+        idempotency_key=idempotency_key,
+    )
+
+    if not created:
+        # Idempotent replay of the same tap — the first call was already placed.
+        # Don't dial a second time; report the existing attempt with no new SID.
+        return attempt, voice_transport.VoiceCallResult(
+            ok=True, status="duplicate", error_message="idempotent_replay"
+        )
+
+    # Persist the attempt so its id is available for the signed bridge token
+    # (the token binds the callback to this specific attempt + contact number).
+    db.flush()
+    token = voice_transport.mint_bridge_token(
+        call_attempt_id=attempt.id,
+        contact_id=contact.id,
+        dial_number=contact_number,
+    )
+    result = voice_transport.initiate_bridge_call(
+        rep_number=rep_dial,
+        callback_url=voice_transport.bridge_callback_url(token),
+    )
+    return attempt, result
+
+
 def record_outcome(
     db: Session,
     *,

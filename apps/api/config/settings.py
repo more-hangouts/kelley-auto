@@ -149,6 +149,25 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN") or None
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER") or None
 TWILIO_MESSAGING_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID") or None
 
+# Twilio Voice — click-to-call bridge (CRM "Business number call").
+# Optional, additive path beside the native tel: dialer: Twilio first calls the
+# REP, then the answered leg is bridged to the CONTACT so the contact sees the
+# business caller ID (TWILIO_VOICE_FROM_NUMBER, falling back to the SMS
+# TWILIO_FROM_NUMBER). Hard-disabled by default — stays off until an authorized
+# voice-capable number is configured. Reuses TWILIO_ACCOUNT_SID/AUTH_TOKEN.
+#
+# TWILIO_VOICE_REP_FALLBACK_NUMBER is the default number Twilio dials for the
+# rep when the request doesn't carry a per-device callback number (the admin UI
+# remembers the rep's number in localStorage and sends it explicitly). Single-
+# rep shops can rely on the fallback alone.
+TWILIO_VOICE_ENABLED = os.getenv("TWILIO_VOICE_ENABLED", "false").lower() == "true"
+TWILIO_VOICE_FROM_NUMBER = (
+    os.getenv("TWILIO_VOICE_FROM_NUMBER") or TWILIO_FROM_NUMBER
+)
+TWILIO_VOICE_REP_FALLBACK_NUMBER = (
+    os.getenv("TWILIO_VOICE_REP_FALLBACK_NUMBER") or None
+)
+
 # Omnichannel inbox (Phase 2+). Outbound SMS stays hard-disabled until the
 # A2P 10DLC campaign is approved — inbound lands regardless. Inbound webhook
 # signature verification is REQUIRED by default (needs TWILIO_AUTH_TOKEN);

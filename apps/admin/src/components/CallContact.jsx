@@ -7,9 +7,15 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   IconButton,
   Link,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Snackbar,
   Stack,
   TextField,
   ToggleButton,
@@ -18,8 +24,33 @@ import {
   Typography,
 } from '@mui/material'
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
+import SmartphoneOutlinedIcon from '@mui/icons-material/SmartphoneOutlined'
 
-import { logCallAttempt, updateCallAttempt } from '../services/api'
+import { logCallAttempt, startBridgeCall, updateCallAttempt } from '../services/api'
+
+// Per-device storage of the rep's callback number for the business-number
+// bridge (Twilio rings THIS number first, then bridges to the contact). Kept
+// in localStorage so a rep enters it once per device; the server also has a
+// TWILIO_VOICE_REP_FALLBACK_NUMBER default when this is absent.
+const REP_PHONE_KEY = 'kelley.callback_phone'
+
+function readRepPhone() {
+  try {
+    return window.localStorage.getItem(REP_PHONE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function writeRepPhone(value) {
+  try {
+    if (value) window.localStorage.setItem(REP_PHONE_KEY, value)
+  } catch {
+    /* ignore storage failures (private mode) */
+  }
+}
 
 // Shared tap-to-call control (Phase 7). Replaces raw `tel:` links so a
 // salesperson's call attempt is LOGGED before the native dialer opens, and an
@@ -32,9 +63,17 @@ import { logCallAttempt, updateCallAttempt } from '../services/api'
 //   4. When the page becomes visible again after a logged call → outcome sheet.
 //   5. Dismissing the sheet keeps the row as call_initiated (outcome_pending).
 //
-// This is NOT Twilio Voice: the device places the call; we only record intent
-// and a salesperson-reported outcome. We NEVER infer "connected" from the user
-// returning to the app.
+// The native path is NOT Twilio Voice: the device places the call; we only
+// record intent and a salesperson-reported outcome. We NEVER infer "connected"
+// from the user returning to the app.
+//
+// OPTIONAL business-number path (Twilio Voice click-to-call bridge): the caret
+// menu offers "Business number call". Instead of the device dialing the
+// contact (which exposes the rep's personal cell), the server rings the rep
+// first, then bridges to the contact so the contact sees the BUSINESS number.
+// It reuses the same call-attempt logging. If Twilio voice isn't configured the
+// server returns 503 and the UI cleanly points the rep back at the native path
+// — the native tel: dialer is never removed or degraded.
 
 const OUTCOMES = [
   { value: 'connected', label: 'Connected' },
@@ -74,6 +113,14 @@ export default function CallContact({
   const [outcome, setOutcome] = useState(null)
   const [notes, setNotes] = useState('')
   const [outcomeError, setOutcomeError] = useState(null)
+
+  // Business-number bridge (Twilio Voice) UI state.
+  const [menuAnchor, setMenuAnchor] = useState(null)
+  const [bridgePending, setBridgePending] = useState(false)
+  const [repPhoneDialogOpen, setRepPhoneDialogOpen] = useState(false)
+  const [repPhoneInput, setRepPhoneInput] = useState('')
+  const [toast, setToast] = useState(null) // { severity, message }
+  const bridgeInFlightRef = useRef(false)
 
   // The attempt we're waiting to collect an outcome for once the page returns
   // to the foreground. Held in a ref so the visibilitychange handler always
@@ -174,6 +221,73 @@ export default function CallContact({
     openDialer()
   }
 
+  // --- Business-number bridge (Twilio Voice) --------------------------------
+
+  const placeBridgeCall = useCallback(
+    async (repPhone) => {
+      if (bridgeInFlightRef.current) return
+      bridgeInFlightRef.current = true
+      setBridgePending(true)
+      setError(null)
+      try {
+        await startBridgeCall(contactId, {
+          rep_phone: repPhone || undefined,
+          event_id: eventId,
+        })
+        setToast({
+          severity: 'success',
+          message:
+            'Calling your phone now — answer it and we’ll connect you. The contact sees the business number.',
+        })
+      } catch (err) {
+        const code = err?.response?.data?.detail?.code || err?.response?.data?.detail
+        const status = err?.response?.status
+        if (status === 503 || code === 'voice_not_configured') {
+          // Voice isn't set up — fall back to the native dialer, clearly.
+          setToast({
+            severity: 'info',
+            message:
+              'Business-number calling isn’t set up yet — using this device’s dialer instead.',
+          })
+        } else if (code === 'rep_phone_missing') {
+          setRepPhoneInput(readRepPhone())
+          setRepPhoneDialogOpen(true)
+        } else {
+          setToast({
+            severity: 'error',
+            message:
+              err?.response?.data?.detail?.provider_error ||
+              (typeof code === 'string' ? code : 'Could not start the call.'),
+          })
+        }
+      } finally {
+        bridgeInFlightRef.current = false
+        setBridgePending(false)
+      }
+    },
+    [contactId, eventId],
+  )
+
+  function onBusinessCallClick() {
+    setMenuAnchor(null)
+    const saved = readRepPhone()
+    if (!saved) {
+      // First business call on this device — ask which number to ring.
+      setRepPhoneInput('')
+      setRepPhoneDialogOpen(true)
+      return
+    }
+    placeBridgeCall(saved)
+  }
+
+  function confirmRepPhone() {
+    const val = repPhoneInput.trim()
+    if (!val) return
+    writeRepPhone(val)
+    setRepPhoneDialogOpen(false)
+    placeBridgeCall(val)
+  }
+
   async function saveOutcome() {
     const attempt = pendingAttemptRef.current
     if (!attempt) {
@@ -259,9 +373,119 @@ export default function CallContact({
       </Link>
     )
 
+  const caret = (
+    <Tooltip title="Call options" arrow>
+      <span>
+        <IconButton
+          size="small"
+          onClick={(e) => setMenuAnchor(e.currentTarget)}
+          disabled={bridgePending}
+          aria-label="Call options"
+          sx={{ p: 0.25 }}
+        >
+          {bridgePending ? (
+            <CircularProgress size={14} />
+          ) : (
+            <ArrowDropDownIcon fontSize="small" />
+          )}
+        </IconButton>
+      </span>
+    </Tooltip>
+  )
+
   return (
     <>
-      {trigger}
+      <Box
+        component="span"
+        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}
+      >
+        {trigger}
+        {caret}
+      </Box>
+
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setMenuAnchor(null)
+            handleCall()
+          }}
+        >
+          <ListItemIcon>
+            <SmartphoneOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Native call"
+            secondary="Uses this device’s dialer"
+          />
+        </MenuItem>
+        <MenuItem onClick={onBusinessCallClick}>
+          <ListItemIcon>
+            <BusinessOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Business number call"
+            secondary="Customer sees the business number"
+          />
+        </MenuItem>
+      </Menu>
+
+      <Dialog
+        open={repPhoneDialogOpen}
+        onClose={() => setRepPhoneDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Which number should we ring?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            We’ll call this phone first, then connect you to the contact. The
+            contact sees the business number — not this one. Saved on this
+            device for next time.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Your phone number"
+            placeholder="+1 210 555 0134"
+            value={repPhoneInput}
+            onChange={(e) => setRepPhoneInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmRepPhone()
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRepPhoneDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={confirmRepPhone}
+            disabled={!repPhoneInput.trim()}
+          >
+            Call me
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={6000}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {toast ? (
+          <Alert
+            severity={toast.severity}
+            onClose={() => setToast(null)}
+            sx={{ width: '100%' }}
+          >
+            {toast.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
 
       {error && (
         <Box sx={{ mt: 0.5 }}>
