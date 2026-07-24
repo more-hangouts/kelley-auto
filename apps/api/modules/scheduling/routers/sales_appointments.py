@@ -78,6 +78,9 @@ class ContactSummary(BaseModel):
     display_name: str
     phone: str | None
     email: str | None
+    # SMS eligibility for the shared Message action (Phase 8).
+    sms_consent: bool = False
+    sms_opted_out: bool = False
 
 
 class EventSummary(BaseModel):

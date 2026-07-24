@@ -21,6 +21,7 @@ import dayjs from 'dayjs'
 
 import { getEvent, getEventWorkflow } from '../services/api'
 import CallContact from './CallContact'
+import ContactActions from './ContactActions'
 
 function formatDate(d) {
   if (!d) return '—'
@@ -37,7 +38,7 @@ function KV({ label, value }) {
       >
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ flex: 1 }}>
+      <Typography variant="body2" component="div" sx={{ flex: 1 }}>
         {value || '—'}
       </Typography>
     </Stack>
@@ -264,6 +265,30 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
                   )
                 }
               />
+              {(detail?.primary_contact?.id ?? card.primary_contact?.id) && (
+                <KV
+                  label="Actions"
+                  value={
+                    <ContactActions
+                      contact={{
+                        id: detail?.primary_contact?.id ?? card.primary_contact?.id,
+                        display_name:
+                          detail?.primary_contact?.display_name ??
+                          card.primary_contact?.display_name,
+                        phone: detail?.primary_contact_phone,
+                        sms_consent:
+                          detail?.primary_contact?.sms_consent ??
+                          card.primary_contact?.sms_consent,
+                        sms_opted_out:
+                          detail?.primary_contact?.sms_opted_out ??
+                          card.primary_contact?.sms_opted_out,
+                      }}
+                      eventId={card.id}
+                      source="event_quick_view"
+                    />
+                  }
+                />
+              )}
               <KV
                 label="Email"
                 value={

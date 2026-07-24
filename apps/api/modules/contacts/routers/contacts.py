@@ -59,6 +59,10 @@ class ContactResponse(BaseModel):
     appointment_count: int
     alternate_celebrants: list[str]
     linked_events: list[LinkedEventSummary]
+    # SMS eligibility signals for the shared Message action (Phase 8). Booleans
+    # so the client never sees the raw consent/opt-out timestamps.
+    sms_consent: bool
+    sms_opted_out: bool
 
 
 class ContactPatch(BaseModel):
@@ -104,6 +108,8 @@ class ContactListItem(BaseModel):
     event_count: int
     created_at: datetime
     updated_at: datetime
+    sms_consent: bool = False
+    sms_opted_out: bool = False
 
 
 class ContactTagFacet(BaseModel):
@@ -142,6 +148,8 @@ def _to_response(
         appointment_count=ctx["appointment_count"],
         alternate_celebrants=ctx["alternate_celebrants"],
         linked_events=[LinkedEventSummary(**e) for e in linked_events],
+        sms_consent=contact.sms_consent_at is not None,
+        sms_opted_out=contact.sms_opted_out_at is not None,
     )
 
 

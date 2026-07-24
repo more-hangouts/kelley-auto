@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import ContactActions from '../components/ContactActions'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined'
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
@@ -107,6 +108,11 @@ function ContactRow({ contact, onOpen }) {
             sx={{ bgcolor: 'action.selected', fontWeight: 500 }}
           />
         )}
+
+        {/* Call/Message actions — stop propagation so they don't open the row. */}
+        <Box onClick={(e) => e.stopPropagation()}>
+          <ContactActions contact={contact} source="contacts_list" />
+        </Box>
 
         <ChevronRightIcon sx={{ color: 'text.disabled' }} />
       </Stack>

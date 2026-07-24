@@ -339,6 +339,8 @@ def get_detail(db: Session, *, appointment_id: int) -> dict | None:
                 "display_name": contact.display_name,
                 "phone": contact.phone_e164 or contact.phone,
                 "email": contact.email,
+                "sms_consent": contact.sms_consent_at is not None,
+                "sms_opted_out": contact.sms_opted_out_at is not None,
             }
             if contact is not None
             else None

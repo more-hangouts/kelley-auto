@@ -3,39 +3,19 @@ import { CircularProgress, IconButton, Tooltip } from '@mui/material'
 import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined'
 
 import { startSmsConversation } from '../services/api'
+import { precheckEligibility, SMS_REASON_TOOLTIP } from '../utils/smsEligibility'
 import SmsComposerDialog from './SmsComposerDialog'
 
 // Shared "Message" action (Phase 8). A single icon button that:
-//   1. client-side pre-checks eligibility from data the surface already has, to
-//      render a DISABLED icon + tooltip for ineligible contacts (no phone / no
-//      consent / opted out) without a network round-trip;
+//   1. client-side pre-checks eligibility (see utils/smsEligibility) from data
+//      the surface already has, to render a DISABLED icon + tooltip for
+//      ineligible contacts (no phone / no consent / opted out) without a
+//      network round-trip;
 //   2. on click, asks the SERVER (authoritative) to create/reuse the SMS
 //      conversation, then opens the shared composer.
 //
 // The server enforces eligibility on the actual send, so the client pre-check is
 // only a UX affordance — it can never let an ineligible send through.
-
-// Compute a best-effort eligibility from a contact-summary-shaped object. The
-// surface passes whatever it has; missing fields are treated conservatively.
-export function precheckEligibility(contact) {
-  if (!contact) return { eligible: false, reason: 'no_phone' }
-  const phone = contact.phone_e164 || contact.phone
-  if (!phone) return { eligible: false, reason: 'no_phone' }
-  if (contact.sms_opted_out || contact.sms_opted_out_at) return { eligible: false, reason: 'opted_out' }
-  // sms_consent may be a boolean (contact summary) or a timestamp (raw contact).
-  const hasConsent = contact.sms_consent === true || Boolean(contact.sms_consent_at)
-  if (!hasConsent) return { eligible: false, reason: 'no_consent' }
-  return { eligible: true, reason: 'eligible' }
-}
-
-const REASON_TOOLTIP = {
-  no_phone: 'No phone number on file',
-  no_consent: 'No SMS consent — they must opt in or text first',
-  opted_out: 'This contact opted out of SMS',
-  sms_disabled: 'Outbound SMS is not enabled',
-  transport_unavailable: 'SMS is not configured',
-  eligible: 'Send a text message',
-}
 
 export default function MessageContactButton({
   contactId,
@@ -68,7 +48,7 @@ export default function MessageContactButton({
 
   const tooltip = error
     ? 'Could not open the conversation'
-    : REASON_TOOLTIP[pre.reason] || 'Send a text message'
+    : SMS_REASON_TOOLTIP[pre.reason] || 'Send a text message'
 
   return (
     <>
