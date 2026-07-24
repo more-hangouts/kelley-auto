@@ -1,0 +1,7 @@
+# Generated E2E artifacts — never commit
+.build/
+node_modules/
+test-results/
+report/
+playwright-report/
+package-lock.json

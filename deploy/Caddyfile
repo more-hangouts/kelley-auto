@@ -30,7 +30,7 @@ api.kelleyautoplex.com {
 # --- Admin SPA (static Vite build, no Node process) ---
 admin.kelleyautoplex.com {
 	encode gzip zstd
-	root * /opt/kelley/backend/frontend/dist
+	root * /opt/kelley/apps/admin/dist
 	# SPA fallback: client-side routes resolve to index.html.
 	try_files {path} /index.html
 	file_server
@@ -42,7 +42,7 @@ admin.kelleyautoplex.com {
 # Uncomment + add a DNS record if you want sales.kelleyautoplex.com.
 # sales.kelleyautoplex.com {
 # 	encode gzip zstd
-# 	root * /opt/kelley/backend/frontend/dist
+# 	root * /opt/kelley/apps/admin/dist
 # 	try_files {path} /index.html
 # 	file_server
 # }

@@ -40,7 +40,7 @@ api.kelleyautoplex.com {
 admin.kelleyautoplex.com {
 	encode gzip zstd
 	header X-Robots-Tag "noindex, nofollow"
-	root * /opt/kelley/backend/frontend/dist
+	root * /opt/kelley/apps/admin/dist
 	try_files {path} /index.html
 	file_server
 }

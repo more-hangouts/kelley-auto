@@ -1,0 +1,12 @@
+packages:
+  - apps/admin
+  - apps/storefront
+  - packages/*
+
+# Native dependencies allowed to run install scripts under pnpm 10's
+# default script sandbox. esbuild (Vite's transitive binary) fetches its
+# platform binary via a postinstall and must be allowed. sharp is NOT
+# listed: sharp 0.34.x ships prebuilt @img/sharp-linux-x64 binaries and
+# needs no build step.
+onlyBuiltDependencies:
+  - esbuild
