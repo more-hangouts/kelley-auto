@@ -1,11 +1,35 @@
 import { useState } from 'react'
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, Paper, Stack, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
+import { useQuery } from '@tanstack/react-query'
 
 import { useSalesAuth } from '../contexts/SalesAuthContext'
+import { getMyCallsToday } from '../services/api'
 import AppointmentsToday from './AppointmentsToday'
 import LeadSearch from './LeadSearch'
 import SalesWalkInDialog from './SalesWalkInDialog'
+
+function CallsTodayTile() {
+  const { data } = useQuery({
+    queryKey: ['my-calls-today'],
+    queryFn: getMyCallsToday,
+  })
+  const count = data?.calls_today ?? 0
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: 2, px: 2.5, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <PhoneOutlinedIcon color="primary" />
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 600, lineHeight: 1 }}>
+          {count}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {count === 1 ? 'Call logged today' : 'Calls logged today'}
+        </Typography>
+      </Box>
+    </Paper>
+  )
+}
 
 function pickGreeting(now) {
   const h = now.getHours()
@@ -49,6 +73,7 @@ export default function RepDashboard() {
           Add walk-in
         </Button>
       </Stack>
+      <CallsTodayTile />
       <LeadSearch />
       <AppointmentsToday refreshKey={appointmentsRefreshKey} />
       <SalesWalkInDialog
