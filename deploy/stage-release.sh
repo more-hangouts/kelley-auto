@@ -191,20 +191,23 @@ echo "==> preview HTTP checks"
 ADMIN_PORT="${STAGE_ADMIN_PORT:-5174}"
 STORE_PORT="${STAGE_STORE_PORT:-3001}"
 pids=()
-# next only honors a RELATIVE distDir, so preview it through a temporary
-# relative symlink under apps/storefront/ that points at the release dir.
-PREVIEW_LINK_REL=".next-preview-$SHA"
-PREVIEW_LINK_ABS="$ROOT/apps/storefront/$PREVIEW_LINK_REL"
+# Next 15.5 fails at request time when distDir is a symlink, even when the
+# symlink target is a valid build. Materialize a real preview directory under
+# the storefront project instead.
+PREVIEW_DIR_REL=".next-preview-$SHA"
+PREVIEW_DIR_ABS="$ROOT/apps/storefront/$PREVIEW_DIR_REL"
 cleanup() {
   for p in "${pids[@]:-}"; do kill "$p" 2>/dev/null || true; done
-  rm -f "$PREVIEW_LINK_ABS"
+  rm -rf -- "$PREVIEW_DIR_ABS"
 }
 trap cleanup EXIT
 
 ( cd "$ROOT/apps/admin" && pnpm exec vite preview --outDir "$ADMIN_OUT" --port "$ADMIN_PORT" --strictPort --host 127.0.0.1 ) >/dev/null 2>&1 &
 pids+=($!)
-rm -f "$PREVIEW_LINK_ABS"; ln -s "$STORE_OUT" "$PREVIEW_LINK_ABS"
-( cd "$ROOT/apps/storefront" && NEXT_DIST_DIR="$PREVIEW_LINK_REL" pnpm exec next start -p "$STORE_PORT" -H 127.0.0.1 ) >/dev/null 2>&1 &
+rm -rf -- "$PREVIEW_DIR_ABS"
+mkdir -p "$PREVIEW_DIR_ABS"
+cp -a --reflink=auto "$STORE_OUT/." "$PREVIEW_DIR_ABS/"
+( cd "$ROOT/apps/storefront" && NEXT_DIST_DIR="$PREVIEW_DIR_REL" pnpm exec next start -p "$STORE_PORT" -H 127.0.0.1 ) >/dev/null 2>&1 &
 pids+=($!)
 
 # reuse install.sh's bounded readiness poller

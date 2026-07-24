@@ -53,11 +53,11 @@ In production the storefront runs as `kelley-public.service` (`next start` on
 `127.0.0.1:3000`) behind Caddy. The production build bakes `NEXT_PUBLIC_*` values
 from `.env.production` at build time.
 
-> **⚠️ The production build writes into `apps/storefront/.next`, which is the
-> tree the running `next start` process serves.** A build here happens in place;
-> `deploy/build.sh --storefront` does this on the VPS. Do not rebuild `.next`
-> casually against a live process — see [docs/OPERATIONS.md](../../docs/OPERATIONS.md)
-> for the deployment procedure and the outstanding staged-artifact preflight.
+> **Do not run the legacy in-place storefront build against production.**
+> `deploy/stage-release.sh` builds and validates a versioned artifact, and
+> `deploy/promote-release.sh` activates it as a real `.next` directory while
+> the service is stopped. Next 15.5 must not be pointed at a symlink distDir.
+> See [docs/OPERATIONS.md](../../docs/OPERATIONS.md) for promotion and rollback.
 
 ## Docs
 

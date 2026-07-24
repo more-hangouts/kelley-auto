@@ -15,12 +15,17 @@ build/
 *.tsbuildinfo
 
 # ---- Staged release artifacts (deploy/stage-release.sh) ----
-# Versioned builds + the active-release symlinks live on the server only.
+# Versioned builds and runtime release state live on the server only.
 /releases/
+# Legacy pointer from the initial staged-release design; no longer used because
+# Next 15.5 cannot serve a symlink distDir.
 apps/storefront/.next-current
 apps/storefront/.next-releases/
 apps/storefront/.next-stage-*
 apps/storefront/.next-preview-*
+apps/storefront/.next.promote.*
+apps/storefront/.next.previous.*
+apps/storefront/.next.failed.*
 apps/storefront/.next-env.d.ts.stagebak
 apps/storefront/.tsconfig.json.stagebak
 

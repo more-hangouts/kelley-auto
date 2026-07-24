@@ -116,19 +116,18 @@ dev "null" transport (lead emails are logged, not sent).
 ## Build + first start
 
 ```bash
-# As deploy: build all artifacts + run migrations.
-# ⚠️ Writes in place into the live apps/admin/dist and running apps/storefront/.next
-# (no staged promotion yet) — see ../docs/OPERATIONS.md §5, §12, §20.
-/opt/kelley/deploy/build.sh
+# As deploy: stage and validate the exact release commit without touching live
+# frontend artifacts. Use build.sh --api separately for dependency/migrations.
+/opt/kelley/deploy/build.sh --api
+/opt/kelley/deploy/stage-release.sh --sha <full-git-sha>
 
-# Start services (after units are installed)
-sudo systemctl start kelley-backend kelley-public
-sudo systemctl reload caddy     # picks up the Caddyfile
+# Promote during an approved window. Admin uses a symlink; storefront uses a
+# real .next directory because Next 15.5 cannot serve a symlink distDir.
+sudo bash /opt/kelley/deploy/promote-release.sh <full-git-sha>
 ```
 
-The dev servers (`next dev` :3000, `vite` :5173, manual `uvicorn` :8000) must
-be stopped first so the prod services can bind — `next start` and the
-`kelley-backend` unit both use the same ports as their dev counterparts.
+The legacy `build.sh --admin` and `--storefront` targets write in place; do not
+use them against running production services.
 
 ---
 

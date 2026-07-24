@@ -1,10 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Staged releases build into a versioned directory and the running service
-  // is pointed at it via NEXT_DIST_DIR (set to `.next-current`, a symlink to
-  // the active release). Defaults to `.next` for local dev and any process
-  // that does not set it. Build and `next start` must see the SAME value.
+  // Staging and preview builds use a real, relative NEXT_DIST_DIR. Production
+  // intentionally leaves this unset and serves the real `.next` directory:
+  // Next 15.5 returns MODULE_NOT_FOUND for request-time chunks when distDir is
+  // a symlink, even when that symlink targets a valid build.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
     remotePatterns: [

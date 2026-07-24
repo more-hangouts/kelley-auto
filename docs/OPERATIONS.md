@@ -176,7 +176,8 @@ After restart, `install.sh` polls until healthy (bounded by
 
 Frontend releases are **staged, versioned, and recoverable** (Phase 6). A build
 never touches the live served artifacts (`apps/admin/dist`,
-`apps/storefront/.next`); promotion switches a symlink. (Staging does run
+`apps/storefront/.next`); promotion switches the admin symlink and replaces the
+stopped storefront's real `.next` directory. (Staging does run
 `pnpm install --frozen-lockfile`, which touches the shared `node_modules` the
 running storefront imports from — normally a no-op against a frozen lockfile,
 but stage during a quiet window or from a separate checkout if a release
@@ -191,11 +192,13 @@ changes dependencies.)
   ```
 
 - **Promote** (privileged, in a deployment window) — verifies the validated
-  manifest, stops the storefront, atomically switches `apps/admin/dist` and
-  `apps/storefront/.next-current` to the release, restarts, and polls readiness;
-  it preserves the previous pointers and prints the exact rollback command. The
-  **first** promotion moves the current Phase‑2 `dist`/`.next` into
-  `releases/phase2-baseline/` so the pre‑restructure build stays recoverable:
+  manifest and materializes the storefront candidate into a real directory
+  beside `.next`. It stops the storefront, renames the current real `.next`
+  aside, renames the candidate into place, atomically switches the admin
+  `dist` symlink, starts the services, and polls readiness. The previous real
+  storefront directory is retained until readiness passes; failures restore it
+  automatically. The first successful promotion preserves the current Phase-2
+  artifacts in `releases/phase2-baseline/`:
 
   ```bash
   sudo bash deploy/promote-release.sh <release-id>
@@ -210,10 +213,11 @@ changes dependencies.)
   ```
 
 Atomicity: the **admin** switch is atomic (symlink `rename(2)`). The
-**storefront** switch is **not** atomic — `next start` holds its `.next` open, so
-the service is stopped, switched, then started; expect a few seconds of
-storefront 502 at the proxy during promotion. Old releases are never deleted by
-these scripts.
+**storefront** switch is deliberately a real-directory transaction, not a
+symlink: Next 15.5 returns request-time `MODULE_NOT_FOUND` errors when its
+configured `distDir` is a symlink. The service is stopped, `.next` is renamed,
+and the candidate real directory is renamed into place; expect a few seconds of
+storefront 502 at the proxy. Old releases are never deleted by these scripts.
 
 - **Config layer** (systemd units, Caddyfile): `install.sh` keeps timestamped
   `.bak` and one-time `.orig` backups and prints the exact rollback commands.
@@ -325,8 +329,9 @@ It is a **required release gate** and runs automatically inside
 ## 20. Window B (Phase 6) preflight risks
 
 1. **Staged/recoverable artifact promotion — IMPLEMENTED (§12).** Frontend
-   releases now stage into `releases/<sha>/`, validate before promotion, and
-   switch via symlink with the previous artifacts retained. Use
+   releases stage into `releases/<sha>/` and validate before promotion. Admin
+   uses an atomic symlink; storefront is copied into and activated as a real
+   `.next` directory with the previous directory retained. Use
    `deploy/stage-release.sh` then `deploy/promote-release.sh`; do **not** use the
    in-place `build.sh --admin`/`--storefront` for a deploy.
 2. **Browser E2E gate — IMPLEMENTED (§19).** The pinned-Playwright Docker suite

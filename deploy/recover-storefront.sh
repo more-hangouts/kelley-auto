@@ -27,22 +27,39 @@ UNIT_DST="/etc/systemd/system/kelley-public.service"
 
 echo "==> recovering storefront to the Phase-2 baseline build (real .next dir)"
 
+# If recovery already completed, do not stop a healthy service or require the
+# consumed baseline source to still exist.
+if [[ -d "$SF/.next" && ! -L "$SF/.next" ]]; then
+  code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:3000/ 2>/dev/null || true)"
+  if [[ "$code" =~ ^[23][0-9][0-9]$ ]]; then
+    echo "==> storefront is already recovered and healthy ($code)."
+    echo "    BUILD_ID: $(cat "$SF/.next/BUILD_ID" 2>/dev/null)"
+    exit 0
+  fi
+fi
+
+# Validate the recovery source before stopping anything.
+[[ -d "$BASELINE" ]] || { echo "error: baseline build missing at $BASELINE" >&2; exit 1; }
+
 # 1. Stop the failing service.
 systemctl stop kelley-public || true
 
-# 2. Remove the broken symlink pointer.
+# 2. Remove the broken legacy symlink pointer.
 rm -f "$SF/.next-current"
 
-# 3. Restore the baseline build to a REAL .next directory.
-[[ -d "$BASELINE" ]] || { echo "error: baseline build missing at $BASELINE" >&2; exit 1; }
-if [[ -e "$SF/.next" && ! -L "$SF/.next" ]]; then
-  echo "    apps/storefront/.next already exists as a real dir; leaving it in place"
+# 3. Restore the baseline build to a REAL .next directory. A real but unhealthy
+# candidate is preserved for diagnosis rather than mistaken for a successful
+# recovery.
+if [[ -d "$SF/.next" && ! -L "$SF/.next" ]]; then
+  failed="$SF/.next.failed.recovery.$(date +%Y%m%d-%H%M%S)"
+  mv "$SF/.next" "$failed"
+  echo "    preserved unhealthy real build at $failed"
 else
   rm -f "$SF/.next"          # clear any stale symlink
-  # Move the baseline back (it was moved here from .next during first conversion).
-  mv "$BASELINE" "$SF/.next"
-  echo "    restored $SF/.next from phase2-baseline"
 fi
+# Move the baseline back (it was moved here from .next during first conversion).
+mv "$BASELINE" "$SF/.next"
+echo "    restored $SF/.next from phase2-baseline"
 
 # 4. Reinstall the ORIGINAL unit (no NEXT_DIST_DIR) so next uses the default
 #    distDir (.next), matching the baked build. Written explicitly to avoid any

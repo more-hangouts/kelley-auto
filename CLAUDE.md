@@ -115,8 +115,10 @@ existing coupling is out of scope — see
 - **For an actual deploy, use the staged release scripts, not the in-place
   builds.** `deploy/stage-release.sh` builds a versioned, checksummed,
   E2E-validated release into `releases/<sha>/` without touching live artifacts;
-  `deploy/promote-release.sh` (privileged, in a window) switches the live
-  symlinks; `deploy/rollback-release.sh` reverts. See
+  `deploy/promote-release.sh` (privileged, in a window) switches the admin
+  symlink and activates a real storefront `.next` directory;
+  `deploy/rollback-release.sh` reverts. Never point Next's `distDir` at a
+  symlink: Next 15.5 can start but returns request-time `MODULE_NOT_FOUND`. See
   [docs/OPERATIONS.md §12](docs/OPERATIONS.md#12-staged-releases-backup-and-rollback).
 - **Browser E2E** lives in `apps/admin/e2e/` and runs in a pinned Playwright
   Docker image (`pnpm --filter ./apps/admin test:e2e:docker`) — no host Chromium

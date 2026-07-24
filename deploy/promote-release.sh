@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
 #
-# promote-release.sh — atomically point the live admin dist and storefront at a
-# previously-staged, validated release, then restart the services. Privileged;
-# run during a deployment window (Window B).
+# promote-release.sh — promote a previously staged, validated frontend release.
+# Privileged; run during a deployment window.
 #
 # Safety:
 #   - Requires a validated release manifest; re-verifies a sample of checksums.
 #   - Release ID is a strict allowlist (40-hex sha, or 'phase2-baseline').
 #   - All target paths are realpath-resolved and confirmed under RELEASE_ROOT.
 #   - The admin symlink swap is atomic (ln -s + mv -T = rename(2)).
-#   - The storefront is STOPPED before its artifact is switched (next start
-#     holds .next open), then started — a few seconds of downtime is inherent
-#     and unavoidable; this is NOT an atomic switch.
-#   - First conversion moves (not copies) the current real dist/.next into
-#     releases/phase2-baseline/ so the pre-restructure build stays recoverable.
-#   - On readiness failure after the switch, both pointers are restored.
+#   - The storefront candidate is copied to a REAL directory before downtime.
+#     Next 15.5 cannot serve request-time chunks from a symlink distDir.
+#   - The storefront is STOPPED, its real .next is renamed aside, and the real
+#     candidate is renamed into place. This is recoverable, not atomic.
+#   - On readiness failure, admin and the previous real .next are restored.
 #   - Old releases are never deleted.
 #
-# Usage:  sudo bash deploy/promote-release.sh <release-id>
+# Usage:
+#   sudo bash deploy/promote-release.sh <release-id> [--skip-backend-restart]
 #
 # Overridable for dry-run/testing (default to production):
-#   ROOT, RELEASE_ROOT, ADMIN_LINK, STOREFRONT_LINK, STOREFRONT_APP,
+#   ROOT, RELEASE_ROOT, ADMIN_LINK, STOREFRONT_APP, STORE_STATE,
 #   SERVICE_CMD (default: "systemctl"), SKIP_SYSTEMD_INSTALL (default: 0)
 #
 set -euo pipefail
@@ -30,10 +29,19 @@ ROOT="${ROOT:-$(cd "$SELF_DIR/.." && pwd)}"
 RELEASE_ROOT="${RELEASE_ROOT:-$ROOT/releases}"
 ADMIN_LINK="${ADMIN_LINK:-$ROOT/apps/admin/dist}"
 STOREFRONT_APP="${STOREFRONT_APP:-$ROOT/apps/storefront}"
-STOREFRONT_LINK="${STOREFRONT_LINK:-$STOREFRONT_APP/.next-current}"
+STOREFRONT_LIVE="${STOREFRONT_LIVE:-$STOREFRONT_APP/.next}"
+STORE_STATE="${STORE_STATE:-$RELEASE_ROOT/.active-storefront}"
 SERVICE_CMD="${SERVICE_CMD:-systemctl}"
 
 REL_ID="${1:-}"
+SKIP_BACKEND_RESTART=0
+shift || true
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-backend-restart) SKIP_BACKEND_RESTART=1; shift ;;
+    *) echo "error: unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
 
 fail() { echo "error: $*" >&2; exit 1; }
 
@@ -81,7 +89,7 @@ echo "==> verifying checksums (sample)"
   const fs=require("fs"), cp=require("child_process"), path=require("path");
   const [dir,manifest]=process.argv.slice(1);
   const m=JSON.parse(fs.readFileSync(manifest,"utf8"));
-  const files=Object.keys(m.checksums).slice(0,20);
+  const files=Object.keys(m.checksums || {}).slice(0,20);
   for (const f of files){
     const full=path.join(dir,f);
     const got=cp.execSync("sha256sum "+JSON.stringify(full)).toString().split(" ")[0];
@@ -100,11 +108,25 @@ swap_symlink() {
   mv -T "$tmp" "$link"
 }
 
-# --- record current pointers (for rollback + partial-failure restore) ---
+# --- record current release (for rollback + partial-failure restore) ---
 PREV_ADMIN=""
-PREV_STORE=""
 [[ -L "$ADMIN_LINK" ]] && PREV_ADMIN="$(readlink -f "$ADMIN_LINK" || true)"
-[[ -L "$STOREFRONT_LINK" ]] && PREV_STORE="$(readlink -f "$STOREFRONT_LINK" || true)"
+PREV_STORE_ID="phase2-baseline"
+if [[ -f "$STORE_STATE" ]]; then
+  PREV_STORE_ID="$(tr -d '\r\n' < "$STORE_STATE")"
+  [[ "$PREV_STORE_ID" =~ ^([0-9a-f]{40}|phase2-baseline)$ ]] \
+    || fail "invalid active storefront state: '$PREV_STORE_ID'"
+fi
+
+[[ -d "$STOREFRONT_LIVE" && ! -L "$STOREFRONT_LIVE" ]] \
+  || fail "live storefront must be a real directory: $STOREFRONT_LIVE"
+
+TARGET_BUILD_ID="$(cat "$STORE_SRC/BUILD_ID" 2>/dev/null)"
+CURRENT_BUILD_ID="$(cat "$STOREFRONT_LIVE/BUILD_ID" 2>/dev/null || true)"
+if [[ "$PREV_STORE_ID" == "$REL_ID" && "$CURRENT_BUILD_ID" == "$TARGET_BUILD_ID" ]] \
+   && [[ -L "$ADMIN_LINK" && "$(readlink -f "$ADMIN_LINK")" == "$ADMIN_SRC" ]]; then
+  fail "release $REL_ID is already active"
+fi
 
 # Write a validated manifest for a directory-only release (e.g.
 # phase2-baseline) so promote/rollback accept it as a target. Checksums are
@@ -121,19 +143,58 @@ write_baseline_manifest() {
 EOF
 }
 
-# --- first conversion: current dist/.next are real dirs, not symlinks ---
-# Detect it up front so the failure/restore path can distinguish it. On a
-# first conversion there are NO previous symlinks to restore, so if promotion
-# fails we must restore the baseline dirs, not leave the services on the
-# failed release.
+# The admin may still need its one-time conversion from a real dist directory
+# to an atomic symlink. Storefront always remains a real .next directory.
 BASELINE_DIR="$RELEASE_ROOT/phase2-baseline"
-FIRST_CONVERSION=0
-[[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" ]] && FIRST_CONVERSION=1
-[[ ! -L "$STOREFRONT_LINK" && -d "$STOREFRONT_APP/.next" ]] && FIRST_CONVERSION=1
+ADMIN_FIRST_CONVERSION=0
+[[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" ]] && ADMIN_FIRST_CONVERSION=1
+
+# Materialize the storefront before stopping the service. The candidate lives
+# on the same filesystem as .next, so the final rename is fast and cannot
+# expose a partially copied build.
+STORE_NEW="$STOREFRONT_APP/.next.promote.$REL_ID.$$"
+STORE_PREV="$STOREFRONT_APP/.next.previous.$$"
+STORE_FAILED="$STOREFRONT_APP/.next.failed.$REL_ID.$(date +%Y%m%d-%H%M%S)"
+[[ ! -e "$STORE_NEW" && ! -e "$STORE_PREV" ]] \
+  || fail "temporary storefront path already exists"
+mkdir -p "$STORE_NEW"
+cp -a --reflink=auto "$STORE_SRC/." "$STORE_NEW/"
+[[ "$(cat "$STORE_NEW/BUILD_ID" 2>/dev/null)" == "$TARGET_BUILD_ID" ]] \
+  || fail "materialized storefront BUILD_ID mismatch"
+
+TRANSACTION_ACTIVE=0
+transaction_cleanup() {
+  local status=$?
+  if [[ "$TRANSACTION_ACTIVE" -eq 1 ]]; then
+    echo "error: unexpected promotion failure — restoring previous artifacts" >&2
+    svc stop kelley-public || true
+    [[ -n "$PREV_ADMIN" ]] && swap_symlink "$PREV_ADMIN" "$ADMIN_LINK" || true
+    if [[ -d "$STORE_PREV" ]]; then
+      if [[ -d "$STOREFRONT_LIVE" ]]; then
+        mv "$STOREFRONT_LIVE" "$STORE_FAILED" || true
+      fi
+      mv "$STORE_PREV" "$STOREFRONT_LIVE" || true
+    elif [[ -d "$RELEASE_ROOT/$PREV_STORE_ID/storefront-next" ]]; then
+      if [[ -d "$STOREFRONT_LIVE" ]]; then
+        mv "$STOREFRONT_LIVE" "$STORE_FAILED" || true
+      fi
+      mkdir -p "$STOREFRONT_LIVE"
+      cp -a --reflink=auto "$RELEASE_ROOT/$PREV_STORE_ID/storefront-next/." "$STOREFRONT_LIVE/" || true
+    fi
+    if [[ "$SKIP_BACKEND_RESTART" -eq 0 ]]; then
+      svc restart kelley-backend || true
+    fi
+    svc start kelley-public || true
+  elif [[ -d "$STORE_NEW" ]]; then
+    rm -rf -- "$STORE_NEW"
+  fi
+  return "$status"
+}
+trap transaction_cleanup EXIT
 
 echo "==> promoting release $REL_ID"
 echo "    admin:      $ADMIN_SRC"
-echo "    storefront: $STORE_SRC"
+echo "    storefront: $STORE_SRC -> real $STOREFRONT_LIVE"
 
 # --- stop storefront BEFORE switching its artifact ---
 # Guard the stop: on first conversion the admin dir has not moved yet, so an
@@ -147,42 +208,43 @@ if [[ "$ok" -ne 1 ]]; then
   exit 6
 fi
 
-# --- perform first-conversion moves now (storefront is stopped) ---
-if [[ "$FIRST_CONVERSION" -eq 1 ]]; then
-  echo "==> first conversion: preserving current Phase-2 build as phase2-baseline"
+TRANSACTION_ACTIVE=1
+
+# Preserve the current real storefront until the candidate passes readiness.
+mv "$STOREFRONT_LIVE" "$STORE_PREV"
+mv "$STORE_NEW" "$STOREFRONT_LIVE"
+
+# --- perform admin first conversion now (storefront is stopped) ---
+if [[ "$ADMIN_FIRST_CONVERSION" -eq 1 ]]; then
+  echo "==> first conversion: preserving current Phase-2 admin as phase2-baseline"
   mkdir -p "$BASELINE_DIR"
   if [[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" && ! -e "$BASELINE_DIR/admin" ]]; then
     mv "$ADMIN_LINK" "$BASELINE_DIR/admin"
   fi
-  if [[ ! -L "$STOREFRONT_LINK" && -d "$STOREFRONT_APP/.next" && ! -e "$BASELINE_DIR/storefront-next" ]]; then
-    mv "$STOREFRONT_APP/.next" "$BASELINE_DIR/storefront-next"
-  fi
-  write_baseline_manifest "$BASELINE_DIR"
-  # On first conversion the "previous" target IS the baseline we just made.
   PREV_ADMIN="$(realpath -e "$BASELINE_DIR/admin" 2>/dev/null || true)"
-  PREV_STORE="$(realpath -e "$BASELINE_DIR/storefront-next" 2>/dev/null || true)"
 fi
 
-# --- swap both pointers ---
-echo "==> switching admin (atomic) + storefront pointers"
+# --- switch admin pointer; storefront real directory is already in place ---
+echo "==> switching admin pointer"
 swap_symlink "$ADMIN_SRC" "$ADMIN_LINK"
-swap_symlink "$STORE_SRC" "$STOREFRONT_LINK"
 
-# --- install updated systemd/Caddy if the repo copies differ from installed ---
+# --- install the real-.next systemd unit if the repo copy differs ---
 if [[ "${SKIP_SYSTEMD_INSTALL:-0}" != "1" ]]; then
   if ! cmp -s "$SELF_DIR/systemd/kelley-public.service" /etc/systemd/system/kelley-public.service 2>/dev/null; then
-    echo "==> installing updated kelley-public.service (adds NEXT_DIST_DIR)"
+    echo "==> installing updated kelley-public.service (real .next)"
     install -m 0644 "$SELF_DIR/systemd/kelley-public.service" /etc/systemd/system/kelley-public.service
     svc daemon-reload
   fi
 fi
 
-# --- restart backend once + start storefront, then poll readiness ---
+# --- optionally restart backend, start storefront, then poll readiness ---
 # A start/restart failure must fall through to the restore block, not abort
 # under `set -e` — so capture its status instead of letting it exit.
-echo "==> restarting backend + starting storefront"
+echo "==> starting promoted services"
 ok=1
-svc restart kelley-backend || ok=0
+if [[ "$SKIP_BACKEND_RESTART" -eq 0 ]]; then
+  svc restart kelley-backend || ok=0
+fi
 svc start kelley-public || ok=0
 
 INSTALL_SH_LIB=1 source "$SELF_DIR/install.sh"
@@ -192,23 +254,44 @@ if [[ "$ok" -eq 1 ]]; then
 fi
 
 if [[ "$ok" -ne 1 ]]; then
-  echo "error: readiness failed after promotion — restoring previous pointers" >&2
+  echo "error: readiness failed after promotion — restoring previous artifacts" >&2
   svc stop kelley-public || true
   [[ -n "$PREV_ADMIN" ]] && swap_symlink "$PREV_ADMIN" "$ADMIN_LINK"
-  [[ -n "$PREV_STORE" ]] && swap_symlink "$PREV_STORE" "$STOREFRONT_LINK"
-  svc restart kelley-backend || true
+  if [[ -d "$STOREFRONT_LIVE" ]]; then
+    mv "$STOREFRONT_LIVE" "$STORE_FAILED"
+  fi
+  mv "$STORE_PREV" "$STOREFRONT_LIVE"
+  if [[ "$SKIP_BACKEND_RESTART" -eq 0 ]]; then
+    svc restart kelley-backend || true
+  fi
   svc start kelley-public || true
-  echo "error: promotion rolled back to previous pointers; investigate before retrying" >&2
+  TRANSACTION_ACTIVE=0
+  echo "error: promotion restored the previous real .next; failed build kept at $STORE_FAILED" >&2
   exit 6
 fi
 
+# Keep the previous live bytes. The recovered Phase-2 build was consumed from
+# its release directory, so put it back there; later releases already retain a
+# canonical staged artifact and receive a timestamped live backup as well.
+if [[ "$PREV_STORE_ID" == "phase2-baseline" && ! -e "$BASELINE_DIR/storefront-next" ]]; then
+  mkdir -p "$BASELINE_DIR"
+  mv "$STORE_PREV" "$BASELINE_DIR/storefront-next"
+  write_baseline_manifest "$BASELINE_DIR"
+else
+  prev_release="$RELEASE_ROOT/$PREV_STORE_ID"
+  mkdir -p "$prev_release"
+  mv "$STORE_PREV" "$prev_release/storefront-live-backup-$(date +%Y%m%d-%H%M%S)"
+fi
+
+# Record the active storefront only after readiness and backup preservation.
+state_tmp="${STORE_STATE}.tmp.$$"
+printf '%s\n' "$REL_ID" > "$state_tmp"
+mv -T "$state_tmp" "$STORE_STATE"
+
+TRANSACTION_ACTIVE=0
+trap - EXIT
 echo "==> promotion complete."
 echo "    active release:   $REL_ID"
 echo "    previous admin:   ${PREV_ADMIN:-<first conversion / none>}"
-echo "    previous store:   ${PREV_STORE:-<first conversion / none>}"
-if [[ -n "$PREV_ADMIN" || -n "$PREV_STORE" ]]; then
-  prev_id="$(basename "$(dirname "${PREV_ADMIN:-$PREV_STORE}")")"
-  echo "    rollback with:    sudo bash deploy/rollback-release.sh $prev_id"
-else
-  echo "    rollback with:    sudo bash deploy/rollback-release.sh phase2-baseline"
-fi
+echo "    previous store:   $PREV_STORE_ID"
+echo "    rollback with:    sudo bash deploy/rollback-release.sh $PREV_STORE_ID"
