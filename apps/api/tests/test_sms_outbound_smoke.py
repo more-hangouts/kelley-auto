@@ -40,6 +40,7 @@ os.environ.setdefault(
 
 from sqlalchemy import text as sql_text  # noqa: E402
 
+from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, Conversation, User  # noqa: E402
 from modules.messaging.services import inbox_service  # noqa: E402
@@ -47,6 +48,7 @@ from modules.core.services.sms_transport import SmsSendResult  # noqa: E402
 
 _TAG = uuid.uuid4().hex[:8]
 _PHONE = f"+1830555{_TAG[:4].translate(str.maketrans('abcdef', '012345'))}"[:12]
+_USER_IDS: list[int] = []
 
 
 def _assert(cond: bool, label: str, detail: object = "") -> None:
@@ -55,11 +57,28 @@ def _assert(cond: bool, label: str, detail: object = "") -> None:
 
 
 def _admin_id(db) -> int:
-    return int(
+    admin_id = (
         db.execute(
             sql_text("SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1")
         ).scalar()
     )
+    if admin_id is not None:
+        return int(admin_id)
+
+    admin = User(
+        username=f"sms-outbound-{_TAG}",
+        email=f"sms-outbound-{_TAG}@example.com",
+        hashed_password=hash_password("smoke-pw-not-real-1234567890"),
+        full_name="SMS Outbound Smoke Admin",
+        is_active=True,
+        role="admin",
+        permissions=[],
+        token_version=0,
+    )
+    db.add(admin)
+    db.flush()
+    _USER_IDS.append(admin.id)
+    return int(admin.id)
 
 
 def _make_sms_conversation(
@@ -120,6 +139,11 @@ def _cleanup() -> None:
             sql_text("DELETE FROM contacts WHERE display_name LIKE :n"),
             {"n": f"SMS Out {_TAG}%"},
         )
+        if _USER_IDS:
+            db.execute(
+                sql_text("DELETE FROM users WHERE id = ANY(:ids)"),
+                {"ids": _USER_IDS},
+            )
         db.commit()
     finally:
         db.close()

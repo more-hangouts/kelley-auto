@@ -23,6 +23,7 @@ import os
 import sys
 import uuid
 from pathlib import Path
+from unittest import mock
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT))
@@ -45,6 +46,7 @@ from database.auth import hash_password  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
 from database.models import (  # noqa: E402
     Contact,
+    Conversation,
     ConversationMessage,
     Event,
     NotificationJob,
@@ -154,13 +156,41 @@ def main() -> int:
         assert contact.sms_opted_out_at is not None
         print("  ok   STOP records contact opt-out")
 
-        # 7. Outbound gated off.
+        # 7. Opt-out wins before transport-state checks.
         try:
             inbox_service.send_reply(db, conv.id, body="hi", user_id=admin.id)
-            raise AssertionError("outbound should be gated")
+            raise AssertionError("opted-out outbound should be blocked")
         except inbox_service.InboxError as exc:
-            assert exc.code == "sms_sending_disabled" and exc.http_status == 503
-        print("  ok   outbound hard-gated (503) pre-A2P")
+            assert exc.code == "recipient_opted_out" and exc.http_status == 409
+        print("  ok   STOP opt-out blocks outbound")
+
+        # 8. A fresh, non-opted-out SMS thread is hard-gated when sending is
+        # disabled. Patch the flag so the smoke is independent of deploy env.
+        fresh_phone = f"+1210556{int(tag, 16) % 10000:04d}"
+        fresh = Contact(
+            display_name=f"Smoke Fresh {tag}",
+            phone=fresh_phone,
+            phone_e164=fresh_phone,
+        )
+        db.add(fresh); db.flush()
+        contact_ids.append(fresh.id)
+        fresh_conv = Conversation(
+            provider="twilio",
+            channel="sms",
+            external_id=fresh_phone,
+            business_ref=TO_NUMBER,
+            contact_id=fresh.id,
+            status="open",
+        )
+        db.add(fresh_conv); db.flush()
+        conv_ids.append(fresh_conv.id)
+        with mock.patch("config.settings.SMS_SENDING_ENABLED", False):
+            try:
+                inbox_service.send_reply(db, fresh_conv.id, body="hi", user_id=admin.id)
+                raise AssertionError("outbound should be gated")
+            except inbox_service.InboxError as exc:
+                assert exc.code == "sms_sending_disabled" and exc.http_status == 503
+        print("  ok   outbound hard-gated when disabled")
 
         print("\ninbox inbound smoke ok")
         return 0
