@@ -1,50 +1,63 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import DashboardLayout from './components/DashboardLayout'
 import ProtectedRoute from './components/ProtectedRoute'
+import RouteFallback from './components/RouteFallback'
 import { AuthProvider } from './contexts/AuthContext'
-import SalesApp from './sales/SalesApp'
-import { isSalesSubdomain } from './services/api'
-import AdminCatalog from './pages/AdminCatalog'
-import AdminVehicles from './pages/AdminVehicles'
-import AdminHolidays from './pages/AdminHolidays'
-import AdminScheduleFinalizedWeek from './pages/AdminScheduleFinalizedWeek'
-import AdminScheduleGrid from './pages/AdminScheduleGrid'
-import AdminOpenShifts from './pages/AdminOpenShifts'
-import AdminSchedulePresets from './pages/AdminSchedulePresets'
-import AdminShiftRequests from './pages/AdminShiftRequests'
-import AdminStaffLocations from './pages/AdminStaffLocations'
-import AdminTimeOff from './pages/AdminTimeOff'
-import AppointmentsCalendar from './pages/AppointmentsCalendar'
-import AttendanceReview from './pages/AttendanceReview'
-import BookingWidgetSettings from './pages/BookingWidgetSettings'
-import BusinessProfile from './pages/BusinessProfile'
-import ContactDetail from './pages/ContactDetail'
-import Contacts from './pages/Contacts'
-import Dashboard from './pages/Dashboard'
-import SalesActivity from './pages/SalesActivity'
-import StorefrontAnalytics from './pages/StorefrontAnalytics'
-import EventDetailLayout from './pages/event/EventDetailLayout'
-import Activity from './pages/event/tabs/Activity'
-import Documents from './pages/event/tabs/Documents'
-import Invoices from './pages/event/tabs/Invoices'
-import Payments from './pages/event/tabs/Payments'
-import Quotes from './pages/event/tabs/Quotes'
-import InvoicesGlobal from './pages/InvoicesGlobal'
-import Overview from './pages/event/tabs/Overview'
-import Login from './pages/Login'
-import Pipeline from './pages/Pipeline'
-import RecycleBin from './pages/RecycleBin'
-import SalesStaffSchedule from './pages/SalesStaffSchedule'
-import SalesStaffSettings from './pages/SalesStaffSettings'
-import Settings from './pages/Settings'
-import NotificationSubscribers from './pages/NotificationSubscribers'
-import Inbox from './pages/Inbox'
-import StaffManagementLayout from './pages/StaffManagementLayout'
-import StaffScheduleLayout from './pages/StaffScheduleLayout'
+// Narrow import: pull hostname detection straight from the client module so
+// the admin shell never evaluates the domain API barrel (and its ~1,800
+// lines of endpoint helpers) just to decide which surface to mount. That
+// keeps the whole API surface out of the initial graph and lets the route
+// chunks below split cleanly.
+import { isSalesSubdomain } from './services/api/client'
 import theme from './theme'
+
+// The sales surface is its own React app; lazy so the admin host never
+// downloads it (and vice versa). This is the single biggest split point.
+const SalesApp = lazy(() => import('./sales/SalesApp'))
+
+// Page-level route components — each becomes its own on-demand chunk. The
+// shell (providers, DashboardLayout, ProtectedRoute) stays eager above.
+const AdminCatalog = lazy(() => import('./pages/AdminCatalog'))
+const AdminVehicles = lazy(() => import('./pages/AdminVehicles'))
+const AdminHolidays = lazy(() => import('./pages/AdminHolidays'))
+const AdminScheduleFinalizedWeek = lazy(() => import('./pages/AdminScheduleFinalizedWeek'))
+const AdminScheduleGrid = lazy(() => import('./pages/AdminScheduleGrid'))
+const AdminOpenShifts = lazy(() => import('./pages/AdminOpenShifts'))
+const AdminSchedulePresets = lazy(() => import('./pages/AdminSchedulePresets'))
+const AdminShiftRequests = lazy(() => import('./pages/AdminShiftRequests'))
+const AdminStaffLocations = lazy(() => import('./pages/AdminStaffLocations'))
+const AdminTimeOff = lazy(() => import('./pages/AdminTimeOff'))
+const AppointmentsCalendar = lazy(() => import('./pages/AppointmentsCalendar'))
+const AttendanceReview = lazy(() => import('./pages/AttendanceReview'))
+const BookingWidgetSettings = lazy(() => import('./pages/BookingWidgetSettings'))
+const BusinessProfile = lazy(() => import('./pages/BusinessProfile'))
+const ContactDetail = lazy(() => import('./pages/ContactDetail'))
+const Contacts = lazy(() => import('./pages/Contacts'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const SalesActivity = lazy(() => import('./pages/SalesActivity'))
+const StorefrontAnalytics = lazy(() => import('./pages/StorefrontAnalytics'))
+const EventDetailLayout = lazy(() => import('./pages/event/EventDetailLayout'))
+const Activity = lazy(() => import('./pages/event/tabs/Activity'))
+const Documents = lazy(() => import('./pages/event/tabs/Documents'))
+const Invoices = lazy(() => import('./pages/event/tabs/Invoices'))
+const Payments = lazy(() => import('./pages/event/tabs/Payments'))
+const Quotes = lazy(() => import('./pages/event/tabs/Quotes'))
+const InvoicesGlobal = lazy(() => import('./pages/InvoicesGlobal'))
+const Overview = lazy(() => import('./pages/event/tabs/Overview'))
+const Login = lazy(() => import('./pages/Login'))
+const Pipeline = lazy(() => import('./pages/Pipeline'))
+const RecycleBin = lazy(() => import('./pages/RecycleBin'))
+const SalesStaffSchedule = lazy(() => import('./pages/SalesStaffSchedule'))
+const SalesStaffSettings = lazy(() => import('./pages/SalesStaffSettings'))
+const Settings = lazy(() => import('./pages/Settings'))
+const NotificationSubscribers = lazy(() => import('./pages/NotificationSubscribers'))
+const Inbox = lazy(() => import('./pages/Inbox'))
+const StaffManagementLayout = lazy(() => import('./pages/StaffManagementLayout'))
+const StaffScheduleLayout = lazy(() => import('./pages/StaffScheduleLayout'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,7 +76,11 @@ export default function App() {
   // match so `admin.kelleyautoplex.com` and `sales.kelleyautoplex.com`
   // get the right tree without sharing routers or providers.
   if (isSalesSubdomain()) {
-    return <SalesApp />
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <SalesApp />
+      </Suspense>
+    )
   }
 
   return (
@@ -73,7 +90,14 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/login" element={<Login />} />
+              <Route
+                path="/login"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <Login />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/"
                 element={
@@ -82,43 +106,51 @@ export default function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route index element={<Dashboard />} />
+                {/* Nested route pages render into DashboardLayout's <Outlet />.
+                    One Suspense boundary here keeps the shell chrome mounted
+                    and only swaps the content region while a page chunk loads. */}
+                <Route index element={<Suspense fallback={<RouteFallback />}><Dashboard /></Suspense>} />
                 {/* Deals is the single vehicle-sale board. The old quinceañera
                     pipeline was retired — keep the URL working for bookmarks. */}
                 <Route path="pipeline" element={<Navigate to="/sales" replace />} />
                 <Route
                   path="sales"
                   element={
-                    <Pipeline
-                      eventType="vehicle_sale"
-                      title="Deals"
-                      subtitleNoun="Vehicle deals"
-                    />
+                    <Suspense fallback={<RouteFallback />}>
+                      <Pipeline
+                        eventType="vehicle_sale"
+                        title="Deals"
+                        subtitleNoun="Vehicle deals"
+                      />
+                    </Suspense>
                   }
                 />
-                <Route path="events/:eventId" element={<EventDetailLayout />}>
+                <Route
+                  path="events/:eventId"
+                  element={<Suspense fallback={<RouteFallback />}><EventDetailLayout /></Suspense>}
+                >
                   <Route index element={<Navigate to="overview" replace />} />
-                  <Route path="overview" element={<Overview />} />
-                  <Route path="documents" element={<Documents />} />
-                  <Route path="quotes" element={<Quotes />} />
-                  <Route path="invoices" element={<Invoices />} />
-                  <Route path="payments" element={<Payments />} />
-                  <Route path="activity" element={<Activity />} />
+                  <Route path="overview" element={<Suspense fallback={<RouteFallback />}><Overview /></Suspense>} />
+                  <Route path="documents" element={<Suspense fallback={<RouteFallback />}><Documents /></Suspense>} />
+                  <Route path="quotes" element={<Suspense fallback={<RouteFallback />}><Quotes /></Suspense>} />
+                  <Route path="invoices" element={<Suspense fallback={<RouteFallback />}><Invoices /></Suspense>} />
+                  <Route path="payments" element={<Suspense fallback={<RouteFallback />}><Payments /></Suspense>} />
+                  <Route path="activity" element={<Suspense fallback={<RouteFallback />}><Activity /></Suspense>} />
                 </Route>
-                <Route path="inbox" element={<Inbox />} />
-                <Route path="calendar" element={<AppointmentsCalendar />} />
-                <Route path="contacts" element={<Contacts />} />
-                <Route path="contacts/:contactId" element={<ContactDetail />} />
-                <Route path="sales-activity" element={<SalesActivity />} />
-                <Route path="analytics" element={<StorefrontAnalytics />} />
-                <Route path="invoices" element={<InvoicesGlobal />} />
-                <Route path="inventory" element={<AdminVehicles />} />
-                <Route path="products" element={<AdminCatalog />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="settings/widget" element={<BookingWidgetSettings />} />
-                <Route path="settings/recycle-bin" element={<RecycleBin />} />
-                <Route path="settings/business-profile" element={<BusinessProfile />} />
-                <Route path="settings/notifications" element={<NotificationSubscribers />} />
+                <Route path="inbox" element={<Suspense fallback={<RouteFallback />}><Inbox /></Suspense>} />
+                <Route path="calendar" element={<Suspense fallback={<RouteFallback />}><AppointmentsCalendar /></Suspense>} />
+                <Route path="contacts" element={<Suspense fallback={<RouteFallback />}><Contacts /></Suspense>} />
+                <Route path="contacts/:contactId" element={<Suspense fallback={<RouteFallback />}><ContactDetail /></Suspense>} />
+                <Route path="sales-activity" element={<Suspense fallback={<RouteFallback />}><SalesActivity /></Suspense>} />
+                <Route path="analytics" element={<Suspense fallback={<RouteFallback />}><StorefrontAnalytics /></Suspense>} />
+                <Route path="invoices" element={<Suspense fallback={<RouteFallback />}><InvoicesGlobal /></Suspense>} />
+                <Route path="inventory" element={<Suspense fallback={<RouteFallback />}><AdminVehicles /></Suspense>} />
+                <Route path="products" element={<Suspense fallback={<RouteFallback />}><AdminCatalog /></Suspense>} />
+                <Route path="settings" element={<Suspense fallback={<RouteFallback />}><Settings /></Suspense>} />
+                <Route path="settings/widget" element={<Suspense fallback={<RouteFallback />}><BookingWidgetSettings /></Suspense>} />
+                <Route path="settings/recycle-bin" element={<Suspense fallback={<RouteFallback />}><RecycleBin /></Suspense>} />
+                <Route path="settings/business-profile" element={<Suspense fallback={<RouteFallback />}><BusinessProfile /></Suspense>} />
+                <Route path="settings/notifications" element={<Suspense fallback={<RouteFallback />}><NotificationSubscribers /></Suspense>} />
                 {/* Legacy URLs — Products moved to top-level nav, Widget settings
                     moved under Settings. Keep old bookmarks/links working. */}
                 <Route
@@ -129,34 +161,40 @@ export default function App() {
                   path="settings/catalog"
                   element={<Navigate to="/products" replace />}
                 />
-                <Route path="settings/staff" element={<StaffManagementLayout />}>
+                <Route
+                  path="settings/staff"
+                  element={<Suspense fallback={<RouteFallback />}><StaffManagementLayout /></Suspense>}
+                >
                   <Route index element={<Navigate to="profiles" replace />} />
-                  <Route path="profiles" element={<SalesStaffSettings />} />
+                  <Route path="profiles" element={<Suspense fallback={<RouteFallback />}><SalesStaffSettings /></Suspense>} />
                   <Route
                     path="profiles/:userId/schedule"
-                    element={<SalesStaffSchedule />}
+                    element={<Suspense fallback={<RouteFallback />}><SalesStaffSchedule /></Suspense>}
                   />
-                  <Route path="schedule" element={<StaffScheduleLayout />}>
+                  <Route
+                    path="schedule"
+                    element={<Suspense fallback={<RouteFallback />}><StaffScheduleLayout /></Suspense>}
+                  >
                     <Route index element={<Navigate to="grid" replace />} />
-                    <Route path="grid" element={<AdminScheduleGrid />} />
+                    <Route path="grid" element={<Suspense fallback={<RouteFallback />}><AdminScheduleGrid /></Suspense>} />
                     <Route
                       path="finalized"
-                      element={<AdminScheduleFinalizedWeek />}
+                      element={<Suspense fallback={<RouteFallback />}><AdminScheduleFinalizedWeek /></Suspense>}
                     />
-                    <Route path="presets" element={<AdminSchedulePresets />} />
-                    <Route path="time-off" element={<AdminTimeOff />} />
+                    <Route path="presets" element={<Suspense fallback={<RouteFallback />}><AdminSchedulePresets /></Suspense>} />
+                    <Route path="time-off" element={<Suspense fallback={<RouteFallback />}><AdminTimeOff /></Suspense>} />
                     <Route
                       path="shift-requests"
-                      element={<AdminShiftRequests />}
+                      element={<Suspense fallback={<RouteFallback />}><AdminShiftRequests /></Suspense>}
                     />
                     <Route
                       path="open-shifts"
-                      element={<AdminOpenShifts />}
+                      element={<Suspense fallback={<RouteFallback />}><AdminOpenShifts /></Suspense>}
                     />
-                    <Route path="holidays" element={<AdminHolidays />} />
+                    <Route path="holidays" element={<Suspense fallback={<RouteFallback />}><AdminHolidays /></Suspense>} />
                   </Route>
-                  <Route path="locations" element={<AdminStaffLocations />} />
-                  <Route path="attendance" element={<AttendanceReview />} />
+                  <Route path="locations" element={<Suspense fallback={<RouteFallback />}><AdminStaffLocations /></Suspense>} />
+                  <Route path="attendance" element={<Suspense fallback={<RouteFallback />}><AttendanceReview /></Suspense>} />
                 </Route>
                 {/* Legacy URLs — keep bookmarks and links from older PDFs/emails working. */}
                 <Route
