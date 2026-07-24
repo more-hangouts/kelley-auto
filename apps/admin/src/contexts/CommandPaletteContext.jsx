@@ -22,6 +22,7 @@ export function CommandPaletteProvider({ value, children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCommandPalette() {
   return useContext(CommandPaletteContext)
 }

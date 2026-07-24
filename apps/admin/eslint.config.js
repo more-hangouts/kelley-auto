@@ -4,7 +4,11 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  // `dist` is build output. `e2e` is the Playwright suite: it runs under Node
+  // in the pinned Playwright Docker image (not the browser), so it uses Node /
+  // Playwright globals this browser-app config would flag. It has its own
+  // toolchain; don't lint it with the app config.
+  { ignores: ['dist', 'e2e'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

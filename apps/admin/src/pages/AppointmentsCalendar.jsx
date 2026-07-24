@@ -179,7 +179,10 @@ export default function AppointmentsCalendar() {
     queryFn: () =>
       listAppointments({ from: ymd(start), to: ymd(end), limit: 200, offset: 0 }),
   })
-  const items = data?.items || []
+  // Memoized so the reference is stable across renders — otherwise `byDay`'s
+  // useMemo below (and anything else depending on `items`) would recompute
+  // every render because `data?.items || []` is a fresh array each time.
+  const items = useMemo(() => data?.items || [], [data])
 
   const byDay = useMemo(() => {
     const m = new Map()

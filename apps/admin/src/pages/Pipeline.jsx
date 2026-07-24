@@ -75,15 +75,6 @@ function daysSince(iso) {
   return `${diff}d`
 }
 
-function daysUntil(date) {
-  if (!date) return null
-  const target = dayjs(date)
-  const diff = target.diff(dayjs(), 'day')
-  if (diff < 0) return `${Math.abs(diff)}d ago`
-  if (diff === 0) return 'today'
-  return `in ${diff}d`
-}
-
 function moveCardOptimistic(board, eventId, newStatus) {
   if (!board) return board
   const columns = board.columns.map((col) => ({ ...col, cards: [...col.cards] }))
