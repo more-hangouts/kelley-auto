@@ -58,7 +58,62 @@ from database.models import (  # noqa: E402
     User,
 )
 
+# Modules whose wall-clock read this test freezes. The endpoints under test
+# recompute "today" per-request via business_time.business_now(); this test
+# also computes an expected "today" once to build its fixtures. If the run
+# crosses local (America/Chicago) midnight between the two reads they disagree
+# and the from_date/to_date assertions flake. We freeze a single instant that
+# BOTH the test and the in-process app observe. business_date() looks up
+# business_now in business_time's globals, so patching there covers it; the
+# direct business_now() calls inside attendance_review resolve in that module's
+# own namespace, so it is patched too.
+import modules.core.services.business_time as _business_time  # noqa: E402
+import modules.scheduling.services.attendance_review as _attendance_review  # noqa: E402
+
 client = TestClient(app)
+
+
+def _resolve_frozen_now() -> datetime:
+    """The instant the test pins the clock to.
+
+    Defaults to a snapshot of the real local time taken once, so a normal run
+    is deterministic regardless of when it starts. Set SMOKE_FROZEN_LOCAL to an
+    ISO local datetime (e.g. ``2026-11-02T12:00:00``) to exercise a specific
+    midnight / month / year / DST boundary.
+    """
+    tz = ZoneInfo(APP_TIMEZONE)
+    override = os.environ.get("SMOKE_FROZEN_LOCAL")
+    if override:
+        return datetime.fromisoformat(override).replace(tzinfo=tz)
+    # Default: noon on the real current local date. Pinning to a fixed
+    # business-hours instant (rather than the exact current time) keeps the
+    # test deterministic no matter when it runs — the fixtures seed punches at
+    # 09:00/17:00 "today", and an open in-punch at 09:00 whose elapsed
+    # "hours_open" must be >= 0, which only holds when the frozen clock is
+    # after 09:00. Noon-today satisfies that for any real run date.
+    real_today = datetime.now(tz).date()
+    return datetime.combine(real_today, time(12, 0), tzinfo=tz)
+
+
+def _freeze_clock(frozen_now: datetime):
+    """Point every wall-clock read this test depends on at ``frozen_now``.
+
+    Returns a restore callable to undo the patch in a finally block.
+    """
+    original_bt = _business_time.business_now
+    original_ar = _attendance_review.business_now
+
+    def _frozen() -> datetime:
+        return frozen_now
+
+    _business_time.business_now = _frozen
+    _attendance_review.business_now = _frozen
+
+    def _restore() -> None:
+        _business_time.business_now = original_bt
+        _attendance_review.business_now = original_ar
+
+    return _restore
 
 _user_ids: list[int] = []
 _location_ids: list[int] = []
@@ -214,7 +269,10 @@ def _cleanup() -> None:
 
 def main() -> None:
     tz = ZoneInfo(APP_TIMEZONE)
-    today_local = datetime.now(tz).date()
+    # The clock is frozen by the caller (see the __main__ block / _freeze_clock).
+    # Derive the test's "today" from the SAME frozen instant the server now sees
+    # via business_now(), so the two never disagree across a midnight rollover.
+    today_local = _business_time.business_now().date()
 
     # ---- Seed users + tokens. ----
     sales_id_a = _make_user(role="sales", suffix="aaaa")
@@ -392,8 +450,13 @@ def main() -> None:
         for d in a_total["by_day"]
     ), a_total["by_day"]
 
-    # ---- 8) current_week range_key includes yesterday + today
-    #    (Monday-anchored). ----
+    # ---- 8) current_week range_key is the Monday-anchored week containing
+    #    today. from_date is this week's Monday (on or before today), to_date
+    #    covers today. Yesterday falls in the same week EXCEPT when today is a
+    #    Monday, in which case yesterday (Sunday) belongs to the prior week —
+    #    so assert the exact Monday anchor rather than an unconditional
+    #    "includes yesterday", which is false on Mondays. ----
+    week_monday = today_local - timedelta(days=today_local.weekday())
     resp = client.get(
         "/api/admin/attendance/punches",
         headers=admin_headers,
@@ -401,8 +464,12 @@ def main() -> None:
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["from_date"] <= yesterday_local.isoformat()
+    assert body["from_date"] == week_monday.isoformat(), body["from_date"]
+    assert body["from_date"] <= today_iso
     assert body["to_date"] >= today_iso
+    # Yesterday is in-window iff it is not before this week's Monday.
+    if yesterday_local >= week_monday:
+        assert body["from_date"] <= yesterday_local.isoformat()
 
     # ---- 9) Confirm hours on the auto-closed B punch. ----
     resp = client.post(
@@ -871,7 +938,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    _restore_clock = _freeze_clock(_resolve_frozen_now())
     try:
         main()
     finally:
+        _restore_clock()
         _cleanup()
