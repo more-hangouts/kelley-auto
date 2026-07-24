@@ -46,6 +46,7 @@ from modules.scheduling.routers import admin_holidays as admin_holidays_router
 from modules.core.routers import admin_me as admin_me_router
 from modules.core.routers import admin_notification_subscribers as admin_notification_subscribers_router
 from modules.scheduling.routers import admin_open_shifts as admin_open_shifts_router
+from modules.analytics.routers import admin_call_activity as admin_call_activity_router
 from modules.analytics.routers import admin_sales_activity as admin_sales_activity_router
 from modules.core.routers import admin_sales_staff as admin_sales_staff_router
 from modules.scheduling.routers import admin_schedule as admin_schedule_router
@@ -59,6 +60,7 @@ from modules.core.routers import auth as auth_router
 from modules.booking.routers import booking as booking_router
 from modules.core.routers import business_profile as business_profile_router
 from modules.inventory.routers import catalog as catalog_router
+from modules.contacts.routers import call_attempts as call_attempts_router
 from modules.contacts.routers import contacts as contacts_router
 from modules.analytics.routers import dashboard as dashboard_router
 from modules.deals.routers import event_documents as event_documents_routers
@@ -181,6 +183,7 @@ MOUNTS: tuple[RouterMount, ...] = (
     RouterMount(walk_in_leads_router.router, {"prefix": "/api/walk-in-leads", "tags": ["walk-in-leads"]}, "booking"),
     RouterMount(event_participants_router.router, {"prefix": "/api/events", "tags": ["event-participants"]}, "deals"),
     RouterMount(contacts_router.router, {"prefix": "/api/contacts", "tags": ["contacts"]}, "contacts"),
+    RouterMount(call_attempts_router.router, {"prefix": "/api/contacts", "tags": ["contacts-call-attempts"]}, "contacts"),
     RouterMount(event_documents_routers.event_documents_router, {"prefix": "/api/events", "tags": ["event-documents"]}, "deals"),
     RouterMount(event_documents_routers.documents_router, {"prefix": "/api/documents", "tags": ["event-documents"]}, "deals"),
     RouterMount(invoices_routers.event_invoices_router, {"prefix": "/api/events", "tags": ["invoices"]}, "deals"),
@@ -204,6 +207,8 @@ MOUNTS: tuple[RouterMount, ...] = (
     RouterMount(sales_appointments_router.router, {"prefix": "/api/sales/appointments", "tags": ["sales-appointments"]}, "scheduling"),
     RouterMount(admin_sales_staff_router.router, {"prefix": "/api/admin/sales-staff", "tags": ["admin-sales-staff"]}, "core"),
     RouterMount(admin_sales_activity_router.router, {"prefix": "/api/admin/sales-activity", "tags": ["admin-sales-activity"]}, "analytics"),
+    RouterMount(admin_call_activity_router.router, {"prefix": "/api/admin/call-activity", "tags": ["admin-call-activity"]}, "analytics"),
+    RouterMount(admin_call_activity_router.sales_router, {"prefix": "/api/sales/call-activity", "tags": ["sales-call-activity"]}, "analytics"),
     RouterMount(admin_staff_router.router, {"prefix": "/api/admin/staff", "tags": ["admin-staff"]}, "core"),
     RouterMount(admin_staff_locations_router.router, {"prefix": "/api/admin/staff-locations", "tags": ["admin-staff-locations"]}, "scheduling"),
     RouterMount(sales_clock_router.router, {"prefix": "/api/sales/clock", "tags": ["sales-clock"]}, "scheduling"),
