@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 
 import { getEvent, getEventWorkflow } from '../services/api'
+import CallContact from './CallContact'
 
 function formatDate(d) {
   if (!d) return '—'
@@ -242,12 +243,22 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
                 label="Phone"
                 value={
                   detail?.primary_contact_phone ? (
-                    <Link
-                      href={`tel:${detail.primary_contact_phone}`}
-                      underline="hover"
-                    >
-                      {detail.primary_contact_phone}
-                    </Link>
+                    (detail?.primary_contact?.id ?? card.primary_contact?.id) ? (
+                      <CallContact
+                        contactId={
+                          detail?.primary_contact?.id ?? card.primary_contact?.id
+                        }
+                        phone={detail.primary_contact_phone}
+                        eventId={card.id}
+                        source="event_quick_view"
+                      />
+                    ) : (
+                      // No contact id available — fall back to a plain dialer
+                      // link (unlogged) rather than dropping the number.
+                      <Link href={`tel:${detail.primary_contact_phone}`} underline="hover">
+                        {detail.primary_contact_phone}
+                      </Link>
+                    )
                   ) : (
                     '—'
                   )

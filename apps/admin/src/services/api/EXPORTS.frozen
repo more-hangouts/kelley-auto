@@ -79,6 +79,7 @@ getArSummary
 getAutoScheduleRules
 getAwaitingSignatureQuotes
 getBusinessProfile
+getCallActivitySummary
 getCatalogPriceBreakdown
 getContact
 getCronHealth
@@ -94,6 +95,8 @@ getInvoice
 getMe
 getPayment
 getPipelineCounts
+getMyCallsToday
+getRecentCallActivity
 getRecentPayments
 getRecordDependencies
 getSalesActivityRepRecent
@@ -117,6 +120,7 @@ listAttendancePunches
 listAttendanceTotals
 listAvailabilityRules
 listBlackouts
+listCallAttempts
 listCatalogDesigners
 listContacts
 listEventActivity
@@ -134,6 +138,7 @@ listSalesStaff
 listSchedulePresets
 listVehicles
 login
+logCallAttempt
 logout
 mintSalesPin
 patchAdminHoliday
@@ -220,6 +225,7 @@ unlockSalesStaff
 updateAvailabilityRule
 updateBusinessProfile
 updateCatalogItem
+updateCallAttempt
 updateContact
 updateInvoice
 updateQuote

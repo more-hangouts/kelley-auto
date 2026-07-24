@@ -28,6 +28,8 @@ import dayjs from 'dayjs'
 
 import ContactEditDialog from '../components/ContactEditDialog'
 import RecordDependenciesDialog from '../components/RecordDependenciesDialog'
+import CallContact from '../components/CallContact'
+import ContactCallTimeline from '../components/ContactCallTimeline'
 import { archiveContact, getContact } from '../services/api'
 
 // Phase 3 destination for `contact` palette results. Read-only by
@@ -269,9 +271,12 @@ export default function ContactDetail() {
                     fontSize="small"
                     sx={{ color: 'text.secondary' }}
                   />
-                  <Link href={`tel:${data.phone_e164 || data.phone}`} underline="hover">
-                    {data.phone}
-                  </Link>
+                  <CallContact
+                    contactId={data.id}
+                    phone={data.phone}
+                    phoneE164={data.phone_e164}
+                    source="contact_detail"
+                  />
                   {data.phone_e164 && data.phone_e164 !== data.phone && (
                     <Tooltip title="Normalized E.164">
                       <Typography variant="caption" color="text.secondary">
@@ -388,6 +393,8 @@ export default function ContactDetail() {
           </Stack>
         )}
       </Paper>
+
+      <ContactCallTimeline contactId={data.id} />
 
       <ContactEditDialog
         open={editOpen}
