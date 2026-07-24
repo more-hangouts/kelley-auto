@@ -14,13 +14,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from database.auth import require_admin_scope
+from database.auth import require_admin_scope, require_any_scope
 from database.connection import get_db
 from database.models import User
 from modules.messaging.services import inbox_service
 from modules.messaging.services.inbox_service import InboxError
 
 router = APIRouter()
+
+# Broad inbox triage (list/read/assign) stays admin-only. The two targeted
+# operations a pipeline sales rep needs — start/reuse an SMS thread for a
+# contact, and send into a thread — allow admin OR sales (Phase 8). They cannot
+# browse the whole inbox; they act on a specific contact/conversation. All the
+# consent/opt-out/quiet-hours guards live in the service, so widening the scope
+# never widens what can actually be sent.
+_start_or_send_scope = require_any_scope("admin", "sales")
 
 
 def _raise(exc: InboxError) -> None:
@@ -45,6 +53,15 @@ class ReplyBody(BaseModel):
     # Set true to send an SMS despite quiet hours (the composer's "send
     # anyway" after a 409 quiet_hours). Ignored on channels without the gate.
     allow_quiet_hours: bool = False
+
+
+class StartSmsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    contact_id: int
+    # Optional originating deal — links a NEW thread to the deal for context.
+    # Never accepts a destination number; the phone comes from the contact.
+    event_id: int | None = None
 
 
 @router.get("/unread-count")
@@ -118,12 +135,33 @@ def patch_conversation(
     return result
 
 
+@router.post("/conversations/sms")
+def start_sms_conversation(
+    payload: StartSmsBody,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_start_or_send_scope)],
+) -> dict:
+    """Create or reuse the canonical SMS conversation for a contact. Idempotent
+    and race-safe; does NOT send a message. Returns conversation_id, contact
+    summary, server-authoritative eligibility, and whether it was newly
+    created."""
+    try:
+        result = inbox_service.start_sms_conversation(
+            db, contact_id=payload.contact_id, event_id=payload.event_id
+        )
+    except InboxError as exc:
+        db.rollback()
+        _raise(exc)
+    db.commit()
+    return result
+
+
 @router.post("/conversations/{conversation_id}/messages")
 def send_message(
     conversation_id: int,
     payload: ReplyBody,
     db: Annotated[Session, Depends(get_db)],
-    admin: Annotated[User, Depends(require_admin_scope)],
+    admin: Annotated[User, Depends(_start_or_send_scope)],
 ) -> dict:
     # Web chat sends immediately; SMS sends via Twilio when SMS_SENDING_ENABLED
     # is on (past opt-out + quiet-hours guards); Meta stays 501 until App Review.

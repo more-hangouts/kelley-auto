@@ -192,9 +192,9 @@ def test_consent_required_blocks() -> None:
                 inbox_service.send_reply(
                     db, conv_id, body="hi", user_id=_admin_id(db), allow_quiet_hours=True
                 )
-                raise AssertionError("expected consent_required")
+                raise AssertionError("expected recipient_no_sms_consent")
             except inbox_service.InboxError as exc:
-                _assert(exc.code == "consent_required", "consent required", exc.code)
+                _assert(exc.code == "recipient_no_sms_consent", "consent required", exc.code)
         sent.assert_not_called()  # never attempted the send
         db.rollback()
     finally:

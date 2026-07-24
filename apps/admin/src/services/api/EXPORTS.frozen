@@ -219,6 +219,7 @@ sendQuote
 sendStaffPasswordReset
 setScheduleEntryNotes
 setSubscriberActive
+startSmsConversation
 testStaffLocationGeofence
 unapplyAllocation
 unlockSalesStaff

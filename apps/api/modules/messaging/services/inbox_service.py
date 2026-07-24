@@ -617,7 +617,7 @@ def _reply_state(
         if contact_opted_out:
             return False, "recipient_opted_out"
         if not consent_ok:
-            return False, "consent_required"
+            return False, "recipient_no_sms_consent"
         return True, None
     return False, "channel_send_not_supported"
 
@@ -812,6 +812,11 @@ def _send_sms_reply(
     if not SMS_SENDING_ENABLED:
         raise InboxError("sms_sending_disabled", http_status=503)
 
+    # A valid E.164 recipient is a precondition for every downstream guard —
+    # opt-out/consent are meaningless against a malformed destination.
+    if normalize_phone_e164(conv.external_id or "") is None:
+        raise InboxError("recipient_has_no_valid_phone", http_status=422)
+
     contact = db.get(Contact, conv.contact_id) if conv.contact_id else None
 
     # Opt-out is absolute — a STOP contact must never be texted.
@@ -825,7 +830,7 @@ def _send_sms_reply(
     # Consent gate: business-initiated texts need express consent; replying to
     # a customer-originated thread is the TCPA reply case and is allowed.
     if not _sms_consent_ok(conv, contact):
-        raise InboxError("consent_required", http_status=409)
+        raise InboxError("recipient_no_sms_consent", http_status=409)
 
     if not allow_quiet_hours and in_sms_quiet_hours():
         # Recoverable: the UI offers a "send anyway" that re-calls with
@@ -885,6 +890,113 @@ def _send_sms_reply(
         http_status=502,
         detail=result.error_message,
     )
+
+
+# ─── Outbound-initiated SMS (Phase 8: start from CRM surfaces) ───────────────
+
+
+def sms_eligibility(db: Session, contact: Contact) -> dict:
+    """Server-authoritative "is this contact approved for messaging" check.
+
+    Returns a stable {eligible, reason} object. Reason precedence (first failing
+    gate wins): no_phone -> no_consent -> opted_out -> sms_disabled ->
+    transport_unavailable -> eligible. NEVER trust a client for eligibility.
+
+    An existing conversation independently marked opted out (STOP recorded on
+    conversation_metadata even when unlinked) is also treated as opted_out.
+    """
+    from config.settings import SMS_SENDING_ENABLED
+    from modules.core.services import sms_transport
+
+    e164 = normalize_phone_e164(contact.phone_e164 or "")
+    if e164 is None:
+        return {"eligible": False, "reason": "no_phone"}
+
+    if contact.sms_consent_at is None:
+        # No form consent — but a customer-originated thread is the TCPA reply
+        # case. Mirror the send-path _sms_consent_ok exactly.
+        conv = _existing_sms_conversation(db, e164)
+        if conv is None or conv.last_inbound_at is None:
+            return {"eligible": False, "reason": "no_consent"}
+
+    # Opt-out wins over consent: check the contact AND any existing thread's
+    # independent opt-out marker.
+    if contact.sms_opted_out_at is not None:
+        return {"eligible": False, "reason": "opted_out"}
+    conv = _existing_sms_conversation(db, e164)
+    if conv is not None:
+        meta = conv.conversation_metadata or {}
+        if meta.get("sms_opted_out_at"):
+            return {"eligible": False, "reason": "opted_out"}
+
+    if not SMS_SENDING_ENABLED:
+        return {"eligible": False, "reason": "sms_disabled"}
+    if not sms_transport.sms_transport_configured():
+        return {"eligible": False, "reason": "transport_unavailable"}
+
+    return {"eligible": True, "reason": "eligible"}
+
+
+def _existing_sms_conversation(db: Session, e164: str) -> Conversation | None:
+    return (
+        db.query(Conversation)
+        .filter_by(provider="twilio", channel="sms", external_id=e164)
+        .first()
+    )
+
+
+def start_sms_conversation(
+    db: Session, *, contact_id: int, event_id: int | None = None
+) -> dict:
+    """Idempotently create-or-reuse the canonical Twilio SMS conversation for a
+    contact's phone number. Does NOT send a message. Returns
+    ``{conversation_id, contact, eligibility, created}``.
+
+    - The destination is ALWAYS the contact's own normalized phone — never a
+      client-supplied number.
+    - Reuse is keyed on (twilio, sms, <contact E.164>) via the unique index, so
+      two simultaneous callers converge on one thread and multiple deals for one
+      contact never fork the SMS history.
+    - Links contact_id/event_id only when unset, so an existing thread's
+      historical context is never clobbered.
+    """
+    contact = db.get(Contact, contact_id)
+    if contact is None or contact.deleted_at is not None:
+        raise InboxError("contact_not_found", http_status=404)
+
+    e164 = normalize_phone_e164(contact.phone_e164 or "")
+    if e164 is None:
+        raise InboxError("recipient_has_no_valid_phone", http_status=422)
+
+    from config.settings import TWILIO_FROM_NUMBER
+
+    conv, created = upsert_conversation(
+        db,
+        provider="twilio",
+        channel="sms",
+        external_id=e164,
+        business_ref=TWILIO_FROM_NUMBER,
+    )
+
+    # Non-clobbering link (mirrors record_inbound_sms): only fill blanks.
+    if conv.contact_id is None:
+        conv.contact_id = contact.id
+    if conv.event_id is None:
+        ev = (
+            db.get(Event, event_id)
+            if event_id is not None
+            else _recent_event_for_contact(db, contact.id)
+        )
+        if ev is not None and ev.deleted_at is None:
+            conv.event_id = ev.id
+    db.flush()
+
+    return {
+        "conversation_id": conv.id,
+        "created": created,
+        "contact": _contact_summary(db, conv),
+        "eligibility": sms_eligibility(db, contact),
+    }
 
 
 def unread_count_for_user(db: Session, user_id: int) -> int:
