@@ -1,0 +1,12 @@
+{
+  "name": "kelley-admin-e2e",
+  "private": true,
+  "description": "Containerized Playwright browser smoke tests for the admin + sales SPA. Runs only inside the pinned mcr.microsoft.com/playwright:v1.61.1-noble image (the VPS has no host Chromium).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "serve": "14.2.4"
+  }
+}
