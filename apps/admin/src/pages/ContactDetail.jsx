@@ -31,6 +31,7 @@ import RecordDependenciesDialog from '../components/RecordDependenciesDialog'
 import CallContact from '../components/CallContact'
 import ContactActions from '../components/ContactActions'
 import ContactCallTimeline from '../components/ContactCallTimeline'
+import SmsActivityTimeline from '../components/SmsActivityTimeline'
 import { archiveContact, getContact } from '../services/api'
 
 // Phase 3 destination for `contact` palette results. Read-only by
@@ -407,6 +408,8 @@ export default function ContactDetail() {
       </Paper>
 
       <ContactCallTimeline contactId={data.id} />
+
+      <SmsActivityTimeline contactId={data.id} />
 
       <ContactEditDialog
         open={editOpen}

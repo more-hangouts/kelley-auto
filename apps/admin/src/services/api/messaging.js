@@ -74,3 +74,15 @@ export async function startSmsConversation(contactId, eventId = null) {
   })
   return data
 }
+
+// Read-only SMS-message feeds for the contact / deal activity timelines
+// (canonical ConversationMessage rows; no synthetic activity is written).
+export async function getContactMessages(contactId) {
+  const { data } = await api.get(`/inbox/contacts/${contactId}/messages`)
+  return data
+}
+
+export async function getEventMessages(eventId) {
+  const { data } = await api.get(`/inbox/events/${eventId}/messages`)
+  return data
+}

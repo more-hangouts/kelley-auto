@@ -64,6 +64,28 @@ class StartSmsBody(BaseModel):
     event_id: int | None = None
 
 
+@router.get("/contacts/{contact_id}/messages")
+def contact_messages(
+    contact_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(_start_or_send_scope)],
+) -> dict:
+    """SMS messages across a contact's conversations, for the contact-activity
+    timeline. Read-only over the canonical ConversationMessage rows."""
+    return {"messages": inbox_service.messages_for_contact(db, contact_id=contact_id)}
+
+
+@router.get("/events/{event_id}/messages")
+def event_messages(
+    event_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(_start_or_send_scope)],
+) -> dict:
+    """SMS messages on the conversation linked to a deal, for the deal-activity
+    timeline. Read-only over ConversationMessage."""
+    return {"messages": inbox_service.messages_for_event(db, event_id=event_id)}
+
+
 @router.get("/unread-count")
 def unread_count(
     db: Annotated[Session, Depends(get_db)],

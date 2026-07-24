@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 import { listEventActivity } from '../../../services/api'
+import SmsActivityTimeline from '../../../components/SmsActivityTimeline'
 import { formatUSD } from '../../../utils/money'
 
 dayjs.extend(relativeTime)
@@ -226,13 +227,17 @@ export default function Activity() {
   }
   if (rows.length === 0) {
     return (
-      <Paper sx={{ p: 4, textAlign: 'center' }}>
-        <HistoryIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          Nothing has happened on this event yet. Activity rows will appear as
-          quotes, invoices, and payments are created.
-        </Typography>
-      </Paper>
+      <Box>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <HistoryIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
+          <Typography variant="body2" color="text.secondary">
+            Nothing has happened on this event yet. Activity rows will appear as
+            quotes, invoices, and payments are created.
+          </Typography>
+        </Paper>
+        {/* SMS messages linked to this deal (read-only, canonical records). */}
+        <SmsActivityTimeline eventId={eventId} />
+      </Box>
     )
   }
 
@@ -285,6 +290,9 @@ export default function Activity() {
           </Button>
         </Box>
       )}
+
+      {/* SMS messages linked to this deal (read-only, canonical records). */}
+      <SmsActivityTimeline eventId={eventId} />
     </Box>
   )
 }

@@ -82,10 +82,12 @@ getBusinessProfile
 getCallActivitySummary
 getCatalogPriceBreakdown
 getContact
+getContactMessages
 getCronHealth
 getDocumentCounts
 getEvent
 getEventBoard
+getEventMessages
 getEventJourney
 getEventWorkflow
 getHoursVariance

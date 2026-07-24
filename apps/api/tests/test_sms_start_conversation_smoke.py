@@ -116,6 +116,8 @@ def _cleanup():
                 {"ids": _contact_ids},
             )
             db.execute(sql_text("DELETE FROM conversations WHERE contact_id = ANY(:ids)"), {"ids": _contact_ids})
+            # Events reference contacts with ON DELETE RESTRICT — clear them first.
+            db.execute(sql_text("DELETE FROM events WHERE primary_contact_id = ANY(:ids)"), {"ids": _contact_ids})
             db.execute(sql_text("DELETE FROM contacts WHERE id = ANY(:ids)"), {"ids": _contact_ids})
         if _user_ids:
             db.execute(sql_text("DELETE FROM users WHERE id = ANY(:ids)"), {"ids": _user_ids})
@@ -283,6 +285,167 @@ def test_authorization():
     print("authorization ok")
 
 
+def test_event_ownership_guard():
+    """A client-supplied event_id belonging to a DIFFERENT contact must NOT be
+    linked to this contact's thread (cross-customer context leak guard)."""
+    from database.models import Event
+
+    admin_id = _make_user("admin")
+    ah = {"Authorization": f"Bearer {_token(admin_id, sales=False)}"}
+    cid, _ = _make_contact()
+    other_cid, _ = _make_contact()
+
+    # An event owned by OTHER contact.
+    db = SessionLocal()
+    try:
+        ev = Event(event_type="vehicle_sale", event_name="Foreign deal", status="lead",
+                   primary_contact_id=other_cid)
+        db.add(ev)
+        db.commit()
+        foreign_event_id = ev.id
+    finally:
+        db.close()
+
+    m1, m2 = _sending_on()
+    with m1, m2:
+        r = client.post(
+            "/api/inbox/conversations/sms",
+            headers=ah,
+            json={"contact_id": cid, "event_id": foreign_event_id},
+        )
+    conv_id = r.json()["conversation_id"]
+    # The foreign event must NOT have been linked.
+    db = SessionLocal()
+    try:
+        conv = db.get(Conversation, conv_id)
+        _assert(conv.event_id != foreign_event_id, "foreign event not linked", conv.event_id)
+    finally:
+        db.close()
+    print("event ownership guard ok")
+
+
+def test_eligibility_optout_beats_consent():
+    """A contact who is opted out AND has no consent reports 'opted_out'
+    (mirrors the send-path order), not 'no_consent'."""
+    admin_id = _make_user("admin")
+    ah = {"Authorization": f"Bearer {_token(admin_id, sales=False)}"}
+    cid, _ = _make_contact(consent=False, opted_out=True)
+    m1, m2 = _sending_on()
+    with m1, m2:
+        r = client.post("/api/inbox/conversations/sms", headers=ah, json={"contact_id": cid})
+    _assert(r.json()["eligibility"]["reason"] == "opted_out", "opt-out beats consent", r.json())
+    print("eligibility opt-out beats consent ok")
+
+
+def test_stop_then_start_eligibility():
+    """STOP flips eligibility to opted_out; START (opt-in) restores it per the
+    consent policy (the contact had form consent)."""
+    admin_id = _make_user("admin")
+    ah = {"Authorization": f"Bearer {_token(admin_id, sales=False)}"}
+    cid, e164 = _make_contact(consent=True)  # consented
+
+    db = SessionLocal()
+    try:
+        contact = db.get(Contact, cid)
+        conv, _ = inbox_service.upsert_conversation(
+            db, provider="twilio", channel="sms", external_id=e164
+        )
+        conv.contact_id = cid
+        db.flush()
+        # STOP.
+        inbox_service._apply_opt_out(db, conv, source="sms_keyword")
+        db.commit()
+        elig_after_stop = inbox_service.sms_eligibility(db, db.get(Contact, cid))
+        # START.
+        inbox_service._apply_opt_in(db, conv)
+        db.commit()
+        elig_after_start = inbox_service.sms_eligibility(db, db.get(Contact, cid))
+    finally:
+        db.close()
+
+    _assert(elig_after_stop["reason"] == "opted_out", "STOP → opted_out", elig_after_stop)
+    m1, m2 = _sending_on()
+    with m1, m2:
+        # Re-evaluate with sending on so the terminal state is 'eligible'.
+        db = SessionLocal()
+        try:
+            elig = inbox_service.sms_eligibility(db, db.get(Contact, cid))
+        finally:
+            db.close()
+    _assert(elig["eligible"] is True, "START restores eligibility", elig)
+    print("STOP then START eligibility ok")
+
+
+def test_disabled_and_transport_reasons():
+    """sms_disabled and transport_unavailable eligibility reasons are reachable."""
+    admin_id = _make_user("admin")
+    ah = {"Authorization": f"Bearer {_token(admin_id, sales=False)}"}
+    cid, _ = _make_contact(consent=True)
+
+    # Sending OFF → sms_disabled.
+    with mock.patch("config.settings.SMS_SENDING_ENABLED", False):
+        r = client.post("/api/inbox/conversations/sms", headers=ah, json={"contact_id": cid})
+    _assert(r.json()["eligibility"]["reason"] == "sms_disabled", "sms_disabled", r.json())
+
+    # Sending ON but transport NOT configured → transport_unavailable.
+    with mock.patch("config.settings.SMS_SENDING_ENABLED", True), mock.patch(
+        "modules.core.services.sms_transport.sms_transport_configured", return_value=False
+    ):
+        r = client.post("/api/inbox/conversations/sms", headers=ah, json={"contact_id": cid})
+    _assert(r.json()["eligibility"]["reason"] == "transport_unavailable", "transport_unavailable", r.json())
+    print("disabled + transport reasons ok")
+
+
+def test_activity_message_feeds():
+    """Contact + deal SMS message feeds surface the canonical ConversationMessage
+    rows (read-only), scoped correctly, and are auth-gated."""
+    admin_id = _make_user("admin")
+    sales_id = _make_user("sales")
+    ah = {"Authorization": f"Bearer {_token(admin_id, sales=False)}"}
+    sh = {"Authorization": f"Bearer {_token(sales_id, sales=True)}"}
+    cid, e164 = _make_contact(consent=True)
+
+    from database.models import Event
+
+    db = SessionLocal()
+    try:
+        ev = Event(event_type="vehicle_sale", event_name="Deal", status="lead",
+                   primary_contact_id=cid)
+        db.add(ev)
+        db.flush()
+        event_id = ev.id
+        conv = Conversation(provider="twilio", channel="sms", external_id=e164,
+                            status="open", contact_id=cid, event_id=event_id)
+        db.add(conv)
+        db.flush()
+        # One outbound + one inbound SMS on this thread.
+        db.add(ConversationMessage(conversation_id=conv.id, direction="outbound",
+                                   channel="sms", provider="twilio", body="hi there",
+                                   status="sent", sender_ref="business", recipient_ref=e164))
+        db.add(ConversationMessage(conversation_id=conv.id, direction="inbound",
+                                   channel="sms", provider="twilio", body="hello back",
+                                   status="received", sender_ref=e164, recipient_ref="business"))
+        db.commit()
+    finally:
+        db.close()
+
+    # Contact feed.
+    r = client.get(f"/api/inbox/contacts/{cid}/messages", headers=sh)
+    _assert(r.status_code == 200, "contact feed 200 (sales)", r.status_code)
+    msgs = r.json()["messages"]
+    _assert(len(msgs) == 2, "contact feed count", msgs)
+    _assert({m["direction"] for m in msgs} == {"outbound", "inbound"}, "both directions", msgs)
+
+    # Deal feed.
+    r = client.get(f"/api/inbox/events/{event_id}/messages", headers=ah)
+    _assert(r.status_code == 200 and len(r.json()["messages"]) == 2, "deal feed", r.json())
+
+    # Auth-gated.
+    r = client.get(f"/api/inbox/contacts/{cid}/messages")
+    _assert(r.status_code == 401, "contact feed unauth 401", r.status_code)
+    print("activity message feeds ok")
+
+
 if __name__ == "__main__":
     try:
         test_eligibility_contract()
@@ -291,6 +454,11 @@ if __name__ == "__main__":
         test_reuse_existing_inbound_thread()
         test_send_bypass_blocked()
         test_authorization()
+        test_event_ownership_guard()
+        test_eligibility_optout_beats_consent()
+        test_stop_then_start_eligibility()
+        test_disabled_and_transport_reasons()
+        test_activity_message_feeds()
     finally:
         _cleanup()
     print("ALL START-SMS-CONVERSATION SMOKES PASSED")

@@ -899,11 +899,13 @@ def sms_eligibility(db: Session, contact: Contact) -> dict:
     """Server-authoritative "is this contact approved for messaging" check.
 
     Returns a stable {eligible, reason} object. Reason precedence (first failing
-    gate wins): no_phone -> no_consent -> opted_out -> sms_disabled ->
-    transport_unavailable -> eligible. NEVER trust a client for eligibility.
+    gate wins) MIRRORS the send-path guard order in _send_sms_reply so the UI
+    never masks an opt-out behind a consent message:
+    no_phone -> opted_out -> no_consent -> sms_disabled -> transport_unavailable
+    -> eligible. NEVER trust a client for eligibility.
 
-    An existing conversation independently marked opted out (STOP recorded on
-    conversation_metadata even when unlinked) is also treated as opted_out.
+    Opt-out considers BOTH the contact and an existing thread's independent
+    marker (STOP recorded on conversation_metadata even when unlinked).
     """
     from config.settings import SMS_SENDING_ENABLED
     from modules.core.services import sms_transport
@@ -912,22 +914,17 @@ def sms_eligibility(db: Session, contact: Contact) -> dict:
     if e164 is None:
         return {"eligible": False, "reason": "no_phone"}
 
-    if contact.sms_consent_at is None:
-        # No form consent — but a customer-originated thread is the TCPA reply
-        # case. Mirror the send-path _sms_consent_ok exactly.
-        conv = _existing_sms_conversation(db, e164)
-        if conv is None or conv.last_inbound_at is None:
-            return {"eligible": False, "reason": "no_consent"}
-
-    # Opt-out wins over consent: check the contact AND any existing thread's
-    # independent opt-out marker.
-    if contact.sms_opted_out_at is not None:
-        return {"eligible": False, "reason": "opted_out"}
     conv = _existing_sms_conversation(db, e164)
-    if conv is not None:
-        meta = conv.conversation_metadata or {}
-        if meta.get("sms_opted_out_at"):
-            return {"eligible": False, "reason": "opted_out"}
+
+    # Opt-out is absolute and wins over consent — mirror _send_sms_reply order.
+    meta = (conv.conversation_metadata or {}) if conv is not None else {}
+    if contact.sms_opted_out_at is not None or meta.get("sms_opted_out_at"):
+        return {"eligible": False, "reason": "opted_out"}
+
+    # Consent: form consent OR a customer-originated inbound thread (TCPA reply).
+    # Mirrors _sms_consent_ok exactly.
+    if contact.sms_consent_at is None and (conv is None or conv.last_inbound_at is None):
+        return {"eligible": False, "reason": "no_consent"}
 
     if not SMS_SENDING_ENABLED:
         return {"eligible": False, "reason": "sms_disabled"}
@@ -935,6 +932,53 @@ def sms_eligibility(db: Session, contact: Contact) -> dict:
         return {"eligible": False, "reason": "transport_unavailable"}
 
     return {"eligible": True, "reason": "eligible"}
+
+
+def messages_for_contact(db: Session, *, contact_id: int, limit: int = 50) -> list[dict]:
+    """SMS messages across all of this contact's conversations, newest first,
+    for the contact-activity timeline. READ-ONLY over the canonical
+    ConversationMessage rows — no synthetic activity row is written."""
+    rows = (
+        db.query(ConversationMessage)
+        .join(Conversation, Conversation.id == ConversationMessage.conversation_id)
+        .filter(
+            Conversation.contact_id == contact_id,
+            ConversationMessage.channel == "sms",
+        )
+        .order_by(ConversationMessage.created_at.desc(), ConversationMessage.id.desc())
+        .limit(max(1, min(limit, 200)))
+        .all()
+    )
+    return [_message_activity_entry(m) for m in rows]
+
+
+def messages_for_event(db: Session, *, event_id: int, limit: int = 50) -> list[dict]:
+    """SMS messages on the conversation linked to this deal, newest first, for
+    the deal-activity timeline. READ-ONLY over ConversationMessage."""
+    rows = (
+        db.query(ConversationMessage)
+        .join(Conversation, Conversation.id == ConversationMessage.conversation_id)
+        .filter(
+            Conversation.event_id == event_id,
+            ConversationMessage.channel == "sms",
+        )
+        .order_by(ConversationMessage.created_at.desc(), ConversationMessage.id.desc())
+        .limit(max(1, min(limit, 200)))
+        .all()
+    )
+    return [_message_activity_entry(m) for m in rows]
+
+
+def _message_activity_entry(m: ConversationMessage) -> dict:
+    return {
+        "id": m.id,
+        "conversation_id": m.conversation_id,
+        "direction": m.direction,
+        "body": m.body,
+        "status": m.status,
+        "sent_by_user_id": m.sent_by_user_id,
+        "created_at": _iso(m.created_at),
+    }
 
 
 def _existing_sms_conversation(db: Session, e164: str) -> Conversation | None:
@@ -987,7 +1031,14 @@ def start_sms_conversation(
             if event_id is not None
             else _recent_event_for_contact(db, contact.id)
         )
-        if ev is not None and ev.deleted_at is None:
+        # Only link a deal that actually belongs to THIS contact — never trust a
+        # client-supplied event_id to point at the caller's contact, or a
+        # foreign customer's deal would surface on this thread.
+        if (
+            ev is not None
+            and ev.deleted_at is None
+            and ev.primary_contact_id == contact.id
+        ):
             conv.event_id = ev.id
     db.flush()
 

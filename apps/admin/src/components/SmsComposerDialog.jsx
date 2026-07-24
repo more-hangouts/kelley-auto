@@ -17,8 +17,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { Link as RouterLink } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-
 import { getInboxConversation, sendInboxMessage } from '../services/api'
 
 // Shared SMS composer (Phase 8). Opened by MessageContactButton after the
@@ -54,7 +52,6 @@ export default function SmsComposerDialog({
   contactName,
   contactPhone,
 }) {
-  const queryClient = useQueryClient()
   const [thread, setThread] = useState(null)
   const [loading, setLoading] = useState(false)
   const [draft, setDraft] = useState('')
@@ -65,11 +62,15 @@ export default function SmsComposerDialog({
   draftRef.current = draft
 
   // Load the thread (recent messages) whenever the dialog opens for a convo.
+  // Reset transient send state too, so a stale quiet-hours banner / draft from a
+  // previous open (possibly for a different contact) never leaks in.
   useEffect(() => {
     if (!open || !conversationId) return
     let cancelled = false
     setLoading(true)
     setError(null)
+    setQuietHoursPrompt(false)
+    setDraft('')
     getInboxConversation(conversationId)
       .then((data) => {
         if (!cancelled) setThread(data)
@@ -94,11 +95,11 @@ export default function SmsComposerDialog({
       await sendInboxMessage(conversationId, text, allowQuietHours)
       setDraft('') // clear only on success
       setQuietHoursPrompt(false)
-      // Refresh this thread + the Inbox caches so the outbound row appears.
+      // Refresh THIS thread so the outbound row appears immediately. The Inbox
+      // page polls on its own interval (it isn't a react-query consumer), so
+      // there's no cache to invalidate here — it reconciles on its next poll.
       const refreshed = await getInboxConversation(conversationId).catch(() => null)
       if (refreshed) setThread(refreshed)
-      queryClient.invalidateQueries({ queryKey: ['inbox'] })
-      queryClient.invalidateQueries({ queryKey: ['inbox-unread'] })
     } catch (err) {
       if (err?.response?.data?.detail?.code === 'quiet_hours') {
         setQuietHoursPrompt(true) // offer "send anyway"; draft preserved
