@@ -89,7 +89,7 @@ restart services.
 |---|---|---|
 | `--api` | `cd apps/api`; pip install requirements into `apps/api/.venv`; run migrations | `.venv` + database |
 | `--admin` | `pnpm install --frozen-lockfile`; `pnpm --filter ./apps/admin build` | **`apps/admin/dist` (the live Caddy root)** |
-| `--storefront` | `pnpm --filter ./apps/storefront build` (bakes `NEXT_PUBLIC_*`) | **`apps/storefront/.next` (the running Next tree)** |
+| `--storefront` | `pnpm install --frozen-lockfile`; `pnpm --filter ./apps/storefront build` (bakes `NEXT_PUBLIC_*`) | **`apps/storefront/.next` (the running Next tree)** |
 | `--all` | api → admin → storefront, in that order | all of the above |
 
 > **⚠️ Both frontend builds write in place** into the directories that are being
@@ -224,8 +224,11 @@ import (see [ARCHITECTURE.md §4](ARCHITECTURE.md#4-backend-modules)).
 ## 16. Admin and sales hostname behavior
 
 The admin and sales surfaces are the **same static build** in `apps/admin/dist`.
-The app self-routes by hostname (`sales.*` → sales), so Caddy serves both hosts
-from that one directory. A single admin build deploys both surfaces at once.
+The app self-routes by hostname (`sales.*` → sales). When the
+`sales.kelleyautoplex.com` block in the Caddyfile is enabled (it ships
+**commented out** — uncomment it and add the DNS record to serve the sales host),
+Caddy serves both hosts from that one directory, and a single admin build deploys
+both surfaces at once.
 
 ## 17. Troubleshooting
 

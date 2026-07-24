@@ -1,5 +1,8 @@
 # Kelley Autoplex Migration & Integration Runbook
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 Combines the **drivereliable** dealership site with the **bellasxv** back office,
 rebranded for Kelley Autoplex.
 

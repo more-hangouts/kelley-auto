@@ -1,5 +1,8 @@
 # Kelley Autoplex — VPS Provisioning, Hardening & Memory Runbook
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 This is the concrete, copy-pasteable runbook for **Phase 7 (MIGRATION_PLAN.md)** /
 **Day 10 (SPRINT_ROADMAP.md)**. It assumes the app already builds and passes smokes
 locally and that all config lives in `.env` (a Phase 0 constraint). Nothing here

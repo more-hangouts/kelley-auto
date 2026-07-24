@@ -98,6 +98,11 @@ Health check: `curl http://127.0.0.1:8000/api/health`.
 pnpm --filter ./apps/admin dev
 ```
 
+Set `VITE_API_URL` in `apps/admin/.env.local` and **make sure it ends in
+`/api`** (e.g. `http://127.0.0.1:8000/api`). The API's routes are all under
+`/api`; if the suffix is missing, authenticated admin calls 404. (The checked-in
+`.env.example` currently omits it — add it when you copy the file.)
+
 Both surfaces are served by the same build. The dev server renders the admin
 surface by default; to work on the **sales** surface without DNS, set
 `VITE_FORCE_SUBDOMAIN=sales`:

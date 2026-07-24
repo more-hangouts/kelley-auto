@@ -1,5 +1,8 @@
 # Storefront Analytics and CAPI Plan
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 ## Goal
 
 Build first-party storefront analytics so Kelley Autoplex can see each shopper's path to conversion, then use the same clean event stream for ad attribution and retargeting through Meta Conversions API when ads begin.

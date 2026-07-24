@@ -4,6 +4,19 @@ systemd + Caddy on a single VPS (no Docker Compose). Replaces the three dev
 servers (`next dev` / `vite dev` / manual `uvicorn`) with process-managed
 services behind a reverse proxy with automatic HTTPS.
 
+> **Scope & status.** This is the original first-provisioning runbook for
+> standing the box up; production is now live. Some sections below describe the
+> pre-launch cutover (DNS not yet pointed, TLS not yet issued) and are retained
+> as historical provisioning notes. For the current, authoritative operations
+> contract — build/deploy behavior, rollback, release gates, troubleshooting —
+> see **[../docs/OPERATIONS.md](../docs/OPERATIONS.md)**. Where the two differ,
+> OPERATIONS.md wins.
+>
+> Note in particular: `deploy/build.sh` **does not** `git pull` and **does not**
+> restart services (you check out the ref and restart separately), and its
+> frontend builds write **in place** into the live `apps/admin/dist` and the
+> running `apps/storefront/.next` — see OPERATIONS.md §5 and §20.
+
 ## Architecture
 
 | Public host | Serves | Backed by |
@@ -19,6 +32,10 @@ vehicle photos persist at `/var/lib/kelley-autoplex/uploads`.
 ---
 
 ## ⚠️ Two blockers before this can go live (need YOU)
+
+> *Historical (first-provisioning).* Production is now live behind DNS + TLS on
+> this box; the DNS-cutover and passwordless-sudo notes below reflect the
+> initial standup and are kept for reference.
 
 1. **No passwordless sudo on this box.** Every step under "Privileged setup"
    needs root and a password the agent doesn't have. Run them yourself.
@@ -99,7 +116,9 @@ dev "null" transport (lead emails are logged, not sent).
 ## Build + first start
 
 ```bash
-# As deploy: build all artifacts + run migrations
+# As deploy: build all artifacts + run migrations.
+# ⚠️ Writes in place into the live apps/admin/dist and running apps/storefront/.next
+# (no staged promotion yet) — see ../docs/OPERATIONS.md §5, §12, §20.
 /opt/kelley/deploy/build.sh
 
 # Start services (after units are installed)
@@ -149,7 +168,9 @@ journalctl -u kelley-backend -f
 journalctl -u kelley-public -f
 journalctl -u caddy -f
 
-# Deploy an update (pull + rebuild + restart)
+# Rebuild artifacts + run migrations (does NOT pull or restart — do those separately).
+# Builds write in place into the live apps/admin/dist and running .next; see
+# ../docs/OPERATIONS.md §5 and §20 before running in production.
 /opt/kelley/deploy/build.sh
 ```
 

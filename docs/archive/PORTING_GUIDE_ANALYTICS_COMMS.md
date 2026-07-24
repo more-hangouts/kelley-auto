@@ -1,5 +1,8 @@
 # Porting Guide — Analytics, Twilio/SMS & Omnichannel Communications
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 **Purpose:** reimplement the Kelley Autoplex analytics + communications stack in another
 project running the same CRM/public-site combo (FastAPI + SQLAlchemy + Postgres backend,
 Next.js App Router public site, Vite/MUI admin SPA).

@@ -1,5 +1,8 @@
 # Kelley Autoplex MVP Sprint Roadmap
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 This document scopes a cheapest-working-solution sprint for Kelley Autoplex.
 It assumes we are adapting the existing Drivereliable public site and Bellas XV
 back office, not rebuilding the product from scratch.

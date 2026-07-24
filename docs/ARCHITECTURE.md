@@ -63,11 +63,11 @@ six are gated by a `MODULE_<NAME>_ENABLED` setting, all defaulting to **true**.
 | `core` | auth, staff, business profile, notifications infra, global search, cron state | — (kernel) | 13 | `notifications`, `daily` | No |
 | `contacts` | contact/customer records, lead PII, buyer journey | — (kernel) | 1 | — | No |
 | `messaging` | inbox, web chat, Twilio + Meta webhooks | `MODULE_MESSAGING_ENABLED` (true) | 4 | — | Yes |
-| `deals` | events, invoices, quotes, payments, customer portal, special orders | `MODULE_DEALS_ENABLED` (true) | 22 | — | Yes |
+| `deals` | events, invoices, quotes, payments, customer portal, special orders | `MODULE_DEALS_ENABLED` (true) | 19 | — | Yes |
 | `inventory` | vehicle catalog, VIN decode, pricing | `MODULE_INVENTORY_ENABLED` (true) | 2 | — | Yes |
-| `scheduling` | shifts, schedules, time-off, clock/attendance | `MODULE_SCHEDULING_ENABLED` (true) | 17 | `schedule_monitor` | Yes |
-| `booking` | public booking, walk-ins, sales appointments | `MODULE_BOOKING_ENABLED` (true) | 5 | — | Yes |
-| `analytics` | storefront analytics, attribution, Meta CAPI, dashboards | `MODULE_ANALYTICS_ENABLED` (true) | 4 | — | Yes |
+| `scheduling` | shifts, schedules, time-off, clock/attendance | `MODULE_SCHEDULING_ENABLED` (true) | 16 | `schedule_monitor` | Yes |
+| `booking` | public booking, walk-ins, sales appointments | `MODULE_BOOKING_ENABLED` (true) | 6 | — | Yes |
+| `analytics` | storefront analytics, attribution, Meta CAPI, dashboards | `MODULE_ANALYTICS_ENABLED` (true) | 3 | — | Yes |
 
 There are 64 router mounts in total, contributing **294 total app routes (289
 HTTP API endpoints across 240 OpenAPI paths)**.
@@ -189,9 +189,16 @@ Every page-level route in both `App.jsx` and `sales/SalesApp.jsx` is
 `React.lazy` + `Suspense`, and `SalesApp` itself is lazy from `App.jsx`, so the
 admin surface never downloads sales page chunks and vice versa. `vite.config.js`
 `manualChunks` groups vendor code into `react-vendor`, `mui`, `query`, `dnd`, and
-`vendor` chunks. The initial JavaScript graph is **801,571 raw / 248,474 gzip
-bytes** across five shared chunks (down from a single 1,386,895 raw / 401,845
-gzip bundle — a ~42% reduction), with ~47 lazily-loaded route chunks.
+`vendor` chunks. When built from current source, the initial JavaScript graph is
+**801,571 raw / 248,474 gzip bytes** across five shared chunks (down from a
+single ~1,386,895 raw / ~401,845 gzip bundle — a ~42% reduction), with ~47
+lazily-loaded route chunks.
+
+> **Not yet deployed.** The live `apps/admin/dist` still serves the pre-split
+> single-bundle build (the ~1.39 MB monolith). The split/chunked build above is
+> what current source produces; it deploys in Phase 6 (Window B). This is the
+> admin-SPA analogue of the pre-Phase-3 backend still running in production
+> (see [OPERATIONS.md §20](OPERATIONS.md#20-window-b-phase-6-preflight-risks)).
 
 ## 14. Shared packages
 

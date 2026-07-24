@@ -1,5 +1,8 @@
 # Kelley Autoplex — Day 0 Baseline (Local Boot)
 
+> **Archived / historical — not authoritative.** Retained for context; may describe old paths, hostnames, or a pre-monorepo layout. Current docs: [README](../../README.md) · [ARCHITECTURE](../ARCHITECTURE.md) · [OPERATIONS](../OPERATIONS.md) · [CLAUDE](../../CLAUDE.md). See [archive index](README.md).
+
+
 **Date:** 2026-06-25 · **Host:** abject-engineers (50.28.114.31), Ubuntu 24.04, 2c/4GB/80GB
 **Repo:** `/opt/kelley` @ `7d1c626` (branch `main`)
 **Goal (SPRINT_ROADMAP Day 0):** prove the imported apps run, lock the Kelley naming/env
