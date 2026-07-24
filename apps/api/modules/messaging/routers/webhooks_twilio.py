@@ -5,8 +5,8 @@ path. The endpoint is public and unauthenticated by design — Twilio's request
 signature is the auth. Flow, in order:
 
   1. Verify ``X-Twilio-Signature`` against the **public** URL (built from
-     ``PUBLIC_API_BASE_URL`` + path — behind Caddy the app sees the internal
-     127.0.0.1 URL, which would fail verification).
+     ``PUBLIC_API_BASE_URL`` + path/query — behind Caddy the app sees the
+     internal 127.0.0.1 URL, which would fail verification).
   2. Store the raw payload first (``webhook_events``, header-redacted) keyed by
      MessageSid — this is the audit/replay buffer and gives idempotency: a
      Twilio retry of the same MessageSid short-circuits to an empty 200.
@@ -43,7 +43,9 @@ def _twiml() -> Response:
 
 
 def _public_url(request: Request) -> str:
-    return settings.PUBLIC_API_BASE_URL.rstrip("/") + request.url.path
+    url = settings.PUBLIC_API_BASE_URL.rstrip("/") + request.url.path
+    query = request.scope.get("query_string", b"").decode("ascii", errors="ignore")
+    return f"{url}?{query}" if query else url
 
 
 def _extract_media(form: dict[str, str]) -> list[dict]:

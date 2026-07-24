@@ -49,6 +49,7 @@ from database.auth import create_access_token, create_sales_token, hash_password
 from database.connection import SessionLocal  # noqa: E402
 from database.models import Contact, ContactCallAttempt, User  # noqa: E402
 from modules.messaging.services import voice_transport  # noqa: E402
+from modules.messaging.services.twilio_signature import compute_signature  # noqa: E402
 
 client = TestClient(app)
 
@@ -356,6 +357,30 @@ def test_twiml_callback_rejects_bad_signature():
     print("twiml callback rejects bad signature ok")
 
 
+def test_twiml_callback_accepts_valid_signature_with_query():
+    """Twilio signs the full public URL, including the bridge token query
+    string. This guards the production callback path (PUBLIC_API_BASE_URL +
+    path + ?token=...)."""
+    dial = "+12105550123"
+    good = voice_transport.mint_bridge_token(
+        call_attempt_id=1, contact_id=2, dial_number=dial
+    )
+    url = f"https://api.example.test/api/webhooks/twilio/voice/bridge?token={good}"
+    sig = compute_signature("tok_test", url, {})
+    with mock.patch("config.settings.PUBLIC_API_BASE_URL", "https://api.example.test"), mock.patch(
+        "config.settings.INBOUND_SMS_REQUIRE_SIGNATURE", True
+    ), mock.patch("config.settings.TWILIO_AUTH_TOKEN", "tok_test"), mock.patch(
+        "config.settings.TWILIO_VOICE_FROM_NUMBER", _BIZ_FROM
+    ):
+        r = client.post(
+            f"/api/webhooks/twilio/voice/bridge?token={good}",
+            headers={"X-Twilio-Signature": sig},
+        )
+    _assert(r.status_code == 200, "valid-sig twiml 200", r.status_code)
+    _assert("<Dial" in r.text and dial in r.text, "valid signature dials", r.text)
+    print("twiml callback accepts valid signature with query ok")
+
+
 def test_native_call_logging_still_works():
     """The pre-existing native tel: call-attempt logging path is unchanged."""
     contact_id = _make_contact()
@@ -384,6 +409,7 @@ if __name__ == "__main__":
         test_bridge_missing_contact_phone()
         test_twiml_callback_token_gate()
         test_twiml_callback_rejects_bad_signature()
+        test_twiml_callback_accepts_valid_signature_with_query()
         test_native_call_logging_still_works()
     finally:
         _cleanup()
