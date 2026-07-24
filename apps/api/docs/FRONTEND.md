@@ -1,5 +1,13 @@
 # Frontend (admin SPA)
 
+> **Superseded (historical).** This describes the pre-monorepo admin SPA
+> (`frontend/dist/` served by nginx at `admin.shopbellasxv.com`). The admin SPA
+> now lives at `apps/admin/`, is served by Caddy from `apps/admin/dist`, and its
+> API client is split into `src/services/api/` (see
+> [`apps/admin/README.md`](../../admin/README.md) and
+> [`/docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md)). Kept for historical
+> reference only.
+
 React 19 + MUI 6 + Vite, served as static files from `frontend/dist/` by
 nginx at admin.shopbellasxv.com. Single-page app behind JWT auth.
 

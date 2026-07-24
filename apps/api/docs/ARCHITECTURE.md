@@ -1,5 +1,11 @@
 # Architecture
 
+> **Superseded (historical).** This document predates the monorepo restructure
+> and the Phase 3 module split; it describes the former Bella's XV layout
+> (nginx, flat `api/` + `frontend/` paths, `bellas-xv-api.service`). The current,
+> authoritative system architecture is [`/docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md).
+> Kept for historical backend reference only.
+
 High-level map of the Bellas XV platform — what runs where, how requests flow,
 and which boundaries to respect when adding code.
 
