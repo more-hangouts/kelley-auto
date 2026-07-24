@@ -20,7 +20,10 @@ function manualChunks(id) {
   // Scoped packages first: '@emotion/react' / '@tanstack/react-query' contain
   // the substring 'react' and must not fall through to the react-vendor test.
   if (pkg.startsWith('@mui/') || pkg.startsWith('@emotion/')) return 'mui'
-  if (pkg === '@tanstack/react-query') return 'query'
+  // Group the whole TanStack Query family (react-query + its query-core
+  // runtime dep) so the query chunk is self-contained rather than leaving
+  // ~30 KB of query-core stranded in the generic vendor chunk.
+  if (pkg.startsWith('@tanstack/')) return 'query'
   if (pkg.startsWith('@dnd-kit/')) return 'dnd'
   // Keep the whole React runtime (react + react-dom + scheduler) and the
   // router (react-router + its @remix-run/router core) in one chunk so init

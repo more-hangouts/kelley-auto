@@ -1,11 +1,13 @@
 import { Box, CircularProgress } from '@mui/material'
 
 // Suspense fallback for lazily-loaded route pages. Deliberately minimal:
-// a centered spinner with no instructional text. `flex: 1` + `minHeight: 0`
-// makes it fill whatever slot it is dropped into (the DashboardLayout
-// <Outlet /> region, or a full-height top-level route) without forcing
-// its own height, so the surrounding shell chrome never shifts or resizes
-// while a page chunk loads.
+// a centered spinner with no instructional text. It is a self-contained
+// flex box with its own minHeight (a generous slice of the viewport), so
+// it centers the spinner whether it is dropped into DashboardLayout's
+// block-level <main> region or rendered as a full-page top-level route —
+// it does not depend on the parent being a flex container. It never grows
+// past its content, so the surrounding shell chrome never shifts or
+// resizes while a page chunk loads.
 export default function RouteFallback() {
   return (
     <Box
@@ -13,9 +15,8 @@ export default function RouteFallback() {
       aria-live="polite"
       aria-busy="true"
       sx={{
-        flex: 1,
-        minHeight: 0,
-        alignSelf: 'stretch',
+        width: '100%',
+        minHeight: '40vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
