@@ -21,6 +21,11 @@ __pycache__/
 .venv/
 venv/
 env/
+# Local convenience symlink at the repo root pointing at apps/api/.venv.
+# The `.venv/` glob above only matches directories, not the symlink; no tracked
+# script depends on the root symlink (build.sh and apps/api/scripts use
+# apps/api/.venv directly), so ignore it here. Leave the symlink in place on disk.
+/.venv
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
