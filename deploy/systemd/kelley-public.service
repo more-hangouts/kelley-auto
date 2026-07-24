@@ -9,6 +9,14 @@ User=deploy
 Group=deploy
 WorkingDirectory=/opt/kelley/apps/storefront
 Environment=NODE_ENV=production
+# Staged releases: `next start` serves the versioned build that
+# `.next-current` (a symlink to the active release) points at, resolved via
+# next.config.ts `distDir: process.env.NEXT_DIST_DIR || '.next'`. This takes
+# effect only once the `.next-current` symlink exists — it is created during
+# the first release promotion (deploy/promote-release.sh). Do NOT install this
+# unit onto a box that has not yet been converted to staged releases, or the
+# service will look for a nonexistent .next-current.
+Environment=NEXT_DIST_DIR=.next-current
 # Runtime API base for server-side fetches. NEXT_PUBLIC_API_BASE_URL is baked
 # at BUILD time (see deploy/env/public.env.production + build.sh).
 EnvironmentFile=/opt/kelley/apps/storefront/.env.production

@@ -172,19 +172,51 @@ After restart, `install.sh` polls until healthy (bounded by
 - `http://127.0.0.1:8000/api/health`
 - `http://127.0.0.1:3000/`
 
-## 12. Backup and rollback
+## 12. Staged releases, backup, and rollback
+
+Frontend releases are **staged, versioned, and recoverable** (Phase 6). A build
+never touches the live artifacts; promotion switches a symlink.
+
+- **Stage** (unprivileged, never touches live) — builds admin + storefront into
+  `releases/<git-sha>/`, writes a checksummed manifest, runs preview HTTP checks
+  and the browser E2E gate, and marks the manifest `validated`:
+
+  ```bash
+  deploy/stage-release.sh --sha <full-git-sha>
+  ```
+
+- **Promote** (privileged, in a deployment window) — verifies the validated
+  manifest, stops the storefront, atomically switches `apps/admin/dist` and
+  `apps/storefront/.next-current` to the release, restarts, and polls readiness;
+  it preserves the previous pointers and prints the exact rollback command. The
+  **first** promotion moves the current Phase‑2 `dist`/`.next` into
+  `releases/phase2-baseline/` so the pre‑restructure build stays recoverable:
+
+  ```bash
+  sudo bash deploy/promote-release.sh <release-id>
+  ```
+
+- **Rollback** — switch back to a known validated release (or
+  `phase2-baseline`); add `--with-backend-phase2` to also restore the Phase‑2
+  backend code (`4ab6c5d`):
+
+  ```bash
+  sudo bash deploy/rollback-release.sh <release-id> [--with-backend-phase2]
+  ```
+
+Atomicity: the **admin** switch is atomic (symlink `rename(2)`). The
+**storefront** switch is **not** atomic — `next start` holds its `.next` open, so
+the service is stopped, switched, then started; expect a few seconds of
+storefront 502 at the proxy during promotion. Old releases are never deleted by
+these scripts.
 
 - **Config layer** (systemd units, Caddyfile): `install.sh` keeps timestamped
   `.bak` and one-time `.orig` backups and prints the exact rollback commands.
-- **Application artifacts**: **no backups exist.** `build.sh` writes directly
-  into `apps/admin/dist` and `apps/storefront/.next` with no staging directory,
-  symlink swap, or promotion step. **Code rollback = `git checkout` the prior
-  ref + rebuild.**
 - **Database**: the runner is forward-only with no downgrade; recovery is a
   forward-fixing migration and/or a database backup restore.
 
-There is **no staged/recoverable artifact promotion today.** Addressing this is a
-Phase 6 preflight item (§20).
+> The legacy `deploy/build.sh --admin`/`--storefront` still build **in place**
+> and remain dangerous — use the staged release scripts above for any deploy.
 
 ## 13. Caddy validation
 
@@ -269,26 +301,32 @@ window.
 
 ## 19. Browser E2E release gate
 
-There is currently **no browser end-to-end suite**. The Phase 4 admin/sales SPA
-verification could not run a real browser because Chromium system libraries are
-unavailable on the VPS (installing them requires root package installation).
-Static and HTTP-level checks stand in for now. **A browser E2E pass is a
-required release gate** and remains **outstanding** — do not report browser
-verification as complete until it has actually run in a browser-capable
-environment.
+A pinned-Playwright browser E2E suite lives at `apps/admin/e2e/` and runs
+**inside the official `mcr.microsoft.com/playwright:v1.61.1-noble` Docker image**,
+so it needs no Chromium libraries on the host (the VPS has none, and none are
+installed). It builds temporary admin and forced-sales bundles (never the live
+dist), mocks the API deterministically for authenticated pages, keeps the
+unauthenticated redirects real, and asserts route rendering, lazy-chunk loading,
+admin/sales chunk isolation, and the absence of console/page errors and asset
+404s across desktop and mobile viewports.
+
+```bash
+pnpm --filter ./apps/admin run test:e2e:docker
+```
+
+It is a **required release gate** and runs automatically inside
+`deploy/stage-release.sh` — a release is only marked validated if it passes.
 
 ## 20. Window B (Phase 6) preflight risks
 
-Before the next production deploy, the following must be addressed — they are
-**not yet resolved**:
-
-1. **Staged/recoverable artifact promotion.** `build.sh --admin` overwrites the
-   live `apps/admin/dist` in place, and `build.sh --storefront` overwrites the
-   running `apps/storefront/.next` in place. A failed or partial build breaks the
-   live surface immediately. Window B needs build-to-staging + atomic swap (e.g.
-   `dist.new` → swap, keep `dist.prev`) or an equivalent recoverable procedure
-   before deploying. This does not exist today.
-2. **Browser E2E gate** (§19) — outstanding.
+1. **Staged/recoverable artifact promotion — IMPLEMENTED (§12).** Frontend
+   releases now stage into `releases/<sha>/`, validate before promotion, and
+   switch via symlink with the previous artifacts retained. Use
+   `deploy/stage-release.sh` then `deploy/promote-release.sh`; do **not** use the
+   in-place `build.sh --admin`/`--storefront` for a deploy.
+2. **Browser E2E gate — IMPLEMENTED (§19).** The pinned-Playwright Docker suite
+   (`apps/admin/e2e/`) runs as part of `stage-release.sh` and must pass before a
+   release is marked validated.
 3. **Unexpected backend restart loads current source.** The running backend was
    started before the Phase 3 modularization; `kelley-backend.service` has
    `Restart=always`. A crash, restart, or reboot will bring the backend up on the

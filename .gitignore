@@ -14,6 +14,19 @@ build/
 .vercel/
 *.tsbuildinfo
 
+# ---- Staged release artifacts (deploy/stage-release.sh) ----
+# Versioned builds + the active-release symlinks live on the server only.
+/releases/
+apps/storefront/.next-current
+apps/storefront/.next-releases/
+
+# ---- E2E generated artifacts ----
+apps/admin/e2e/.build/
+apps/admin/e2e/node_modules/
+apps/admin/e2e/test-results/
+apps/admin/e2e/report/
+apps/admin/e2e/package-lock.json
+
 # ---- Python / FastAPI ----
 __pycache__/
 *.py[cod]

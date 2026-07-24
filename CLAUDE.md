@@ -112,6 +112,15 @@ existing coupling is out of scope — see
   `pnpm --filter ./apps/admin exec vite build --outDir "$(mktemp -d)" --manifest`.
 - Likewise, `next build` writes `apps/storefront/.next`, the tree the running
   `next start` serves. Do not rebuild `.next` in place against a live process.
+- **For an actual deploy, use the staged release scripts, not the in-place
+  builds.** `deploy/stage-release.sh` builds a versioned, checksummed,
+  E2E-validated release into `releases/<sha>/` without touching live artifacts;
+  `deploy/promote-release.sh` (privileged, in a window) switches the live
+  symlinks; `deploy/rollback-release.sh` reverts. See
+  [docs/OPERATIONS.md §12](docs/OPERATIONS.md#12-staged-releases-backup-and-rollback).
+- **Browser E2E** lives in `apps/admin/e2e/` and runs in a pinned Playwright
+  Docker image (`pnpm --filter ./apps/admin test:e2e:docker`) — no host Chromium
+  needed. It is a required release gate and runs inside `stage-release.sh`.
 
 ## Git and process
 

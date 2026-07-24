@@ -1,6 +1,11 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Staged releases build into a versioned directory and the running service
+  // is pointed at it via NEXT_DIST_DIR (set to `.next-current`, a symlink to
+  // the active release). Defaults to `.next` for local dev and any process
+  // that does not set it. Build and `next start` must see the SAME value.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
     remotePatterns: [
       // Vehicle photos are served by the FastAPI backend at
