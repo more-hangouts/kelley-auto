@@ -110,6 +110,7 @@ from .analytics import (
     AdConversionEvent,
     ActivityLog,
     SalesActivityEvent,
+    ContactCallAttempt,
 )
 
 __all__ = [
@@ -201,4 +202,5 @@ __all__ = [
     "AdConversionEvent",
     "ActivityLog",
     "SalesActivityEvent",
+    "ContactCallAttempt",
 ]

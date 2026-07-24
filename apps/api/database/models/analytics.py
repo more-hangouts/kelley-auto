@@ -204,3 +204,51 @@ class SalesActivityEvent(Base):
     )
 
 
+class ContactCallAttempt(Base):
+    """Native-dialer call-attempt record (Phase 7, migration 098).
+
+    A signed-in salesperson taps a customer's number in the dashboard; the
+    client logs the attempt here BEFORE opening ``tel:``. Unlike the
+    append-only audit streams above, this row is MUTABLE — its ``outcome``
+    transitions from ``call_initiated`` to a salesperson-reported terminal
+    outcome. Not Twilio Voice: no routing, no recording, no audio ever.
+
+    Deletion resilience mirrors ``ActivityLog``: ``salesperson_user_id`` is
+    ON DELETE SET NULL with a ``salesperson_display_name`` snapshot so manager
+    reports survive a rep leaving. Contact archive is soft-delete, so a call
+    history is preserved when a contact is archived.
+    """
+
+    __tablename__ = "contact_call_attempts"
+
+    id = Column(BigInteger, primary_key=True)
+    contact_id = Column(
+        Integer,
+        ForeignKey("contacts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    salesperson_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    salesperson_display_name = Column(String(200))
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="SET NULL"))
+    phone_e164 = Column(String(20), nullable=False)
+    # CHECK (migration 098) constrains this to the CALL_OUTCOMES allowlist.
+    outcome = Column(
+        String(20), nullable=False, server_default=text("'call_initiated'")
+    )
+    # CHECK (migration 098): (outcome = 'call_initiated') = outcome_pending.
+    outcome_pending = Column(
+        Boolean, nullable=False, server_default=text("TRUE")
+    )
+    notes = Column(Text)
+    source = Column(String(40))
+    idempotency_key = Column(String(64))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
