@@ -86,7 +86,9 @@ test('lazy route chunk is fetched on navigation', async ({ authedPage }) => {
 
 // Cross-surface isolation: the admin host must never request the SalesApp
 // chunk. Resolve the real emitted filename from the build manifest (hash-free).
-test('admin host does not load the SalesApp chunk', async ({ authedPage }) => {
+// Positive control included: admin MUST load admin page chunks (proving the
+// name filter is live) while never loading the SalesApp/sales chunks.
+test('admin host loads admin chunks but not the SalesApp chunk', async ({ authedPage }) => {
   const requested = []
   authedPage.on('request', (r) => {
     if (/\/assets\/.+\.js$/.test(r.url())) requested.push(r.url())
@@ -95,7 +97,8 @@ test('admin host does not load the SalesApp chunk', async ({ authedPage }) => {
   await expect(authedPage.getByRole('heading', { name: /welcome back/i })).toBeVisible()
   await authedPage.goto('/sales')
   await authedPage.goto('/inbox')
-  // SalesApp / sales-only page chunks are named after their source components.
   const salesLike = requested.filter((u) => /SalesApp|PinLogin|RepDashboard|ClockScreen/i.test(u))
+  const adminLike = requested.filter((u) => /Pipeline|Inbox|Dashboard|ContactDetail/i.test(u))
   expect(salesLike, `unexpected sales chunks on admin host:\n${salesLike.join('\n')}`).toEqual([])
+  expect(adminLike.length, 'expected at least one admin page chunk to load').toBeGreaterThan(0)
 })

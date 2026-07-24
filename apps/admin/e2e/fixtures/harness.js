@@ -8,10 +8,11 @@ const OK = (body) => ({ status: 200, contentType: 'application/json', body: JSON
 const ADMIN_USER = { id: 1, username: 'e2e', full_name: 'E2E Admin', role: 'admin' }
 const SALES_USER = { id: 2, username: 'rep', full_name: 'E2E Rep', role: 'sales', force_pin_change: false }
 
-// Route matchers are checked in order; first match wins. Keep specific paths
-// before the catch-all. Every handler returns a 200 with a valid-shaped body
-// EXCEPT the catch-all, which 200s an empty envelope so an unmocked GET never
-// 500s the page (an unmocked unsafe call is unexpected and left to 404).
+// The array is written MOST-SPECIFIC FIRST for readability. Playwright resolves
+// routes last-registered-first, so the installer (installMocks) registers this
+// array in REVERSE, making the specific entries here win over the broad ones
+// below them. Every handler returns a 200 with a valid-shaped body matching
+// what the page actually reads.
 function authedRoutes() {
   const routes = [
     // Auth probes — presence of a user keeps the app out of the login redirect.
@@ -51,9 +52,9 @@ function authedRoutes() {
     [/\/api\/inbox\/unread-count/, OK({ count: 0 })],
     [/\/api\/inbox\/conversations/, OK({ conversations: [], items: [] })],
 
-    // Analytics
-    [/\/api\/admin\/storefront-analytics\/summary/, OK({ funnel: {}, series: [], totals: {} })],
-    [/\/api\/analytics/, OK({ funnel: {}, series: [], totals: {} })],
+    // Analytics — funnel MUST be an array (page does funnel.map()).
+    [/\/api\/admin\/storefront-analytics\/summary/, OK({ funnel: [], series: [], totals: {} })],
+    [/\/api\/analytics/, OK({ funnel: [], series: [], totals: {} })],
 
     // Scheduling (admin grid)
     [/\/api\/admin\/schedule\/week/, OK({ entries: [], days: [] })],
@@ -63,10 +64,34 @@ function authedRoutes() {
     // Sales surface
     [/\/api\/sales\/auth\/staff-picker/, OK([{ username: 'rep', full_name: 'E2E Rep' }])],
     [/\/api\/sales\/clock\/status/, OK({ clocked_in: false })],
-    [/\/api\/sales\/appointments\/today/, OK([])],
-    [/\/api\/sales\/appointments\/[^/]+$/, OK({ id: 123, status: 'scheduled', participants: [] })],
-    [/\/api\/sales\/schedule\/team/, OK({ items: [] })],
-    [/\/api\/sales\/schedule/, OK({ items: [] })],
+    [/\/api\/sales\/appointments\/today/, OK({ appointments: [] })],
+    // Appointment detail is a rich page: it reads data.appointment.<many>,
+    // data.event, data.contact, data.enrichment, and the arrays
+    // data.participants / data.recent_activity (both .length'd). Provide the
+    // full envelope so the page renders instead of dropping to its error state.
+    [/\/api\/sales\/appointments\/\d+(\?|$)/, OK({
+      appointment: {
+        id: 123, status: 'scheduled', internal_notes: '',
+        timezone: 'America/Chicago',
+        slot_start_at: '2026-07-27T15:00:00Z', slot_end_at: '2026-07-27T16:00:00Z',
+        celebrant_first_name: 'E2E', celebrant_last_name: 'Guest',
+        parent_first_name: '', parent_last_name: '',
+        email: 'guest@example.com', phone: '+15125550100',
+        party_size_bucket: null, confirmation_code: 'E2E123',
+        assigned_user_id: null, assigned_user_full_name: null,
+        event_participant_id: null,
+      },
+      event: null,
+      contact: null,
+      enrichment: null,
+      participants: [],
+      recent_activity: [],
+    })],
+    // Team schedule reads teamData?.entries; my-schedule reads data.days.map
+    // and data.posts, so both need their real shapes (guarded fields use ?? []
+    // but data.days.map is unguarded).
+    [/\/api\/sales\/schedule\/team/, OK({ entries: [] })],
+    [/\/api\/sales\/schedule/, OK({ days: [], posts: [], entries: [] })],
     [/\/api\/sales\//, OK({ items: [] })],
   ]
   return routes
@@ -78,14 +103,17 @@ function authedRoutes() {
 export const test = base.extend({
   authedPage: async ({ page }, use, testInfo) => {
     await installCollectors(page, testInfo)
-    // Playwright matches routes LAST-registered-first. Register the catch-all
-    // FIRST so every specific handler below overrides it — otherwise the
-    // generic empty envelope wins for every /api call and pages that read a
-    // specific field (e.g. board.columns) crash.
+    // Playwright matches routes LAST-registered-first. Register the broad
+    // catch-all FIRST (lowest priority). Then register authedRoutes() in
+    // REVERSE so the most-specific entries (written first in the array) are
+    // registered LAST and therefore WIN over the broader domain patterns
+    // (/api/sales/, /api/admin/) that sit below them in the array. Without the
+    // reverse, those broad patterns would shadow every specific sales/analytics
+    // mock and pages would render on garbage shapes.
     await page.route(/\/api\//, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '{"items":[],"data":[],"ok":true}' }),
     )
-    for (const [pattern, response] of authedRoutes()) {
+    for (const [pattern, response] of [...authedRoutes()].reverse()) {
       await page.route(pattern, (route) => route.fulfill(response))
     }
     await use(page)
