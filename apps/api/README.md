@@ -1,153 +1,138 @@
-# Bellas XV
+# Kelley Autoplex — API
 
-The platform behind a quinceañera and bridal shop in San Antonio, TX.
+The FastAPI backend and single system of record for Kelley Autoplex: inventory,
+CRM/deals, quotes, invoices, payments, staff, scheduling, messaging, and
+notifications. Every other surface (admin SPA, sales surface, storefront) reads
+and writes through this API over HTTP.
 
-A booking widget on the marketing site captures leads. Staff promote them
-into a CRM event, then drag the event through a kanban from `lead` all the
-way to `picked_up`. Quotes and invoices are built from a product catalog of
-gowns seeded from several designer and distributor sites. One small shop,
-one stack, no multi-tenancy.
-
-## Surfaces
-
-- `shopbellasxv.com` — marketing site + public booking widget
-- `admin.shopbellasxv.com` — staff admin SPA (React)
-- `sales.shopbellasxv.com` — stylist sales portal (kiosk PIN login,
-  same React bundle, hostname-routed)
-- `api.shopbellasxv.com` — FastAPI backend
+This app is **not** a pnpm workspace member — it is a standalone Python
+application with its own `.venv`.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
-| Backend | FastAPI 0.115 + SQLAlchemy 2.0 + PostgreSQL |
-| Auth | JWT (HS256) bearer tokens |
-| Public widget | Vanilla JS, embedded on the marketing site |
-| Admin SPA | React 19 + MUI 6 + Vite, react-query, dnd-kit |
-| Reverse proxy | Nginx + Certbot |
-| Process supervisor | systemd (`bellas-xv-api.service`) |
+| Framework | FastAPI + SQLAlchemy 2.0 |
+| Database | PostgreSQL (`psycopg2`) |
+| Cache / rate limiting | Redis |
+| Server | uvicorn (`api.server:app`), 2 workers in production |
+| Auth | session cookie (HttpOnly) + readable CSRF cookie; CSRF header on unsafe methods |
+| Email | Gmail API (OAuth2) with SMTP fallback; null transport when unconfigured |
 
-## Docs
+## Module architecture (Phase 3)
 
-Section-by-section reference under [docs/](docs/):
+The application is organized into **eight domain modules** under `modules/`:
 
-- [Architecture overview](docs/ARCHITECTURE.md) — what runs where, how
-  requests flow, where to add new code
-- [CRM: contacts, events, kanban](docs/CRM.md) — the events domain, status
-  workflow, promotion path
-- [Booking widget + admin appointments](docs/BOOKING.md) — public submission
-  flow, slot algorithm, attribution capture, admin surface
-- [Database](docs/DATABASE.md) — schema, migration runner, indexes,
-  conventions
-- [Frontend (admin SPA)](docs/FRONTEND.md) — pages, react-query patterns,
-  drag-drop, build
-- [Testing](docs/TESTING.md) — smoke-test pattern, how to add one
+`core`, `contacts`, `messaging`, `deals`, `inventory`, `scheduling`, `booking`,
+`analytics`.
 
-Phase plans (feature-by-feature roadmaps with reality findings,
-slices, and shipped/deferred markers):
+- **`core` and `contacts` are kernel modules** — always enabled, no flag.
+- The other six each have a `MODULE_<NAME>_ENABLED` flag in `config/settings.py`,
+  all defaulting to **true**. Disabling a module means its **routers are not
+  mounted and its workers do not start** — its Python package and models still
+  import unconditionally.
+- **Routers mount synchronously** at app construction; **workers start in the
+  lifespan**. The `modules/registry.py` `MOUNTS`/`MODULES` tables drive both, in
+  an order that preserves the historical OpenAPI contract. Never mount a router
+  inside the lifespan.
+- Workers: `notifications` and `daily` belong to `core`; `schedule_monitor`
+  belongs to `scheduling`.
 
-- [Omnichannel CRM Inbox](docs/CRM_OMNICHANNEL_INBOX_PLAN.md) — Twilio
-  SMS/MMS + Facebook Messenger + Instagram DM inbox, subscriber-based
-  "who gets what" notification routing, sales-portal reply surface
-- [Sales Portal](docs/SALES_PORTAL_PHASES.md) — stylist kiosk surface,
-  geofenced clock-in, attendance review, shifts, time-off, holidays
-- [Scheduling Improvement Plan](docs/SCHEDULING_IMPROVEMENT_PLAN.md) —
-  shift requests, pickup/open shifts, swaps, admin approval, and smoke-test
-  phases
-- [Global Search](docs/GLOBAL_SEARCH_PHASES.md) — trigram + document
-  indexes, command palette
-- [Catalog and vendor seeds](docs/CATALOG_SKU_OBFUSCATION_PHASES.md) — SKU
-  obfuscation, the Products gallery/list browse page, and the multi-vendor
-  seed scrapers (`scripts/seed_catalog/`)
-- [Invoice Discounts and Terms](docs/INVOICE_DISCOUNTS_AND_TERMS_PHASES.md)
-  — stacked discounts, plan selector, quote installments
+New routers go in `modules/<domain>/routers/` and are registered in
+`registry.py`; new services go in `modules/<domain>/services/`.
 
-Operational / planning docs at the repo root:
+### Models facade
 
-- [INFRASTRUCTURE.md](INFRASTRUCTURE.md) — VPS layout, services, env vars
-- [VPS_HARDENING.md](VPS_HARDENING.md) — memory caps, sysctl, log rotation
-- [BOOKING_WIDGET_PHASES.md](BOOKING_WIDGET_PHASES.md) — booking widget
-  feature roadmap (planning)
-- [FIT_PREP_TOOL_PLAN.md](FIT_PREP_TOOL_PLAN.md) — enrichment / fit-prep
-  feature plan
-- [JOBNIMBUS_ARCHITECTURE_MAP.md](JOBNIMBUS_ARCHITECTURE_MAP.md) — reverse
-  engineering of JobNimbus's CRM that informed our event model
+`database/models/` is split into per-domain files, but
+`from database.models import <Name>` keeps working via the facade in
+`database/models/__init__.py`. **Every model imports unconditionally**, so every
+table registers on `Base.metadata` regardless of module flags. When you add a
+model, put it in its domain file **and** re-export it (and add it to `__all__`)
+in `__init__.py`.
+
+### Migration compatibility surface
+
+`apps/api/services/` is **not** an application service directory. It is a narrow,
+permanent compatibility shim that re-exports exactly the two symbols migrations
+`061` and `062` import at `upgrade()` time (`integration_tokens`,
+`quote_signature_hmac`). Application code must import from `modules.*`; a guard
+smoke (`tests/test_services_compat_guard_smoke.py`) fails if app source imports
+`services.*`.
 
 ## Dev quickstart
 
 ```bash
-git clone git@github.com:more-hangouts/bellasxv.git
-cd bellasxv
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env       # fill in DATABASE_URL + SECRET_KEY at minimum
-venv/bin/python -m database.migrations.runner
-venv/bin/uvicorn api.server:app --reload --host 127.0.0.1 --port 8000
-```
-
-In a second shell:
-
-```bash
-cd frontend
-npm install
-echo 'VITE_API_URL=http://127.0.0.1:8000/api' > .env.local
-# To hit the sales tree on localhost without DNS, also set:
-# echo 'VITE_FORCE_SUBDOMAIN=sales' >> .env.local
-npm run dev
+cd apps/api
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env                                # fill in DATABASE_URL + SECRET_KEY at minimum
+.venv/bin/python -m database.migrations.runner      # apply migrations (forward-only)
+.venv/bin/python scripts/seed_admin.py              # first admin user (interactive)
+.venv/bin/uvicorn api.server:app --reload --host 127.0.0.1 --port 8000
 ```
 
 API health: `curl http://127.0.0.1:8000/api/health`
 
+The admin/sales SPA and storefront live in `apps/admin` and `apps/storefront`;
+see the root [README.md](../../README.md) for running them.
+
 ## Smoke tests
 
-```bash
-venv/bin/python tests/test_booking_smoke.py
-venv/bin/python tests/test_admin_booking_smoke.py
-venv/bin/python tests/test_notifications_smoke.py
-venv/bin/python tests/test_events_smoke.py
-venv/bin/python tests/test_boutique_experience_smoke.py
+Smoke tests are **standalone scripts, not pytest** — each mints its own ephemeral
+fixtures and cleans up, and they must run **serially** (several mutate singleton
+numbering rows). Run one directly:
 
-# Sales Portal (Phase 1-8):
-venv/bin/python tests/test_sales_auth_smoke.py
-venv/bin/python tests/test_clock_in_smoke.py
-venv/bin/python tests/test_time_off_endpoints_smoke.py
+```bash
+.venv/bin/python tests/test_events_smoke.py
 ```
 
-Each script mints its own ephemeral fixtures and cleans up. See
-[docs/TESTING.md](docs/TESTING.md). Note: smokes that mutate
-singleton/numbering rows or walk the global table must run
-**serially**, not in parallel — running two cron-pass smokes
-concurrently will trip each other.
+Run the whole handoff suite (the `PYTHON` override is required — the script's
+default interpreter path does not exist):
+
+```bash
+PYTHON="$PWD/.venv/bin/python" scripts/smoke_handoff.sh
+```
+
+See [docs/TESTING.md](docs/TESTING.md).
 
 ## Deploy
 
-```bash
-# Build the admin SPA (output goes to frontend/dist/, served by nginx)
-cd frontend && npm run build
-
-# Restart the API to pick up backend changes
-sudo systemctl restart bellas-xv-api
-```
-
-DB migrations are applied explicitly:
+Production is systemd + Caddy; the backend runs as `kelley-backend.service`
+(uvicorn on `127.0.0.1:8000`). Deployment is driven from the repo root by
+`deploy/build.sh` and `deploy/install.sh`.
 
 ```bash
-venv/bin/python -m database.migrations.runner
+# From the repo root — installs deps + runs migrations (does NOT restart):
+deploy/build.sh --api
 ```
 
-See [INFRASTRUCTURE.md](INFRASTRUCTURE.md) for the full VPS layout.
+Migrations are applied explicitly:
+
+```bash
+.venv/bin/python -m database.migrations.runner
+```
+
+Full production procedures, rollback behavior, and release gates are in
+[docs/OPERATIONS.md](../../docs/OPERATIONS.md). System design is in
+[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md).
+
+## Backend reference docs
+
+Section references under [docs/](docs/) (backend-internal; some predate the
+module restructure and are marked where they are superseded by the root docs):
+
+- [Database](docs/DATABASE.md) — schema, migration runner, conventions
+- [Testing](docs/TESTING.md) — smoke-test pattern, how to add one
+- [Data retention & delete policy](docs/DATA_RETENTION_AND_DELETE_POLICY.md)
+- [CRM](docs/CRM.md), [Booking](docs/BOOKING.md) — domain references
+- Feature phase plans (`docs/*_PHASES.md`, `docs/*_PLAN.md`) — historical, shipped
 
 ## Conventions
 
-A few load-bearing rules — explained in the section docs but worth calling
-out at the top:
-
-- **Routers contain no business logic** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#boundaries))
-- **Services do not import FastAPI** — they're plain modules
-- **Migrations are forward-only**, numbered sequentially, mirrored as Python
-  CHECK-constraint workflows where applicable ([docs/DATABASE.md](docs/DATABASE.md#migration-runner))
-- **Phone (E.164) is the canonical contact identity**, not email ([docs/CRM.md](docs/CRM.md#contact-identity))
+- **Routers contain no business logic**; **services do not import FastAPI**.
+- **Migrations are append-only and forward-only** — never edit, renumber, or
+  squash an existing migration.
+- **Phone (E.164) is the canonical contact identity**, not email.
 
 ## License
 
