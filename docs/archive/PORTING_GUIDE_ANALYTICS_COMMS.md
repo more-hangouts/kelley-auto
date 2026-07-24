@@ -592,3 +592,4 @@ Mirrors the dependency graph; each step is shippable alone.
 | 18 | `metadata` reserved on SQLAlchemy Base | map as `event_metadata` → column `"metadata"` |
 | 19 | Compliance clocks started late | A2P + Meta App Review submitted on day 1, code flag-gated in parallel |
 | 20 | Backend `.env` changes need a service restart (interactive sudo here) | fold restarts into the deploy runbook; flags don't hot-reload |
+| 21 | **Unhandled 500s masquerade as CORS errors** — exceptions escape `CORSMiddleware`, so the error response carries no `Access-Control-Allow-Origin` and the browser reports a CORS block | when the SPA shows a CORS error on ONE endpoint while others work, it's a 500 — check backend logs for the traceback, not the CORS config; confirm with `curl -i -H "Origin: <spa-origin>"` (a 401/404 WITH CORS headers proves config is fine) |
