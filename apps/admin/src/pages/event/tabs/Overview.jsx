@@ -24,6 +24,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
+import CreditApplicationPanel from './CreditApplicationPanel'
 import LeadJourneyPanel from './LeadJourneyPanel'
 import AddParticipantDialog from '../../../components/AddParticipantDialog'
 import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
@@ -676,7 +677,11 @@ export default function Overview() {
       </Section>
 
       {event.event_type === 'vehicle_sale' && (
-        <LeadJourneyPanel eventId={event.id} />
+        <>
+          {/* Renders itself away for users without the PII permission. */}
+          <CreditApplicationPanel eventId={event.id} />
+          <LeadJourneyPanel eventId={event.id} />
+        </>
       )}
 
       <ContactEditDialog

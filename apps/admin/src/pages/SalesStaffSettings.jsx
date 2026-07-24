@@ -98,6 +98,9 @@ function emptyForm() {
     // collapse to NaN; converted to numbers on submit.
     hourly_wage_dollars: '',
     commission_rate_percent: '',
+    // Credit-application PII access is never granted at creation — it is a
+    // deliberate second step on an existing admin.
+    can_view_application_pii: false,
   }
 }
 
@@ -114,6 +117,7 @@ function formFromRow(row) {
       row.commission_rate == null
         ? ''
         : String(Math.round(row.commission_rate * 10000) / 100),
+    can_view_application_pii: Boolean(row.can_view_application_pii),
   }
 }
 
@@ -286,6 +290,9 @@ export default function SalesStaffSettings() {
     }
     if (code === 'invalid_role') return 'That role is not allowed.'
     if (code === 'nothing_to_update') return 'No changes to save.'
+    if (code === 'pii_permission_requires_admin') {
+      return detail.message || 'Only admins can view credit applications.'
+    }
     return 'Could not save the profile.'
   }
 
@@ -423,6 +430,11 @@ export default function SalesStaffSettings() {
           role: form.role,
           is_active: form.is_active,
           ...compensationPayload(form),
+          // Only admins can hold this; sending it for other roles would
+          // trip the backend's 422 guard on an unrelated save.
+          ...(form.role === 'admin'
+            ? { can_view_application_pii: form.can_view_application_pii }
+            : {}),
         }
         await patchSalesStaff(userId, body)
         await refresh()
@@ -925,6 +937,49 @@ export default function SalesStaffSettings() {
                             )}
                           </Button>
                         ) : null}
+
+                        {editDialog.mode === 'edit' &&
+                          editDialog.form.role === 'admin' && (
+                            <Box
+                              sx={{
+                                mt: 1,
+                                pt: 1.5,
+                                borderTop: 1,
+                                borderColor: 'divider',
+                                width: '100%',
+                              }}
+                            >
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    checked={
+                                      editDialog.form.can_view_application_pii
+                                    }
+                                    onChange={(e) =>
+                                      updateForm({
+                                        can_view_application_pii:
+                                          e.target.checked,
+                                      })
+                                    }
+                                    disabled={editDialog.saving}
+                                  />
+                                }
+                                label="Can view credit applications"
+                              />
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                sx={{ ml: 0.5 }}
+                              >
+                                Lets this admin reveal customer date of birth,
+                                driver&apos;s license, SSN, and home address on
+                                a deal. Every reveal is logged under their
+                                name. Turning this off signs them out
+                                immediately.
+                              </Typography>
+                            </Box>
+                          )}
                       </Stack>
                     ) : (
                       <Stack spacing={1.5}>

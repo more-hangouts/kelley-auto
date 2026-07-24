@@ -22,6 +22,17 @@ export async function getEventJourney(eventId) {
   return data
 }
 
+// Decrypted BHPH credit-application PII (DOB / driver's license / SSN /
+// address). Call this ONLY in response to a deliberate user action — every
+// success writes an `application.pii_viewed` audit row naming the viewer, so
+// fetching it on page load would forge an audit trail of reads nobody made.
+// 403 = caller lacks `lead_applications:read_sensitive`; 404 = no application
+// on file for this deal.
+export async function getEventApplication(eventId) {
+  const { data } = await api.get(`/events/${eventId}/application`)
+  return data
+}
+
 export async function addEventParticipant(eventId, body) {
   // Canonical home for the add-participant flow (Phase 6). Both admin
   // and sales tokens hit the same path; the deprecated alias under
