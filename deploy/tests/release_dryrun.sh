@@ -95,6 +95,8 @@ if run_promote "$SHA_A" >/dev/null 2>&1; then
   [[ -f "$REL_ROOT/phase2-baseline/storefront-next/BUILD_ID" ]] && ok "phase2-baseline .next preserved" || bad "phase2-baseline .next missing"
   grep -q "phase2 admin" "$REL_ROOT/phase2-baseline/admin/index.html" && ok "phase2 bytes intact" || bad "phase2 bytes changed"
   [[ "$(readlink -f "$APP_ADMIN/dist")" == "$REL_ROOT/$SHA_A/admin" ]] && ok "admin points at A" || bad "admin not pointing at A"
+  # phase2-baseline must get a VALIDATED manifest so it is rollback-able (H1)
+  [[ -f "$REL_ROOT/phase2-baseline/manifest.json" ]] && grep -q '"validated": true' "$REL_ROOT/phase2-baseline/manifest.json" && ok "phase2-baseline manifest is validated" || bad "phase2-baseline manifest missing/unvalidated"
   # stop must precede start in the log
   if [[ "$(grep -nE 'stop kelley-public|start kelley-public' "$STUB_LOG" | head -1)" == *stop* ]]; then ok "storefront stop precedes start"; else bad "start before stop"; fi
 else
@@ -116,8 +118,9 @@ echo "== 5) partial-failure: storefront start fails -> both pointers restored to
 if STUB_FAIL_START=1 run_promote "$SHA_A" >/dev/null 2>&1; then
   bad "promote reported success despite start failure"
 else
-  # after a failed promote to A, pointers should be restored to the pre-attempt active (B)
+  # after a failed promote to A, BOTH pointers should be restored to B
   [[ "$(readlink -f "$APP_ADMIN/dist")" == "$REL_ROOT/$SHA_B/admin" ]] && ok "admin restored to B after partial failure" || bad "admin not restored (got $(readlink -f "$APP_ADMIN/dist"))"
+  [[ "$(readlink -f "$APP_STORE/.next-current")" == "$REL_ROOT/$SHA_B/storefront-next" ]] && ok "storefront restored to B after partial failure" || bad "storefront not restored (got $(readlink -f "$APP_STORE/.next-current"))"
 fi
 
 echo "== 6) rollback to A succeeds and no-op guard rejects repeat =="
@@ -127,6 +130,16 @@ if run_rollback "$SHA_A" >/dev/null 2>&1; then
   if run_rollback "$SHA_A" >/dev/null 2>&1; then bad "no-op rollback accepted"; else ok "no-op rollback rejected"; fi
 else
   bad "rollback to A failed"
+fi
+
+echo "== 7) rollback to phase2-baseline works (H1: baseline is a valid target) =="
+: > "$STUB_LOG"
+if run_rollback "phase2-baseline" >/dev/null 2>&1; then
+  [[ "$(readlink -f "$APP_ADMIN/dist")" == "$REL_ROOT/phase2-baseline/admin" ]] && ok "rolled back to phase2-baseline admin" || bad "did not switch to baseline admin"
+  [[ "$(readlink -f "$APP_STORE/.next-current")" == "$REL_ROOT/phase2-baseline/storefront-next" ]] && ok "rolled back to phase2-baseline storefront" || bad "did not switch to baseline storefront"
+  grep -q "phase2 admin" "$APP_ADMIN/dist/index.html" && ok "phase2-baseline bytes served after rollback" || bad "baseline bytes wrong"
+else
+  bad "rollback to phase2-baseline failed (H1 regression)"
 fi
 
 echo ""

@@ -175,7 +175,12 @@ After restart, `install.sh` polls until healthy (bounded by
 ## 12. Staged releases, backup, and rollback
 
 Frontend releases are **staged, versioned, and recoverable** (Phase 6). A build
-never touches the live artifacts; promotion switches a symlink.
+never touches the live served artifacts (`apps/admin/dist`,
+`apps/storefront/.next`); promotion switches a symlink. (Staging does run
+`pnpm install --frozen-lockfile`, which touches the shared `node_modules` the
+running storefront imports from — normally a no-op against a frozen lockfile,
+but stage during a quiet window or from a separate checkout if a release
+changes dependencies.)
 
 - **Stage** (unprivileged, never touches live) — builds admin + storefront into
   `releases/<git-sha>/`, writes a checksummed manifest, runs preview HTTP checks

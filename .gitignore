@@ -21,6 +21,8 @@ apps/storefront/.next-current
 apps/storefront/.next-releases/
 apps/storefront/.next-stage-*
 apps/storefront/.next-preview-*
+apps/storefront/.next-env.d.ts.stagebak
+apps/storefront/.tsconfig.json.stagebak
 
 # ---- E2E generated artifacts ----
 apps/admin/e2e/.build/

@@ -3,9 +3,13 @@
 # stage-release.sh — build a versioned, checksummed, recoverable release into
 # /opt/kelley/releases/<git-sha>/ WITHOUT touching any live artifact.
 #
-# Unprivileged. Never writes into apps/admin/dist or apps/storefront/.next, and
-# never moves a live symlink. A build failure leaves the live site untouched
-# and the partial release un-promotable (no validated manifest).
+# Unprivileged. Never writes into the live served ARTIFACTS (apps/admin/dist,
+# apps/storefront/.next) and never moves a live pointer. A build failure leaves
+# those untouched and the partial release un-promotable (no validated
+# manifest). Caveat: `pnpm install --frozen-lockfile` DOES touch the shared
+# node_modules the running storefront imports from — run staging in a
+# quiet/pre-window period, or from a separate checkout, if a release changes
+# dependencies (the lockfile is frozen, so this is normally a no-op).
 #
 # Usage:
 #   deploy/stage-release.sh [--sha <full40hexsha>] [--verify-only] [--skip-e2e]
@@ -106,15 +110,23 @@ else
   STORE_STAGE_ABS="$ROOT/apps/storefront/$STORE_REL"
   rm -rf "$STORE_STAGE_ABS"
   # `next build` rewrites next-env.d.ts and tsconfig.json's `include` to point
-  # at the build's types dir. Snapshot both and restore them afterward so the
-  # working tree is left pristine (these are tracked files).
+  # at the build's types dir. Snapshot both and restore them via a trap so the
+  # working tree is left pristine even if the build FAILS (otherwise a failed
+  # build leaves mutated tracked files + .bak litter that block the clean-tree
+  # gate on the next run). The backups use fixed names cleaned by the trap.
   SF="$ROOT/apps/storefront"
-  cp "$SF/next-env.d.ts" "$SF/.next-env.d.ts.bak" 2>/dev/null || true
-  cp "$SF/tsconfig.json" "$SF/.tsconfig.json.bak" 2>/dev/null || true
+  cp "$SF/next-env.d.ts" "$SF/.next-env.d.ts.stagebak" 2>/dev/null || true
+  cp "$SF/tsconfig.json" "$SF/.tsconfig.json.stagebak" 2>/dev/null || true
+  restore_sf_config() {
+    [[ -f "$SF/.next-env.d.ts.stagebak" ]] && mv -f "$SF/.next-env.d.ts.stagebak" "$SF/next-env.d.ts"
+    [[ -f "$SF/.tsconfig.json.stagebak" ]] && mv -f "$SF/.tsconfig.json.stagebak" "$SF/tsconfig.json"
+    return 0
+  }
+  trap restore_sf_config EXIT
   ( cd "$SF" && NEXT_DIST_DIR="$STORE_REL" pnpm exec next build )
-  [[ -f "$SF/.next-env.d.ts.bak" ]] && mv "$SF/.next-env.d.ts.bak" "$SF/next-env.d.ts"
-  [[ -f "$SF/.tsconfig.json.bak" ]] && mv "$SF/.tsconfig.json.bak" "$SF/tsconfig.json"
-  [[ -s "$STORE_STAGE_ABS/BUILD_ID" ]] || { echo "error: storefront build produced no BUILD_ID at $STORE_STAGE_ABS" >&2; exit 4; }
+  restore_sf_config
+  trap - EXIT
+  [[ -s "$STORE_STAGE_ABS/BUILD_ID" ]] || { echo "error: storefront build produced no BUILD_ID at $STORE_STAGE_ABS" >&2; rm -rf "$STORE_STAGE_ABS"; exit 4; }
   rm -rf "$STORE_OUT"
   mv "$STORE_STAGE_ABS" "$STORE_OUT"
 fi

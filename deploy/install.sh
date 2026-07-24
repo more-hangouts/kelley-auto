@@ -86,6 +86,22 @@ backup "$BACKEND_UNIT_DST"
 backup "$PUBLIC_UNIT_DST"
 backup "$CADDY_DST"
 
+# 3b. Safety guard: the repo kelley-public.service sets NEXT_DIST_DIR=.next-current,
+# which only exists once the box has been converted to staged releases (the
+# first promote-release.sh run creates the symlink). Installing this unit onto
+# an UNCONVERTED box would make `next start` look for a nonexistent distDir and
+# crash-loop. Refuse unless the symlink exists (or the operator overrides).
+if grep -q 'NEXT_DIST_DIR=.next-current' "$PUBLIC_UNIT_SRC" 2>/dev/null; then
+  if [[ ! -e "/opt/kelley/apps/storefront/.next-current" && "${ALLOW_UNCONVERTED_PUBLIC_UNIT:-0}" != "1" ]]; then
+    echo "error: $PUBLIC_UNIT_SRC sets NEXT_DIST_DIR=.next-current but" >&2
+    echo "       /opt/kelley/apps/storefront/.next-current does not exist." >&2
+    echo "       Convert to staged releases first (deploy/promote-release.sh," >&2
+    echo "       which installs this unit itself), or set ALLOW_UNCONVERTED_PUBLIC_UNIT=1" >&2
+    echo "       if you have created the symlink manually." >&2
+    exit 1
+  fi
+fi
+
 # 4. Install with explicit modes/owner.
 echo "==> installing units + Caddyfile"
 install -m 0644 -o root -g root "$BACKEND_UNIT_SRC" "$BACKEND_UNIT_DST"

@@ -90,31 +90,61 @@ PREV_STORE=""
 [[ -L "$ADMIN_LINK" ]] && PREV_ADMIN="$(readlink -f "$ADMIN_LINK" || true)"
 [[ -L "$STOREFRONT_LINK" ]] && PREV_STORE="$(readlink -f "$STOREFRONT_LINK" || true)"
 
+# Write a validated manifest for a directory-only release (e.g.
+# phase2-baseline) so promote/rollback accept it as a target. Checksums are
+# best-effort; the marker that matters is "validated": true.
+write_baseline_manifest() {
+  local dir="$1"
+  [[ -f "$dir/manifest.json" ]] && return 0
+  ( cd "$dir" && find admin storefront-next -type f -print0 2>/dev/null | sort -z \
+      | xargs -0 sha256sum > .checksums.sha256 2>/dev/null || true )
+  local build_id=""
+  [[ -f "$dir/storefront-next/BUILD_ID" ]] && build_id="$(cat "$dir/storefront-next/BUILD_ID")"
+  cat > "$dir/manifest.json" <<EOF
+{ "sha": "phase2-baseline", "build_id": "$build_id", "admin_path": "phase2-baseline/admin", "storefront_path": "phase2-baseline/storefront-next", "note": "pre-restructure Phase-2 build captured at first conversion", "validated": true }
+EOF
+}
+
 # --- first conversion: current dist/.next are real dirs, not symlinks ---
+# Detect it up front so the failure/restore path can distinguish it. On a
+# first conversion there are NO previous symlinks to restore, so if promotion
+# fails we must restore the baseline dirs, not leave the services on the
+# failed release.
 BASELINE_DIR="$RELEASE_ROOT/phase2-baseline"
-if [[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" ]]; then
-  echo "==> first conversion: preserving current admin dist as phase2-baseline"
-  mkdir -p "$BASELINE_DIR"
-  mv "$ADMIN_LINK" "$BASELINE_DIR/admin"
-fi
-if [[ ! -L "$STOREFRONT_LINK" && -d "$STOREFRONT_APP/.next" && ! -e "$BASELINE_DIR/storefront-next" ]]; then
-  echo "==> first conversion: preserving current .next as phase2-baseline"
-  mkdir -p "$BASELINE_DIR"
-  # storefront must be stopped before we move the tree it serves (done below);
-  # record intent — the actual mv happens after the stop.
-  NEED_STORE_BASELINE=1
-fi
+FIRST_CONVERSION=0
+[[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" ]] && FIRST_CONVERSION=1
+[[ ! -L "$STOREFRONT_LINK" && -d "$STOREFRONT_APP/.next" ]] && FIRST_CONVERSION=1
 
 echo "==> promoting release $REL_ID"
 echo "    admin:      $ADMIN_SRC"
 echo "    storefront: $STORE_SRC"
 
 # --- stop storefront BEFORE switching its artifact ---
+# Guard the stop: on first conversion the admin dir has not moved yet, so an
+# aborted stop leaves the box exactly as it was. Fall through to the failure
+# handler on stop failure rather than aborting under set -e.
 echo "==> stopping storefront"
-svc stop kelley-public
+ok=1
+svc stop kelley-public || ok=0
+if [[ "$ok" -ne 1 ]]; then
+  echo "error: could not stop kelley-public; aborting before any artifact move (box unchanged)" >&2
+  exit 6
+fi
 
-if [[ "${NEED_STORE_BASELINE:-0}" == "1" ]]; then
-  mv "$STOREFRONT_APP/.next" "$BASELINE_DIR/storefront-next"
+# --- perform first-conversion moves now (storefront is stopped) ---
+if [[ "$FIRST_CONVERSION" -eq 1 ]]; then
+  echo "==> first conversion: preserving current Phase-2 build as phase2-baseline"
+  mkdir -p "$BASELINE_DIR"
+  if [[ ! -L "$ADMIN_LINK" && -d "$ADMIN_LINK" && ! -e "$BASELINE_DIR/admin" ]]; then
+    mv "$ADMIN_LINK" "$BASELINE_DIR/admin"
+  fi
+  if [[ ! -L "$STOREFRONT_LINK" && -d "$STOREFRONT_APP/.next" && ! -e "$BASELINE_DIR/storefront-next" ]]; then
+    mv "$STOREFRONT_APP/.next" "$BASELINE_DIR/storefront-next"
+  fi
+  write_baseline_manifest "$BASELINE_DIR"
+  # On first conversion the "previous" target IS the baseline we just made.
+  PREV_ADMIN="$(realpath -e "$BASELINE_DIR/admin" 2>/dev/null || true)"
+  PREV_STORE="$(realpath -e "$BASELINE_DIR/storefront-next" 2>/dev/null || true)"
 fi
 
 # --- swap both pointers ---
