@@ -96,10 +96,18 @@ intentionally deploying inside a release window.
 
 ## Browser verification
 
-Interactive browser verification (route rendering, lazy-load behavior, console
-errors, mobile layout) is a release gate that is currently **outstanding** —
-Chromium system libraries are unavailable on the VPS. Static and HTTP-level
-checks (build manifest analysis, SPA-fallback and asset-fetch checks against a
-temporary `vite preview`) stand in until a browser-capable environment is
-available. Do not claim browser verification is complete until it has actually
-run.
+Browser verification (route rendering, lazy-load behavior, admin/sales chunk
+isolation, console errors, asset 404s, mobile layout) runs as a **containerized
+Playwright suite** in `e2e/`, using the pinned
+`mcr.microsoft.com/playwright:v1.61.1-noble` image — so it needs no Chromium
+system libraries on the host (the VPS has none):
+
+```bash
+pnpm --filter ./apps/admin run test:e2e:docker
+```
+
+It builds temporary admin and forced-sales bundles (**never** the live `dist`)
+and mocks the API for authenticated pages while leaving unauthenticated
+redirects real. It is a required release gate and runs inside
+`deploy/stage-release.sh`. Do not claim browser verification is complete until
+the suite has actually run.

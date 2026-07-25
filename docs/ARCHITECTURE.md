@@ -60,17 +60,17 @@ six are gated by a `MODULE_<NAME>_ENABLED` setting, all defaulting to **true**.
 
 | Module | Responsibility | Enable flag (default) | Router mounts | Workers | Can disable? |
 |---|---|---|---|---|---|
-| `core` | auth, staff, business profile, notifications infra, global search, cron state | — (kernel) | 13 | `notifications`, `daily` | No |
-| `contacts` | contact/customer records, lead PII, buyer journey | — (kernel) | 1 | — | No |
-| `messaging` | inbox, web chat, Twilio + Meta webhooks | `MODULE_MESSAGING_ENABLED` (true) | 4 | — | Yes |
+| `core` | auth, staff, business profile, notifications infra, SMS transport, global search, cron state | — (kernel) | 13 | `notifications`, `daily` | No |
+| `contacts` | contact/customer records, lead PII, buyer journey, call attempts | — (kernel) | 2 | — | No |
+| `messaging` | inbox, web chat, Twilio + Meta webhooks, voice bridge | `MODULE_MESSAGING_ENABLED` (true) | 4 | — | Yes |
 | `deals` | events, invoices, quotes, payments, customer portal, special orders | `MODULE_DEALS_ENABLED` (true) | 19 | — | Yes |
 | `inventory` | vehicle catalog, VIN decode, pricing | `MODULE_INVENTORY_ENABLED` (true) | 2 | — | Yes |
 | `scheduling` | shifts, schedules, time-off, clock/attendance | `MODULE_SCHEDULING_ENABLED` (true) | 16 | `schedule_monitor` | Yes |
 | `booking` | public booking, walk-ins, sales appointments | `MODULE_BOOKING_ENABLED` (true) | 6 | — | Yes |
-| `analytics` | storefront analytics, attribution, Meta CAPI, dashboards | `MODULE_ANALYTICS_ENABLED` (true) | 3 | — | Yes |
+| `analytics` | storefront analytics, attribution, Meta CAPI, call/sales activity, dashboards | `MODULE_ANALYTICS_ENABLED` (true) | 5 | — | Yes |
 
-There are 64 router mounts in total, contributing **294 total app routes (289
-HTTP API endpoints across 240 OpenAPI paths)**.
+There are 67 router mounts in total, contributing **305 total app routes (291
+HTTP API endpoints across 250 OpenAPI paths)**.
 
 **What "disabled" means:** a disabled module does not mount its routers and does
 not start its workers. Its Python package and its models **still import** — every
@@ -116,14 +116,14 @@ callers.
 
 - **All models import unconditionally**, regardless of module enable flags, so
   every table registers on the shared `Base.metadata`.
-- The facade exposes **88 public exports** — 69 model classes (one per table),
+- The facade exposes **89 public exports** — 70 model classes (one per table),
   plus `Base` and the SQLAlchemy column/type helpers re-exported for convenience.
-- There are **69 tables**.
+- There are **70 tables**.
 
 ## 8. Immutable migrations
 
 Migrations live in `apps/api/database/migrations/` as flat, sequentially
-numbered files (`001_*.py` … `097_*.py`, **97 total**). They are **append-only
+numbered files (`001_*.py` … `098_*.py`, **98 total**). They are **append-only
 and immutable** — historical artifacts that must stay byte-for-byte identical so
 a fresh replay reproduces production exactly. New schema work is always a **new**
 numbered file; existing migrations are never edited, renumbered, or squashed. The
@@ -158,7 +158,43 @@ The core CRM flow spans several modules:
 identity; `inventory` supplies the vehicle; `booking` supplies appointments and
 walk-ins; `analytics` records attribution and milestones.
 
-## 11. Admin and sales SPA
+## 11. Customer communications (SMS, voice, inbox)
+
+Customer contact spans three modules: `messaging` owns the conversation model and
+the carrier webhooks, `core` owns the SMS transport, and `contacts`/`analytics`
+own call attempts and their reporting.
+
+**Omnichannel inbox.** One `Conversation`/`Message` model backs every channel —
+SMS, Facebook, Instagram, and `web_chat` (the storefront chat widget). Inbound
+Twilio and Meta webhooks verify their signatures in-house; there is **no Twilio
+SDK dependency**. Web chat needs no external transport, so the admin composer is
+live for it while SMS and Meta outbound remain flag-gated.
+
+**A2P 10DLC consent.** Outbound SMS passes a consent gate in
+`modules/messaging/services/inbox_service.py`. A **business-initiated** text
+requires express written consent — `contacts.sms_consent_at`, recorded when a
+customer checks the optional consent box on a public form. Consent is **never a
+submit gate**: the forms accept a lead with the box unchecked (a campaign was
+once rejected for treating consent as a condition of service). Replying inside a
+customer-initiated conversation is allowed without a stored timestamp. A blocked
+send raises `recipient_no_sms_consent` (HTTP 409), and the composer mirrors the
+same rule so the UI never offers a send the API would reject. Opt-out is checked
+independently.
+
+**Call tracking.** `contact_call_attempts` (migration `098`) logs outbound call
+attempts from the CRM. `contacts` exposes the write/read endpoints and
+`analytics` serves the admin and sales call-activity dashboards.
+
+**Voice bridge.** An optional click-to-call path (`TWILIO_VOICE_ENABLED`,
+default **false**) rings the rep first and bridges to the contact, so the contact
+sees the **business** number rather than the rep's cell. Twilio fetches TwiML
+from a callback carrying a **short-lived signed JWT** that binds one call attempt
+to one exact destination number — the token authorizes the number, so the
+endpoint can never be coerced into dialing an arbitrary one. It reuses the
+call-attempt logging above and needed no migration. The native `tel:` dialer path
+remains alongside it.
+
+## 12. Admin and sales SPA
 
 `apps/admin` is one Vite/React build that serves two surfaces from the **same
 bundle**, chosen at runtime by hostname. `isSalesSubdomain()` (in
@@ -168,7 +204,7 @@ not match). `App.jsx` mounts the sales app for sales hosts and the admin app
 otherwise. The two apps have separate auth contexts, routers, and session
 cookies.
 
-## 12. API client split
+## 13. API client split
 
 All admin/sales API calls go through `src/services/api/`:
 
@@ -183,7 +219,7 @@ All admin/sales API calls go through `src/services/api/`:
   `services/api/` imports the barrel (cycle safety). The surface is frozen at
   **227 named exports + 1 default** and guarded by `check:api-exports`.
 
-## 13. Lazy loading and bundle structure
+## 14. Lazy loading and bundle structure
 
 Every page-level route in both `App.jsx` and `sales/SalesApp.jsx` is
 `React.lazy` + `Suspense`, and `SalesApp` itself is lazy from `App.jsx`, so the
@@ -194,13 +230,12 @@ admin surface never downloads sales page chunks and vice versa. `vite.config.js`
 single ~1,386,895 raw / ~401,845 gzip bundle — a ~42% reduction), with ~47
 lazily-loaded route chunks.
 
-> **Not yet deployed.** The live `apps/admin/dist` still serves the pre-split
-> single-bundle build (the ~1.39 MB monolith). The split/chunked build above is
-> what current source produces; it deploys in Phase 6 (Window B). This is the
-> admin-SPA analogue of the pre-Phase-3 backend still running in production
-> (see [OPERATIONS.md §20](OPERATIONS.md#20-window-b-phase-6-preflight-risks)).
+> **Deployed.** The live `apps/admin/dist` now serves the split/chunked build —
+> the `mui`, `react-vendor`, `vendor`, `dnd`, and entry chunks described above,
+> not the former ~1.39 MB single bundle. The backend likewise runs the current
+> modularized source (`/api/health` reports `migrations_applied: 98`).
 
-## 14. Shared packages
+## 15. Shared packages
 
 - **`@kelley/shared-types`** — a small ESM package exporting `EVENT_TYPES` and
   `INBOX_CHANNELS`. It is **scaffolded and not yet consumed by any app**; the
@@ -211,7 +246,7 @@ lazily-loaded route chunks.
   `apps/api/assets/email/`; email rendering must not depend on resolving this
   package.
 
-## 15. Known cross-domain coupling
+## 16. Known cross-domain coupling
 
 The backend modules are cleanly separated at the router/worker level but retain
 **pre-existing cross-domain imports** (made visible, not removed, by the Phase 3
@@ -233,7 +268,7 @@ Because of this coupling, disabling an optional module removes its routes and
 owned workers but does not make the codebase importable without the modules it
 depends on — every package still imports.
 
-## 16. Security / session overview
+## 17. Security / session overview
 
 - **Auth** is cookie-based: the session lives in an HttpOnly cookie the browser
   attaches automatically; JavaScript cannot read it. A separate readable CSRF
@@ -250,14 +285,18 @@ depends on — every package still imports.
 Exact secret handling and environment variables are covered in
 [OPERATIONS.md](OPERATIONS.md); no secret values appear in this repository.
 
-## 17. Boundaries and deferred improvements
+## 18. Boundaries and deferred improvements
 
 - **Cross-domain coupling** (§15) is intentionally deferred — the modules are
   registry-separated but not import-independent.
 - **`@kelley/shared-types` / `@kelley/brand-assets`** consolidation is scaffolded
   but not wired up; the API and the checked-in email asset remain authoritative.
-- **Staged/recoverable deploy artifacts** do not exist yet — production builds
-  currently write in place (see [OPERATIONS.md](OPERATIONS.md)); this is a Phase
-  6 (Window B) preflight item.
-- **Browser end-to-end verification** for the admin/sales SPA is outstanding
-  (Chromium system libraries unavailable on the VPS) and is a release gate.
+- **Staged/recoverable deploy artifacts** are implemented — `stage-release.sh` /
+  `promote-release.sh` / `rollback-release.sh` build into `releases/<sha>/` and
+  promote atomically. The in-place `build.sh --admin` / `--storefront` paths
+  still exist and still publish live; they must not be used for a deploy (see
+  [OPERATIONS.md §12](OPERATIONS.md#12-staged-releases-backup-and-rollback)).
+- **Browser end-to-end verification** is implemented as a containerized
+  Playwright suite (`apps/admin/e2e/`, pinned `v1.61.1-noble`) that needs no host
+  Chromium and runs as a release gate inside `stage-release.sh` (see
+  [OPERATIONS.md §19](OPERATIONS.md#19-browser-e2e-release-gate)).

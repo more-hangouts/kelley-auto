@@ -337,8 +337,10 @@ It is a **required release gate** and runs automatically inside
 2. **Browser E2E gate — IMPLEMENTED (§19).** The pinned-Playwright Docker suite
    (`apps/admin/e2e/`) runs as part of `stage-release.sh` and must pass before a
    release is marked validated.
-3. **Unexpected backend restart loads current source.** The running backend was
-   started before the Phase 3 modularization; `kelley-backend.service` has
-   `Restart=always`. A crash, restart, or reboot will bring the backend up on the
-   **current modularized source** ahead of the planned Window B. Phase 3/4 are
-   well verified, but this is an operational fact to plan around.
+3. **Backend now runs current source — resolved.** The concern here was that the
+   running backend predated the Phase 3 modularization while
+   `kelley-backend.service` has `Restart=always`, so any crash or reboot would
+   load the new source unplanned. That transition has since happened: the live
+   backend runs the current modularized source and the live `apps/admin/dist`
+   serves the split/chunked bundle. Verify with `/api/health`
+   (`migrations_applied: 98`) rather than assuming either state.

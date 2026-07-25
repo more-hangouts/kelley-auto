@@ -46,7 +46,7 @@ focused smokes for the domain you touched over the full ~90-test suite.
 
 ### Migrations are append-only and immutable
 
-Migrations in `apps/api/database/migrations/` (`001_*.py` … `097_*.py`) are
+Migrations in `apps/api/database/migrations/` (`001_*.py` … `098_*.py`) are
 historical artifacts. **Never edit, renumber, squash, or otherwise rewrite an
 existing migration** — a replay must reproduce production byte-for-byte. New
 schema work is a new numbered file. The runner is forward-only
@@ -83,7 +83,27 @@ make module packages conditionally importable.
 Cross-domain imports exist and are (for now) accepted; the dependency graph is
 not acyclic. Don't add new cross-domain coupling casually, but untangling the
 existing coupling is out of scope — see
-[docs/ARCHITECTURE.md §15](docs/ARCHITECTURE.md#15-known-cross-domain-coupling).
+[docs/ARCHITECTURE.md §16](docs/ARCHITECTURE.md#16-known-cross-domain-coupling).
+
+### Customer messaging is consent-gated (A2P 10DLC)
+
+Outbound SMS is a **compliance surface**, not just a feature.
+
+- **Never make SMS consent a condition of using a form.** Public forms must
+  submit with the consent box unchecked; the box only records
+  `contacts.sms_consent_at`. A carrier campaign was previously rejected for
+  gating service on consent.
+- **Every outbound SMS goes through the send path in
+  `modules/messaging/services/inbox_service.py`,** which enforces consent and
+  opt-out. Do not add a second send path that bypasses it. Business-initiated
+  texts need stored consent; replying inside a customer-initiated conversation
+  does not. Blocked sends raise `recipient_no_sms_consent` (409).
+- Keep the composer's enable/disable rule mirroring the server gate, so the UI
+  never offers a send the API will reject.
+- `SMS_SENDING_ENABLED` defaults **false**; the voice bridge
+  (`TWILIO_VOICE_ENABLED`) also defaults false. Leave them off outside a
+  deliberate rollout. See
+  [docs/ARCHITECTURE.md §11](docs/ARCHITECTURE.md#11-customer-communications-sms-voice-inbox).
 
 ## Admin / sales SPA
 
