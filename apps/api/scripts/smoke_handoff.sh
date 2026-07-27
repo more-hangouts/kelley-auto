@@ -95,6 +95,7 @@ SUITE=(
 
   # contacts / events
   tests/test_contacts_smoke.py
+  tests/test_dob_normalization_smoke.py
   tests/test_events_smoke.py
   tests/test_event_documents_smoke.py
   tests/test_event_participants_smoke.py

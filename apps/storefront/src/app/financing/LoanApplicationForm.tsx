@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { submitLead } from "@/lib/publicApi";
 import { getTrackingContext, track } from "@/lib/analytics";
 import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
+import { isValidDateOfBirth, maskDateOfBirth } from "@/lib/dob";
 
 const FORM_TYPE = "loan_application";
 
@@ -86,6 +87,12 @@ export default function LoanApplicationForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // `required` only catches an empty field; a complete-but-impossible date
+    // ("13/45/1995") would otherwise sail through to the encrypted column.
+    if (!isValidDateOfBirth(form.dateOfBirth)) {
+      setError("Please enter your date of birth as mm/dd/yyyy.");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -231,15 +238,30 @@ export default function LoanApplicationForm({
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input
-          required
-          type="text"
-          inputMode="numeric"
-          placeholder="DOB / Date of birth (mm/dd/yyyy)"
-          value={form.dateOfBirth}
-          onChange={update("dateOfBirth")}
-          className={inputClass}
-        />
+        <div>
+          <input
+            required
+            type="text"
+            inputMode="numeric"
+            placeholder="DOB / Date of birth (mm/dd/yyyy)"
+            value={form.dateOfBirth}
+            onChange={(e) => {
+              markStarted();
+              setForm((current) => ({
+                ...current,
+                dateOfBirth: maskDateOfBirth(e.target.value),
+              }));
+            }}
+            maxLength={10}
+            className={inputClass}
+          />
+          {form.dateOfBirth.length === 10 &&
+            !isValidDateOfBirth(form.dateOfBirth) && (
+              <p className="mt-1 text-xs text-red-600">
+                That date doesn&apos;t look right — please check it.
+              </p>
+            )}
+        </div>
         <input
           placeholder="Driver's license state"
           value={form.driversLicenseState}

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { submitLead } from "@/lib/publicApi";
 import { getTrackingContext, track } from "@/lib/analytics";
 import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
+import { isValidDateOfBirth, maskDateOfBirth } from "@/lib/dob";
 
 const FORM_TYPE = "vehicle_inquiry";
 
@@ -304,7 +305,7 @@ export default function InquiryForm({
   const phoneValid = phone.trim().length > 0;
   const approvalValid =
     address.trim().length > 0 &&
-    dateOfBirth.trim().length > 0 &&
+    isValidDateOfBirth(dateOfBirth) &&
     hasDriversLicense &&
     US_STATES.some(
       (state) =>
@@ -500,9 +501,18 @@ export default function InquiryForm({
                     aria-label="DOB or date of birth"
                     placeholder="DOB / Date of birth (mm/dd/yyyy)"
                     value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    onChange={(e) =>
+                      setDateOfBirth(maskDateOfBirth(e.target.value))
+                    }
+                    maxLength={10}
                     className={inputClass}
                   />
+                  {dateOfBirth.length === 10 &&
+                    !isValidDateOfBirth(dateOfBirth) && (
+                      <p className="-mt-1 text-xs text-red-600">
+                        That date doesn&apos;t look right — please check it.
+                      </p>
+                    )}
                   <label className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-25 px-4 py-3 text-sm text-neutral-600">
                     <input
                       type="checkbox"

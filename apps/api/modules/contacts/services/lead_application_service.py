@@ -14,7 +14,9 @@ fields.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -58,11 +60,61 @@ class ApplicationInput:
         return out
 
 
+# Date-of-birth shapes intake has actually produced. The storefront masks the
+# field to mm/dd/yyyy, but the API is public and the column already holds years
+# of unmasked entries, so normalization happens here — at the only write path —
+# rather than trusting any client.
+_DOB_PATTERNS: tuple[tuple[re.Pattern[str], tuple[int, int, int]], ...] = (
+    # (pattern, (year_group, month_group, day_group))
+    (re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$"), (1, 2, 3)),
+    (re.compile(r"^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$"), (3, 1, 2)),
+    (re.compile(r"^(\d{2})(\d{2})(\d{4})$"), (3, 1, 2)),
+    (re.compile(r"^(\d{4})(\d{2})(\d{2})$"), (1, 2, 3)),
+)
+
+_MAX_AGE_YEARS = 120
+
+
+def normalize_date_of_birth(raw: str | None) -> str | None:
+    """Canonicalize a free-text DOB to ``YYYY-MM-DD``.
+
+    Returns the input unchanged (trimmed) when it cannot be read as a
+    plausible birth date — a lead is worth more than a tidy column, so an
+    unreadable entry is preserved verbatim for staff to follow up on rather
+    than dropped or coerced into a wrong date. Two-digit years and bare
+    6-digit strings are deliberately NOT guessed: "071986" is ambiguous
+    between mmddyy and mm/yyyy, and inventing a day on a lender document is
+    worse than showing the applicant's own text.
+    """
+    if raw is None:
+        return None
+    text = raw.strip()
+    if not text:
+        return text
+    for pattern, (y_group, m_group, d_group) in _DOB_PATTERNS:
+        match = pattern.match(text)
+        if match is None:
+            continue
+        try:
+            parsed = date(
+                int(match.group(y_group)),
+                int(match.group(m_group)),
+                int(match.group(d_group)),
+            )
+        except ValueError:
+            continue  # impossible calendar date, e.g. 02/31 — try the next shape
+        today = date.today()
+        if parsed > today or parsed.year < today.year - _MAX_AGE_YEARS:
+            continue
+        return parsed.isoformat()
+    return text
+
+
 def _apply_to_row(row: LeadApplication, data: ApplicationInput) -> None:
     """Encrypt/set only the provided fields onto ``row`` (partial update)."""
     if data.date_of_birth is not None:
         row.date_of_birth_ciphertext = lead_pii_crypto.encrypt_optional(
-            data.date_of_birth
+            normalize_date_of_birth(data.date_of_birth)
         )
     if data.driver_license_number is not None:
         row.driver_license_number_ciphertext = lead_pii_crypto.encrypt_optional(
