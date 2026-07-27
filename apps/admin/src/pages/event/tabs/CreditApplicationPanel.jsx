@@ -16,16 +16,53 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import { useState } from 'react'
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 import { getEventApplication } from '../../../services/api'
 import { useAuth } from '../../../contexts/AuthContext'
 
+dayjs.extend(customParseFormat)
+
 const PII_PERMISSION = 'lead_applications:read_sensitive'
+
+// Intake takes the DOB as free text and most applicants fill it on a phone
+// numeric keypad, so the stored value is usually bare digits ("08101995").
+// Bare dayjs(raw) hands anything non-ISO to the Date constructor, which reads
+// "08101995" as year 0810 — hence the "(age 1214)" nonsense. Parse strictly
+// against the shapes intake actually produces instead of guessing.
+const DOB_FORMATS = [
+  'MM/DD/YYYY',
+  'M/D/YYYY',
+  'MM-DD-YYYY',
+  'M-D-YYYY',
+  'MM.DD.YYYY',
+  'YYYY-MM-DD',
+  'MMDDYYYY',
+  'YYYYMMDD',
+  'MM/DD/YY',
+  'M/D/YY',
+]
+
+/** Parsed DOB, or null when the stored text is not a date we can trust.
+ *  Anything outside a livable age range is treated as unparseable — a
+ *  wrong DOB on a lender packet is worse than a missing one. */
+function parseDOB(raw) {
+  const text = String(raw).trim()
+  for (const format of DOB_FORMATS) {
+    const d = dayjs(text, format, true)
+    if (!d.isValid()) continue
+    const age = dayjs().diff(d, 'year')
+    if (age >= 0 && age <= 120) return d
+  }
+  return null
+}
 
 function formatDOB(raw) {
   if (!raw) return null
-  const d = dayjs(raw)
-  if (!d.isValid()) return raw
+  const d = parseDOB(raw)
+  // Partial or malformed entries (e.g. "071986") show through as-is so staff
+  // can see what the applicant actually typed and re-ask.
+  if (!d) return `${String(raw).trim()} (unrecognized date)`
   // Age is the reason staff look at a DOB on a BHPH deal, so save them
   // the mental arithmetic.
   return `${d.format('MMM D, YYYY')} (age ${dayjs().diff(d, 'year')})`
