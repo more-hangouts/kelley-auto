@@ -32,7 +32,8 @@ Assertions:
     an empty cascaded_appointment_ids.
   - Sales-token PATCH against the admin route is rejected (403).
   - Non-existent event PATCH → 404.
-  - Invalid assignee (admin id) → 400.
+  - Assigning the event owner to an admin id → 200 (admins are
+    assignable owners as of 2026-07-24).
 
 No attendance-gate manipulation needed — admin is not floor-gated.
 """
@@ -472,8 +473,9 @@ def main() -> None:
     picker_ids = {row["id"] for row in resp.json()}
     assert sales_a_id in picker_ids, resp.json()
     assert sales_b_id in picker_ids, resp.json()
-    # Admin users must not appear in the picker.
-    assert admin_id not in picker_ids, resp.json()
+    # 2026-07-24: admins are assignable owners, so an active admin now
+    # appears in the picker.
+    assert admin_id in picker_ids, resp.json()
 
     # ---- Non-existent event → 404 ----
     resp = client.patch(
@@ -483,14 +485,14 @@ def main() -> None:
     )
     assert resp.status_code == 404, resp.text
 
-    # ---- Invalid assignee (admin id) → 400 ----
+    # ---- Assigning an event owner to an admin id is now valid → 200 ----
     resp = client.patch(
         f"/api/admin/events/{event_id}/owner",
         headers=admin_headers,
         json={"owner_user_id": admin_id},
     )
-    assert resp.status_code == 400, resp.text
-    assert resp.json()["detail"] == "invalid_assigned_user_id", resp.text
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["owner_user_id"] == admin_id, resp.json()
 
     # ---- Unassign (None) succeeds and clears the owner ----
     resp = client.patch(

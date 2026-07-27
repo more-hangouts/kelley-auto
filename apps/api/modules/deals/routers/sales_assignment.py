@@ -84,12 +84,13 @@ _ERROR_STATUS = {
 @router.get("/staff/assignable", response_model=list[AssignableStaffRow])
 def list_assignable(
     db: Annotated[Session, Depends(get_db)],
-    # Phase 11: relaxed from sales-only to admin-or-sales so the admin
-    # event-owner dialog reuses this single source-of-truth picker
-    # instead of forking a sibling admin endpoint. The response shape
-    # and the underlying sales_staff filter (role='sales' AND active)
-    # are unchanged — admin sees the same list of assignable stylists,
-    # never themselves.
+    # Phase 11: relaxed the *route scope* from sales-only to admin-or-sales
+    # so the admin event-owner dialog reuses this single source-of-truth
+    # picker instead of forking a sibling admin endpoint.
+    # 2026-07-24: the underlying sales_staff filter now includes admins
+    # (role in ('sales','admin') AND active) so admins are ownable too —
+    # a viewing admin therefore appears in their own list and may assign
+    # a lead/appointment to themselves.
     _user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
 ) -> list[AssignableStaffRow]:
     rows = sales_staff.list_assignable_sales_users(db)

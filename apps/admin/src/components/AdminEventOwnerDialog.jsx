@@ -36,7 +36,7 @@ function describeError(err) {
   const status = err?.response?.status
   const detail = err?.response?.data?.detail
   if (status === 400 && detail === 'invalid_assigned_user_id') {
-    return 'Pick an active sales stylist.'
+    return 'Pick an active staff member (sales or admin).'
   }
   if (status === 404 && detail === 'event_not_found') {
     return 'This event no longer exists. Reload and try again.'

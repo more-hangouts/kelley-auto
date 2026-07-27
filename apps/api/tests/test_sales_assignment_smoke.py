@@ -3,16 +3,17 @@
 Covers:
 
   - ``GET /api/sales/staff/assignable``:
-      * Lists active sales users (Sales A, Sales B).
-      * Excludes admin users and inactive sales users.
-      * Admin token gets 403 (sales scope).
+      * Lists active assignable users — sales AND admin (Sales A,
+        Sales B, and the active admin).
+      * Excludes inactive users of any role.
+      * Admin token is accepted for the picker (admin-or-sales scope).
   - ``PATCH /api/sales/appointments/{id}/assignment``:
       * Sales A reassigns an appointment to Sales B → 200.
       * activity_log gets one ``appointment.reassigned`` row anchored
         to the appointment's linked event, with payload
         ``{from_user_id: A, to_user_id: B, reason: 'sales_reassignment'}``
         and actor = caller.
-      * Assigning to an admin id → 400 ``invalid_assigned_user_id``.
+      * Assigning to an admin id → 200 (admins are assignable owners).
       * Assigning to an inactive sales id → 400.
       * Non-existent appointment id → 404.
       * Idempotent same-value patch → 200 but no new audit row.
@@ -315,14 +316,16 @@ def main() -> None:
         ids = {row["id"] for row in resp.json()}
         assert sales_a_id in ids, ids
         assert sales_b_id in ids, ids
-        assert admin_id not in ids, ids
+        # 2026-07-24: admins are now assignable owners, so an active
+        # admin appears in the picker. Inactive users of any role stay
+        # excluded.
+        assert admin_id in ids, ids
         assert inactive_id not in ids, ids
 
-        # Phase 11: the picker is now admin-or-sales scope so the admin
-        # event-owner dialog can reuse it (previously sales-only). The
-        # response shape and the underlying sales_staff filter are
-        # unchanged — admin sees the same active-sales-user list and is
-        # never themselves a row.
+        # Phase 11: the picker is admin-or-sales scope so the admin
+        # event-owner dialog can reuse it (previously sales-only).
+        # 2026-07-24: admins are assignable, so a viewing admin now sees
+        # themselves in the list (and may assign a lead to themselves).
         resp = client.get(
             "/api/sales/staff/assignable", headers=admin_headers
         )
@@ -330,7 +333,7 @@ def main() -> None:
         admin_view_ids = {row["id"] for row in resp.json()}
         assert sales_a_id in admin_view_ids, admin_view_ids
         assert sales_b_id in admin_view_ids, admin_view_ids
-        assert admin_id not in admin_view_ids, admin_view_ids
+        assert admin_id in admin_view_ids, admin_view_ids
         assert inactive_id not in admin_view_ids, admin_view_ids
 
         # ---- PATCH appointment assignment ----
@@ -371,14 +374,28 @@ def main() -> None:
         assert resp.status_code == 200, resp.text
         assert _count_reassign_rows(event_id=event_id, subject_id=appt_id) == 1
 
-        # Assigning to an admin id → 400.
+        # 2026-07-24: assigning to an admin id is now valid (admins are
+        # assignable owners) → 200, and it records a real reassignment
+        # (B → admin), bumping the audit count 1 → 2.
         resp = client.patch(
             f"/api/sales/appointments/{appt_id}/assignment",
             headers=sales_a_headers,
             json={"assigned_user_id": admin_id},
         )
-        assert resp.status_code == 400, resp.text
-        assert resp.json()["detail"] == "invalid_assigned_user_id", resp.text
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["assigned_user_id"] == admin_id, resp.text
+        assert _read_appointment(appt_id).assigned_user_id == admin_id
+        assert _count_reassign_rows(event_id=event_id, subject_id=appt_id) == 2
+
+        # Restore owner to Sales B so downstream assertions are unaffected
+        # (admin → B is another real change, audit count 2 → 3).
+        resp = client.patch(
+            f"/api/sales/appointments/{appt_id}/assignment",
+            headers=sales_a_headers,
+            json={"assigned_user_id": sales_b_id},
+        )
+        assert resp.status_code == 200, resp.text
+        assert _count_reassign_rows(event_id=event_id, subject_id=appt_id) == 3
 
         # Inactive sales user → 400.
         resp = client.patch(
@@ -415,8 +432,8 @@ def main() -> None:
         assert resp.json()["assigned_user_id"] is None
         assert _read_appointment(appt_id).assigned_user_id is None
 
-        # Audit row count went from 1 → 2 (B → None is a real change).
-        assert _count_reassign_rows(event_id=event_id, subject_id=appt_id) == 2
+        # Audit row count went from 3 → 4 (B → None is a real change).
+        assert _count_reassign_rows(event_id=event_id, subject_id=appt_id) == 4
 
         print("sales_assignment smoke ok")
     finally:
