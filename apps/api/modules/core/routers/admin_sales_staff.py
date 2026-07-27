@@ -39,7 +39,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database.auth import hash_password, require_admin_scope
+from database.auth import (
+    LEAD_APPLICATION_PII_PERMISSION,
+    bump_token_version,
+    hash_password,
+    require_admin_scope,
+)
 from database.connection import get_db
 from database.models import User
 from modules.core.services import sales_auth
@@ -75,6 +80,11 @@ class SalesStaffOut(BaseModel):
     commission_rate: float | None
     is_archived: bool
     deleted_at: str | None
+    # Whether this user may read decrypted BHPH application PII (DOB, DL,
+    # SSN, address). Surfaced as a plain bool rather than the raw
+    # `permissions` list so the UI has one obvious thing to toggle; the
+    # underlying storage stays the JSONB list.
+    can_view_application_pii: bool
 
     @classmethod
     def from_user(cls, user: User) -> "SalesStaffOut":
@@ -114,6 +124,9 @@ class SalesStaffOut(BaseModel):
                 if user.commission_rate is not None
                 else None
             ),
+            can_view_application_pii=(
+                LEAD_APPLICATION_PII_PERMISSION in (user.permissions or [])
+            ),
         )
 
 
@@ -138,6 +151,11 @@ class SalesStaffPatchRequest(BaseModel):
     is_active: bool | None = None
     hourly_wage: float | None = None
     commission_rate: float | None = None
+    # Grant / revoke decrypted BHPH application PII access. Admin-only at
+    # the model level too: granting it to a non-admin is rejected, because
+    # `require_lead_application_pii` gates on admin scope first and the
+    # permission would be dead weight that misleads the roster UI.
+    can_view_application_pii: bool | None = None
 
 
 class PinMintResponse(BaseModel):
@@ -149,6 +167,52 @@ class ArchiveStaffRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     reason: str | None = Field(default=None, max_length=500)
+
+
+def _apply_pii_permission(user: User, granted: bool, *, actor: User) -> bool:
+    """Add or remove the BHPH PII permission on `user`. Returns True only
+    when an existing grant was REVOKED, which the caller uses to decide
+    whether to invalidate that user's live tokens.
+
+    Only admins may hold it — `require_lead_application_pii` gates on admin
+    scope before it ever looks at the permission list, so granting it to a
+    sales user would be a no-op that reads as access in the roster UI.
+    Rejecting loudly beats a switch that silently does nothing.
+    """
+    current = list(user.permissions or [])
+    has = LEAD_APPLICATION_PII_PERMISSION in current
+
+    if granted and user.role != "admin":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "pii_permission_requires_admin",
+                "message": (
+                    "Only admin users can be granted credit-application "
+                    "access. Change the role to admin first."
+                ),
+            },
+        )
+
+    if granted == has:
+        return False
+
+    if granted:
+        current.append(LEAD_APPLICATION_PII_PERMISSION)
+    else:
+        current = [p for p in current if p != LEAD_APPLICATION_PII_PERMISSION]
+
+    # Reassign rather than mutate in place: SQLAlchemy does not track
+    # in-place edits to a JSONB list, so a .append() alone would not persist.
+    user.permissions = current
+
+    log.info(
+        "bhph_pii_permission_%s user_id=%s by_admin_id=%s",
+        "granted" if granted else "revoked",
+        user.id,
+        actor.id,
+    )
+    return has and not granted
 
 
 def _validate_role(value: str) -> str:
@@ -354,6 +418,7 @@ def patch_sales_staff(
 
     user = _get_staff(db, user_id)
     old_role = user.role
+    pii_stripped_by_role_change = False
 
     if "username" in sent:
         new_username = (payload.username or "").strip()
@@ -389,6 +454,25 @@ def patch_sales_staff(
 
     if "role" in sent:
         user.role = _validate_role(payload.role)
+        # Demoting out of admin strips the PII grant. Leaving it behind
+        # would be invisible dead weight that silently reactivates if the
+        # user is ever promoted back to admin.
+        if user.role != "admin" and LEAD_APPLICATION_PII_PERMISSION in (
+            user.permissions or []
+        ):
+            user.permissions = [
+                p
+                for p in (user.permissions or [])
+                if p != LEAD_APPLICATION_PII_PERMISSION
+            ]
+            pii_stripped_by_role_change = True
+            log.info(
+                "bhph_pii_permission_revoked_on_demotion user_id=%s "
+                "new_role=%s by_admin_id=%s",
+                user.id,
+                user.role,
+                _admin.id,
+            )
 
     if "is_active" in sent:
         user.is_active = bool(payload.is_active)
@@ -399,7 +483,22 @@ def patch_sales_staff(
     if "commission_rate" in sent:
         user.commission_rate = _coerce_commission_rate(payload.commission_rate)
 
+    # Runs AFTER the role assignment above so it validates against the
+    # role this request is landing on, not the one being replaced.
+    pii_revoked = False
+    if "can_view_application_pii" in sent:
+        pii_revoked = _apply_pii_permission(
+            user, bool(payload.can_view_application_pii), actor=_admin
+        )
+
     db.commit()
+    # A revoke must bite immediately — an already-issued JWT would otherwise
+    # keep working until it expired. Bumping the token version invalidates
+    # every live token for that user, so the next request is a 401 and they
+    # sign back in without the permission. Granting needs no bump: the
+    # permission is read from the DB row per request, not from the token.
+    if pii_revoked or pii_stripped_by_role_change:
+        bump_token_version(db, user)
     db.refresh(user)
     if "role" in sent and old_role != user.role:
         _send_role_changed_email_safe(
