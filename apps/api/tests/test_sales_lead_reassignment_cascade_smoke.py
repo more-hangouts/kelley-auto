@@ -404,11 +404,23 @@ def main() -> None:
         )
         assert resp.status_code == 404, resp.text
 
-        # Invalid assignee (admin id) → 400.
+        # 2026-07-24: admins are assignable owners, so handing a lead to an
+        # admin id succeeds and cascades to its appointments like any other
+        # reassignment.
         resp = client.patch(
             f"/api/sales/leads/{event_id}/assignment",
             headers=sales_a_headers,
             json={"owner_user_id": admin_id},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["owner_user_id"] == admin_id, resp.json()
+
+        # A non-existent assignee is still rejected — active-user validation
+        # is what the gate is for, not the role list.
+        resp = client.patch(
+            f"/api/sales/leads/{event_id}/assignment",
+            headers=sales_a_headers,
+            json={"owner_user_id": 9_999_999},
         )
         assert resp.status_code == 400, resp.text
         assert resp.json()["detail"] == "invalid_assigned_user_id", resp.text

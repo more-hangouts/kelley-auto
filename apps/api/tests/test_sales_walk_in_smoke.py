@@ -6,9 +6,11 @@ Covers:
     and assigned to the caller (default = self).
   - Punched-in sales user, explicit `assigned_user_id` for an active
     sales coworker → walk-in is created and assigned to the coworker.
-  - `assigned_user_id` for an admin user → 400 ``invalid_assigned_user_id``
-    (assignment is restricted to active sales users).
-  - `assigned_user_id` for a non-existent id → 400.
+  - `assigned_user_id` for an active admin → walk-in is created and
+    assigned to the admin (assignability is active sales *or* admin as
+    of 2026-07-24).
+  - `assigned_user_id` for a non-existent id → 400
+    ``invalid_assigned_user_id``.
   - Admin token → 403 ``scope_forbidden`` (sales scope required).
   - Sales user with attendance gate enabled but not punched in → 403
     ``attendance_gate``.
@@ -269,7 +271,9 @@ def main() -> None:
         _track_created(body)
         assert body["assigned_user_id"] == sales_b_id, body
 
-        # Assignment to an admin user is rejected.
+        # 2026-07-24: admins are assignable owners, so a rep may file a
+        # walk-in against an admin — tracked for teardown like any other
+        # created row.
         resp = client.post(
             "/api/sales/walk-ins",
             headers=sales_a_headers,
@@ -278,8 +282,10 @@ def main() -> None:
                 assigned_user_id=admin_id,
             ),
         )
-        assert resp.status_code == 400, resp.text
-        assert resp.json()["detail"] == "invalid_assigned_user_id", resp.text
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        _track_created(body)
+        assert body["assigned_user_id"] == admin_id, body
 
         # Assignment to a non-existent id is rejected.
         resp = client.post(
