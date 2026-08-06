@@ -69,7 +69,7 @@ export default function RecentPaymentsWidget() {
           <Stack divider={<Box sx={{ borderTop: '1px solid', borderColor: 'divider' }} />}>
             {query.data.map((p) => {
               const link = p.event_id
-                ? `/events/${p.event_id}/payments`
+                ? `/deals/${p.event_id}/payments`
                 : null
               const row = (
                 <Box

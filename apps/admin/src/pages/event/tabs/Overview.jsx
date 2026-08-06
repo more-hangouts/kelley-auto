@@ -395,7 +395,7 @@ function JourneyItem({ item, eventId, navigate }) {
     const q = item.data
     return (
       <Box
-        onClick={() => navigate(`/events/${eventId}/quotes?edit=${q.id}`)}
+        onClick={() => navigate(`/deals/${eventId}/quotes?edit=${q.id}`)}
         sx={journeyRowSx}
       >
         <DescriptionOutlinedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -418,7 +418,7 @@ function JourneyItem({ item, eventId, navigate }) {
   const showBalance = i.status === 'sent' || i.status === 'partial'
   return (
     <Box
-      onClick={() => navigate(`/events/${eventId}/invoices?edit=${i.id}`)}
+      onClick={() => navigate(`/deals/${eventId}/invoices?edit=${i.id}`)}
       sx={journeyRowSx}
     >
       <ReceiptLongOutlinedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />

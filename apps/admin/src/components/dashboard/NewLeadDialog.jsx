@@ -126,7 +126,7 @@ export default function NewLeadDialog({ open, onClose }) {
     onSuccess: (resp) => {
       onClose?.()
       if (resp?.event?.id) {
-        navigate(`/events/${resp.event.id}/overview`)
+        navigate(`/deals/${resp.event.id}/overview`)
       }
     },
     onError: (err) => setError(describeError(err)),

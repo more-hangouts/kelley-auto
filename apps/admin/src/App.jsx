@@ -42,11 +42,8 @@ const SalesActivity = lazy(() => import('./pages/SalesActivity'))
 const CallActivity = lazy(() => import('./pages/CallActivity'))
 const StorefrontAnalytics = lazy(() => import('./pages/StorefrontAnalytics'))
 const EventDetailLayout = lazy(() => import('./pages/event/EventDetailLayout'))
-const Activity = lazy(() => import('./pages/event/tabs/Activity'))
-const Documents = lazy(() => import('./pages/event/tabs/Documents'))
-const Invoices = lazy(() => import('./pages/event/tabs/Invoices'))
+const Timeline = lazy(() => import('./pages/event/tabs/Timeline'))
 const Payments = lazy(() => import('./pages/event/tabs/Payments'))
-const Quotes = lazy(() => import('./pages/event/tabs/Quotes'))
 const InvoicesGlobal = lazy(() => import('./pages/InvoicesGlobal'))
 const Overview = lazy(() => import('./pages/event/tabs/Overview'))
 const Login = lazy(() => import('./pages/Login'))
@@ -69,6 +66,15 @@ const queryClient = new QueryClient({
 function LegacyStaffScheduleRedirect() {
   const { userId } = useParams()
   return <Navigate to={`/settings/staff/profiles/${userId}/schedule`} replace />
+}
+
+// /events/134/overview -> /deals/134/overview. The tab segment rides along
+// via the splat, so a bookmark deep into a tab lands on the same tab —
+// except the three retired ones, which the deals routes bounce to Overview.
+function LegacyEventRedirect() {
+  const { eventId, '*': rest } = useParams()
+  const tail = rest ? `/${rest}` : ''
+  return <Navigate to={`/deals/${eventId}${tail}`} replace />
 }
 
 export default function App() {
@@ -127,17 +133,32 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="events/:eventId"
+                  path="deals/:eventId"
                   element={<Suspense fallback={<RouteFallback />}><EventDetailLayout /></Suspense>}
                 >
-                  <Route index element={<Navigate to="overview" replace />} />
+                  {/* Timeline is the landing tab: "what happened with this
+                      customer?" is why a rep opens a deal. */}
+                  <Route index element={<Navigate to="timeline" replace />} />
+                  <Route path="timeline" element={<Suspense fallback={<RouteFallback />}><Timeline /></Suspense>} />
                   <Route path="overview" element={<Suspense fallback={<RouteFallback />}><Overview /></Suspense>} />
-                  <Route path="documents" element={<Suspense fallback={<RouteFallback />}><Documents /></Suspense>} />
-                  <Route path="quotes" element={<Suspense fallback={<RouteFallback />}><Quotes /></Suspense>} />
-                  <Route path="invoices" element={<Suspense fallback={<RouteFallback />}><Invoices /></Suspense>} />
                   <Route path="payments" element={<Suspense fallback={<RouteFallback />}><Payments /></Suspense>} />
-                  <Route path="activity" element={<Suspense fallback={<RouteFallback />}><Activity /></Suspense>} />
+                  {/* Notes and Activity were merged INTO Timeline (along with
+                      the standalone text-messages box). Old links follow. */}
+                  <Route path="notes" element={<Navigate to="../timeline" replace />} />
+                  <Route path="activity" element={<Navigate to="../timeline" replace />} />
+                  {/* Documents / Quotes / Invoices were retired from the deal
+                      page — financing and paperwork live outside this CRM, and
+                      all three had zero rows. Land old bookmarks on Overview
+                      rather than a blank router miss. */}
+                  <Route path="documents" element={<Navigate to="../overview" replace />} />
+                  <Route path="quotes" element={<Navigate to="../overview" replace />} />
+                  <Route path="invoices" element={<Navigate to="../overview" replace />} />
                 </Route>
+                {/* Legacy /events/:id/* URLs — the surface is called Deals
+                    everywhere in the UI, so the path says deals now. Keep every
+                    old link (bookmarks, emailed links, dashboard widgets)
+                    working. */}
+                <Route path="events/:eventId/*" element={<LegacyEventRedirect />} />
                 <Route path="inbox" element={<Suspense fallback={<RouteFallback />}><Inbox /></Suspense>} />
                 <Route path="calendar" element={<Suspense fallback={<RouteFallback />}><AppointmentsCalendar /></Suspense>} />
                 <Route path="contacts" element={<Suspense fallback={<RouteFallback />}><Contacts /></Suspense>} />

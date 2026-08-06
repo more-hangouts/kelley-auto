@@ -222,7 +222,7 @@ export default function InvoicesGlobal() {
                 <TableRow
                   key={inv.id}
                   component={RouterLink}
-                  to={`/events/${inv.event_id}/invoices`}
+                  to={`/deals/${inv.event_id}/invoices`}
                   sx={{
                     textDecoration: 'none',
                     cursor: 'pointer',

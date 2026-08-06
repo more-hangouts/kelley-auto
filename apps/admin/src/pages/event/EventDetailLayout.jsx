@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   List,
   ListItem,
@@ -17,12 +18,10 @@ import {
 } from '@mui/material'
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import HistoryIcon from '@mui/icons-material/History'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined'
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
-import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined'
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
 import {
   Link as RouterLink,
   NavLink,
@@ -31,36 +30,104 @@ import {
   useParams,
 } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
 
 import RecordDependenciesDialog from '../../components/RecordDependenciesDialog'
 import {
   archiveEvent,
+  getDealTimeline,
   getDocumentCounts,
   getEvent,
   getEventWorkflow,
   patchEventStatus,
 } from '../../services/api'
 
+dayjs.extend(relativeTime)
+
 const RAIL_WIDTH = 200
 
+// Documents / Quotes / Invoices were retired from the deal page: financing
+// and paperwork run on their own systems, and all three tabs had zero rows
+// in production. Their routes now redirect to Overview so old links land
+// somewhere sane. What's left is what a salesperson works from.
 const TABS = [
+  // One story, not three surfaces. Timeline merges what used to be the
+  // Activity tab, the Notes tab, and the separate text-messages box —
+  // reps were being asked to reconcile them by hand. It's first because
+  // "what happened with this customer?" is the question they open a deal
+  // to answer.
+  { to: 'timeline', label: 'Timeline', icon: HistoryIcon, countKey: 'open_follow_ups' },
   { to: 'overview', label: 'Overview', icon: InfoOutlinedIcon, countKey: null },
-  { to: 'documents', label: 'Documents', icon: DescriptionOutlinedIcon, countKey: 'document' },
-  // Phase 5: quotes get their own tab. No badge for v1 (would need a
-  // dedicated counts query); polish backlog can add it later.
-  { to: 'quotes', label: 'Quotes', icon: RequestQuoteOutlinedIcon, countKey: null },
-  // Phase 4b: invoices badge re-sourced from canonical `outstanding_invoices`
-  // (was 'invoice' in pre-Phase-4b document_counts). Counts unpaid bills,
-  // not file rows.
-  { to: 'invoices', label: 'Invoices', icon: ReceiptLongOutlinedIcon, countKey: 'outstanding_invoices' },
   // Phase 6: payments tab. No badge for v1 — would need a dedicated
   // counts query for "unapplied funds present" which is uncommon enough
   // that staff can spot-check via the tab itself.
   { to: 'payments', label: 'Payments', icon: PaymentsOutlinedIcon, countKey: null },
-  // Phase 9: activity timeline. No badge — every event has activity by
-  // definition; a count would just say "yes, there's stuff".
-  { to: 'activity', label: 'Activity', icon: HistoryIcon, countKey: null },
 ]
+
+// Where this lead came from and what happened last — the two questions a
+// rep asks before picking up the phone. Reads from the same timeline
+// payload the tab uses, so there's no second source of truth.
+function LeadSourceStrip({ summary }) {
+  if (!summary) return null
+
+  const bits = []
+  if (summary.lead_source) {
+    const page = summary.lead_source_page
+    bits.push({
+      key: 'source',
+      label: 'Came from',
+      value:
+        summary.lead_source === 'website' && page
+          ? `Website ${page}`
+          : summary.lead_source,
+    })
+  }
+  if (summary.vehicle_label) {
+    bits.push({ key: 'vehicle', label: 'Asking about', value: summary.vehicle_label })
+  }
+  if (summary.customer_phone) {
+    bits.push({ key: 'phone', label: 'Phone', value: summary.customer_phone })
+  }
+  if (summary.last_touch_label) {
+    bits.push({
+      key: 'last',
+      label: 'Last touch',
+      value: `${summary.last_touch_label}${
+        summary.last_touch_at ? ` · ${dayjs(summary.last_touch_at).fromNow()}` : ''
+      }`,
+    })
+  }
+  if (!bits.length && !(summary.flags || []).length) return null
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        {bits.map((b) => (
+          <Box key={b.key}>
+            <Typography variant="caption" color="text.secondary" display="block">
+              {b.label}
+            </Typography>
+            <Typography variant="body2">{b.value}</Typography>
+          </Box>
+        ))}
+      </Stack>
+      {(summary.flags || []).length > 0 && (
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+          {summary.flags.map((f) => (
+            <Chip
+              key={f.code}
+              size="small"
+              color={f.severity === 'warning' ? 'warning' : 'default'}
+              icon={<WarningAmberOutlinedIcon />}
+              label={f.label}
+            />
+          ))}
+        </Stack>
+      )}
+    </Box>
+  )
+}
 
 function describeArchiveError(err) {
   const detail = err?.response?.data?.detail
@@ -101,6 +168,14 @@ export default function EventDetailLayout() {
   const { data: counts } = useQuery({
     queryKey: ['event', numericId, 'document-counts'],
     queryFn: () => getDocumentCounts(numericId),
+    enabled: !!event,
+  })
+
+  // Shared with the Timeline tab's own query (same key), so opening the
+  // tab is a cache hit rather than a second round trip.
+  const { data: timeline } = useQuery({
+    queryKey: ['event', numericId, 'timeline'],
+    queryFn: () => getDealTimeline(numericId),
     enabled: !!event,
   })
 
@@ -183,6 +258,7 @@ export default function EventDetailLayout() {
           <Typography color="text.secondary">
             {event.primary_contact?.display_name}
           </Typography>
+          <LeadSourceStrip summary={timeline?.summary} />
         </Box>
         <Stack
           direction="row"

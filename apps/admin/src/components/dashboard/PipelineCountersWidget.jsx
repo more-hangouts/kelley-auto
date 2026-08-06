@@ -64,7 +64,7 @@ export default function PipelineCountersWidget() {
 
   function openCard(card) {
     closeLane()
-    navigate(`/events/${card.id}/overview`)
+    navigate(`/deals/${card.id}/overview`)
   }
 
   const lanes = counts.data?.lanes ?? []

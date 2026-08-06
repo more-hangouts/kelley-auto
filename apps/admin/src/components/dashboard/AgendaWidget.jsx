@@ -32,7 +32,7 @@ const STATUS_LABEL = {
 }
 
 function rowRoute(item) {
-  if (item.crm_event_id) return `/events/${item.crm_event_id}/overview`
+  if (item.crm_event_id) return `/deals/${item.crm_event_id}/overview`
   return '/calendar'
 }
 

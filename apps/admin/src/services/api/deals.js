@@ -199,3 +199,9 @@ export async function deleteEventNote(eventId, noteId) {
   await api.delete(`/events/${eventId}/notes/${noteId}`)
 }
 
+// The merged deal story: activity + notes + texts in one ordered list,
+// plus the header summary (lead source, last touch, flags).
+export async function getDealTimeline(eventId) {
+  const { data } = await api.get(`/events/${eventId}/timeline`)
+  return data
+}

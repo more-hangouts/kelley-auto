@@ -61,7 +61,7 @@ export default function AwaitingSignatureWidget() {
               <Box
                 key={q.id}
                 component={RouterLink}
-                to={`/events/${q.event_id}/quotes`}
+                to={`/deals/${q.event_id}/quotes`}
                 sx={{
                   color: 'inherit',
                   textDecoration: 'none',

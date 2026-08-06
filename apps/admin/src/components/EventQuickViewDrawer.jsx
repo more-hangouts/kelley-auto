@@ -90,7 +90,7 @@ export default function EventQuickViewDrawer({ card, onClose, onStatusChange }) 
             {card && (
               <Button
                 component={RouterLink}
-                to={`/events/${card.id}`}
+                to={`/deals/${card.id}`}
                 size="small"
                 startIcon={<OpenInNewIcon />}
               >

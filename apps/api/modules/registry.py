@@ -64,6 +64,7 @@ from modules.contacts.routers import call_attempts as call_attempts_router
 from modules.contacts.routers import contacts as contacts_router
 from modules.analytics.routers import dashboard as dashboard_router
 from modules.deals.routers import event_documents as event_documents_routers
+from modules.deals.routers import deal_timeline as deal_timeline_router
 from modules.deals.routers import event_notes as event_notes_router
 from modules.deals.routers import event_participants as event_participants_router
 from modules.deals.routers import events as events_router
@@ -184,6 +185,7 @@ MOUNTS: tuple[RouterMount, ...] = (
     RouterMount(walk_in_leads_router.router, {"prefix": "/api/walk-in-leads", "tags": ["walk-in-leads"]}, "booking"),
     RouterMount(event_participants_router.router, {"prefix": "/api/events", "tags": ["event-participants"]}, "deals"),
     RouterMount(event_notes_router.router, {"prefix": "/api/events", "tags": ["event-notes"]}, "deals"),
+    RouterMount(deal_timeline_router.router, {"prefix": "/api/events", "tags": ["deal-timeline"]}, "deals"),
     RouterMount(contacts_router.router, {"prefix": "/api/contacts", "tags": ["contacts"]}, "contacts"),
     RouterMount(call_attempts_router.router, {"prefix": "/api/contacts", "tags": ["contacts-call-attempts"]}, "contacts"),
     RouterMount(event_documents_routers.event_documents_router, {"prefix": "/api/events", "tags": ["event-documents"]}, "deals"),

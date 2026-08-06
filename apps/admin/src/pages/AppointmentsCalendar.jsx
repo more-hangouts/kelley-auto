@@ -199,7 +199,7 @@ export default function AppointmentsCalendar() {
 
   const dayAppts = (d) => byDay.get(d.format('YYYY-MM-DD')) || []
   const openAppt = (a) => {
-    if (a.crm_event_id) navigate(`/events/${a.crm_event_id}`)
+    if (a.crm_event_id) navigate(`/deals/${a.crm_event_id}`)
   }
   const goToDay = (d) => {
     setAnchor(d)

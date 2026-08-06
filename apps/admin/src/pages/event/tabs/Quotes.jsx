@@ -158,7 +158,7 @@ export default function Quotes() {
                   variant="outlined"
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigate(`/events/${eventId}/invoices`)
+                    navigate(`/deals/${eventId}/invoices`)
                   }}
                   sx={{ cursor: 'pointer' }}
                 />
@@ -199,7 +199,7 @@ export default function Quotes() {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         onCreated={(newId) => setEditingId(newId)}
-        onConverted={() => navigate(`/events/${eventId}/invoices`)}
+        onConverted={() => navigate(`/deals/${eventId}/invoices`)}
         eventId={eventId}
         eventDate={event.event_date}
         contactId={contactId}
