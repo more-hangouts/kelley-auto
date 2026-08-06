@@ -14,6 +14,7 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -30,6 +31,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
@@ -83,6 +85,23 @@ function statusMeta(value) {
       color: 'default',
     }
   )
+}
+
+// What each status means for the customer-facing site. Mirrors
+// PUBLIC_LIST_STATUSES / PUBLIC_DETAIL_STATUSES in
+// modules/inventory/services/public_inventory_service.py — status is the
+// sales-lifecycle field, and website visibility follows from it.
+const STATUS_HELP = {
+  available: 'Listed on the website.',
+  pending: 'Deal in progress. Still listed on the website.',
+  sold: 'Off the website list; its page stays live for shared links.',
+  delivered: 'Off the website list; its page stays live for shared links.',
+  wholesale: 'Not shown on the website.',
+  hidden: 'Not shown on the website. Use to pull a listing temporarily.',
+}
+
+function statusHelp(value) {
+  return STATUS_HELP[value] || 'Where this car is in the sales process.'
 }
 
 // Friendly copy for the domain error codes the catalog service raises on
@@ -400,7 +419,7 @@ const COLUMNS = [
   { id: 'mileage', label: 'Mileage', align: 'right', numeric: true, getValue: (r) => r.mileage },
   { id: 'price', label: 'Price', align: 'right', numeric: true, getValue: (r) => r.unit_price_cents },
   { id: 'status', label: 'Status', getValue: (r) => r.vehicle_status || '' },
-  { id: 'active', label: 'Active', sortable: false },
+  { id: 'active', label: 'Record', sortable: false },
 ]
 
 function sortRows(rows, orderBy, order) {
@@ -810,7 +829,7 @@ export default function AdminVehicles() {
                   onChange={(e) => setIncludeInactive(e.target.checked)}
                 />
               }
-              label="Include inactive"
+              label="Include inactive records"
             />
           </Stack>
 
@@ -1102,7 +1121,7 @@ export default function AdminVehicles() {
               </Alert>
             )}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth sx={{ flex: 1 }}>
+              <FormControl sx={{ flex: 1, maxWidth: { sm: 320 } }}>
                 <InputLabel>Status</InputLabel>
                 <Select
                   label="Status"
@@ -1115,18 +1134,8 @@ export default function AdminVehicles() {
                     </MenuItem>
                   ))}
                 </Select>
+                <FormHelperText>{statusHelp(form.vehicle_status)}</FormHelperText>
               </FormControl>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={form.active}
-                      onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                    />
-                  }
-                  label="Active"
-                />
-              </Box>
             </Stack>
 
             <Divider />
@@ -1289,6 +1298,50 @@ export default function AdminVehicles() {
                 sx={{ flex: 1 }}
               />
             </Stack>
+
+            {/* Record controls — deliberately kept far from Status. `active`
+                is the soft-delete (catalog_items has no deleted_at), not a
+                listing-visibility switch; sitting it next to Status invited
+                staff to flip it when they only meant to hide a listing. */}
+            <Divider />
+            <Typography variant="subtitle2" color="text.secondary">
+              Record controls
+            </Typography>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: form.active ? 'divider' : 'warning.main',
+                bgcolor: (theme) =>
+                  form.active ? 'transparent' : alpha(theme.palette.warning.main, 0.08),
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.active}
+                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                  />
+                }
+                label="Record active"
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Turn off only for duplicates, wrong VINs, or records that should no
+                longer count. This hides it everywhere — the website, this list, and
+                the vehicle picker on deals.
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                To take a car off the website but keep working it, leave this on and
+                set Status to Hidden instead.
+              </Typography>
+              {!form.active && (
+                <Alert severity="warning" sx={{ mt: 1.5 }}>
+                  This record will be retired on save. Its history is kept — turn
+                  &ldquo;Include inactive records&rdquo; on in the list to find it again.
+                </Alert>
+              )}
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
