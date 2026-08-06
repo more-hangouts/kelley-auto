@@ -44,6 +44,7 @@ createAvailabilityRule
 createBlackout
 createCatalogItem
 createContact
+createEventNote
 createInvoice
 createNotificationSubscriber
 createQuote
@@ -64,6 +65,7 @@ deleteAvailabilityRule
 deleteBlackout
 deleteBusinessLogo
 deleteDocument
+deleteEventNote
 deleteInvoice
 deleteNotificationSubscriber
 deletePayment
@@ -90,17 +92,19 @@ getDocumentCounts
 getEvent
 getEventApplication
 getEventBoard
-getEventMessages
 getEventJourney
+getEventMessages
+getEventNotes
 getEventWorkflow
 getHoursVariance
 getInboxConversation
 getInboxUnreadCount
 getInvoice
 getMe
+getMyCallsToday
 getPayment
 getPipelineCounts
-getMyCallsToday
+getQuote
 getRecentCallActivity
 getRecentPayments
 getRecordDependencies
@@ -108,7 +112,6 @@ getSalesActivityRepRecent
 getSalesActivitySummary
 getSplhLeaderboard
 getStorefrontAnalyticsSummary
-getQuote
 getWidgetSettings
 isSalesSubdomain
 listAdminHolidays
@@ -142,8 +145,8 @@ listRecycleBin
 listSalesStaff
 listSchedulePresets
 listVehicles
-login
 logCallAttempt
+login
 logout
 mintSalesPin
 patchAdminHoliday
@@ -163,6 +166,7 @@ rejectQuote
 resendInvoice
 resendPublishedScheduleWeek
 resendQuote
+resolveEventNote
 resolveMissingOutPunch
 restoreContact
 restoreEvent
@@ -231,9 +235,10 @@ unapplyAllocation
 unlockSalesStaff
 updateAvailabilityRule
 updateBusinessProfile
-updateCatalogItem
 updateCallAttempt
+updateCatalogItem
 updateContact
+updateEventNote
 updateInvoice
 updateQuote
 updateSubscriberSubscriptions

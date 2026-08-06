@@ -1,0 +1,18 @@
+[Unit]
+Description=Fire the Kelley Autoplex deal follow-up reminder pass every 5 minutes
+
+[Timer]
+# First tick shortly after boot so a restart doesn't sit on a backlog, then
+# every 5 minutes. Reps pick a time of day for a follow-up, so the tick has
+# to be short — a once-daily pass would deliver "call back Thursday 9am"
+# whenever the daily job happened to run.
+OnBootSec=2min
+OnUnitActiveSec=5min
+# Spread the load if several timers ever land on the same minute.
+RandomizedDelaySec=30
+AccuracySec=30
+Unit=kelley-reminders.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

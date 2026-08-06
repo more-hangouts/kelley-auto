@@ -132,6 +132,51 @@ class EventStatusChangeEvent(Base):
     notes = Column(Text)
 
 
+class EventNote(Base):
+    """One dated note on a deal — the rep-facing running log.
+
+    Replaces the single free-text ``events.notes`` blob (migration 100
+    backfills that column into a first note per deal and leaves it in place
+    for legacy readers). Each row is one entry in the timeline, authored by
+    a user, editable and soft-deletable.
+
+    A note can also carry a FOLLOW-UP REMINDER: ``remind_at`` +
+    ``remind_user_id`` + ``remind_channel``. The reminder pass
+    (modules/deals/services/note_reminder_runner.py) picks up due rows,
+    delivers them, and stamps ``reminder_sent_at`` — the stamp is the
+    idempotency guard, so a second pass on the same day never re-sends.
+    ``resolved_at`` is the rep saying "handled", which retires the reminder
+    whether or not it has fired.
+
+    ``author_display_name`` snapshots the author's name at write time
+    (mirroring contact_call_attempts): the FK is ON DELETE SET NULL so a
+    departed rep doesn't erase who wrote the note.
+    """
+
+    __tablename__ = "event_notes"
+
+    id = Column(BigInteger, primary_key=True)
+    event_id = Column(
+        Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    body = Column(Text, nullable=False)
+    author_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    author_display_name = Column(String(200))
+
+    # Follow-up reminder (all NULL when the note is just a note).
+    remind_at = Column(DateTime(timezone=True))
+    remind_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    remind_channel = Column(String(16), nullable=False, server_default=text("'email'"))
+    reminder_sent_at = Column(DateTime(timezone=True))
+    resolved_at = Column(DateTime(timezone=True))
+    resolved_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    edited_at = Column(DateTime(timezone=True))
+    deleted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
 class EventDocument(Base):
     __tablename__ = "event_documents"
 

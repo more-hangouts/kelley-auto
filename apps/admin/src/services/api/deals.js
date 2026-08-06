@@ -161,3 +161,41 @@ export async function adminTagAppointmentParticipant(
   )
   return data
 }
+
+// ---------------------------------------------------------------------------
+// Deal notes — the running log on the Notes tab, plus follow-up reminders.
+// Backend routes live under /api/events/{id}/notes (the API path kept its
+// original noun; only the admin URL says /deals).
+// ---------------------------------------------------------------------------
+
+export async function getEventNotes(eventId) {
+  const { data } = await api.get(`/events/${eventId}/notes`)
+  return data
+}
+
+// `body` is required. Pass remind_at (ISO string) to attach a follow-up;
+// remind_user_id defaults server-side to the signed-in rep.
+export async function createEventNote(eventId, payload) {
+  const { data } = await api.post(`/events/${eventId}/notes`, payload)
+  return data
+}
+
+// Partial patch. Pass { clear_reminder: true } to cancel a follow-up —
+// an omitted remind_at can't express "unset".
+export async function updateEventNote(eventId, noteId, payload) {
+  const { data } = await api.patch(`/events/${eventId}/notes/${noteId}`, payload)
+  return data
+}
+
+export async function resolveEventNote(eventId, noteId, resolved = true) {
+  const { data } = await api.post(
+    `/events/${eventId}/notes/${noteId}/resolve`,
+    { resolved },
+  )
+  return data
+}
+
+export async function deleteEventNote(eventId, noteId) {
+  await api.delete(`/events/${eventId}/notes/${noteId}`)
+}
+

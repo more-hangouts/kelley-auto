@@ -2337,3 +2337,54 @@ def render_admin_walk_in_lead_created(
         preheader=f"{actor} logged a walk-in lead.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
+
+
+# ---------------------------------------------------------------------------
+# Staff: deal follow-up reminder
+# ---------------------------------------------------------------------------
+def render_note_reminder(
+    *,
+    rep_name: str | None,
+    customer_name: str,
+    deal_name: str,
+    note_body: str,
+    note_written_at: datetime,
+    admin_url: str,
+) -> RenderedEmail:
+    """The "you asked to be reminded" email a rep gets for a deal note.
+
+    Delivered by modules/deals/services/note_reminder_runner.py. The note's
+    own words are the payload — a rep wrote "call back Thursday", so the
+    reminder shows that sentence rather than paraphrasing it.
+    """
+    who = _first_name(rep_name)
+    written = note_written_at.strftime("%b %-d")
+
+    subject = f"Follow up: {customer_name}"
+    text = (
+        f"Hi {who},\n\n"
+        f"You asked to be reminded about {customer_name}.\n\n"
+        f"Your note from {written}:\n"
+        f"  \"{note_body}\"\n\n"
+        f"  Deal: {deal_name}\n\n"
+        f"Open the deal: {admin_url}\n\n"
+        f"Kelley Autoplex CRM\n"
+    )
+    html = _wrap_html(
+        f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; "
+        f"font-weight:700; color:#14181F; margin-top:0;\">Follow up today</h1>"
+        f"<p>Hi {escape(who)}, you asked to be reminded about "
+        f"<strong>{escape(customer_name)}</strong>.</p>"
+        f"<blockquote style=\"margin:18px 0; padding:12px 16px; "
+        f"border-left:3px solid #E8C46A; background:#FAF7F0; color:#14181F;\">"
+        f"{escape(note_body)}"
+        f"<div style=\"margin-top:8px; font-size:13px; color:#5B636D;\">"
+        f"Your note from {escape(written)}</div>"
+        f"</blockquote>"
+        + _details_table([("Deal", deal_name), ("Customer", customer_name)])
+        + "<p style=\"margin-top:22px;\">"
+        + _html_button("Open the deal", admin_url)
+        + "</p>",
+        preheader=f"Follow up with {customer_name}.",
+    )
+    return RenderedEmail(subject=subject, text=text, html=html)

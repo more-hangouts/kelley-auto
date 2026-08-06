@@ -32,7 +32,7 @@ from config.settings import DOCUMENT_UPLOAD_MAX_MB
 from database.auth import require_any_scope
 from modules.scheduling.services.attendance_gate import require_floor_access
 from database.connection import get_db
-from database.models import Event, EventDocument, Invoice, User
+from database.models import Event, EventDocument, EventNote, Invoice, User
 from modules.core.services import document_storage
 from modules.core.services.upload_validation import (
     HEAD_BYTES_NEEDED,
@@ -133,6 +133,10 @@ class DocumentCountsResponse(BaseModel):
     # canonical `invoices` table — counts rows in 'sent' or 'partial' status.
     external_invoice: int
     outstanding_invoices: int
+    # Migration 100: open follow-ups (a note with a reminder the rep hasn't
+    # marked handled). Drives the Notes tab badge — the one number a
+    # salesperson needs at a glance.
+    open_follow_ups: int = 0
 
 
 class DocumentPatch(BaseModel):
@@ -400,10 +404,19 @@ def document_counts(
         .where(Invoice.status.in_(("sent", "partial")))
     ).scalar() or 0
 
+    open_follow_ups = db.execute(
+        select(func.count(EventNote.id))
+        .where(EventNote.event_id == event_id)
+        .where(EventNote.deleted_at.is_(None))
+        .where(EventNote.remind_at.is_not(None))
+        .where(EventNote.resolved_at.is_(None))
+    ).scalar() or 0
+
     return DocumentCountsResponse(
         document=doc_row.doc_count,
         external_invoice=doc_row.ext_inv_count,
         outstanding_invoices=int(outstanding),
+        open_follow_ups=int(open_follow_ups),
     )
 
 

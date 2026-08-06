@@ -194,6 +194,8 @@ try:
         "document": 0,
         "external_invoice": 0,
         "outstanding_invoices": 0,
+        # Migration 100: the Notes tab badge rides on this same payload.
+        "open_follow_ups": 0,
     }, counts
     print("counts empty ok")
 
@@ -407,6 +409,7 @@ try:
         "document": 1,
         "external_invoice": 1,
         "outstanding_invoices": 1,
+        "open_follow_ups": 0,
     }, counts
     print("counts reflect external_invoice + canonical outstanding ok")
 

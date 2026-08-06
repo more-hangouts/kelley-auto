@@ -41,6 +41,7 @@ ATTENDANCE_GEO_RETENTION = "attendance.geo_retention"
 SCHEDULE_NO_SHOW = "schedule.no_show"
 SCHEDULE_MISSING_OUT_PUNCH = "schedule.missing_out_punch"
 SCHEDULE_REQUEST_EXPIRY = "schedule.shift_request_expiry"
+DEAL_NOTE_REMINDER = "deals.note_reminder"
 
 ALL_CRON_NAMES = (
     AUTO_CLOSE,
@@ -51,6 +52,7 @@ ALL_CRON_NAMES = (
     SCHEDULE_NO_SHOW,
     SCHEDULE_MISSING_OUT_PUNCH,
     SCHEDULE_REQUEST_EXPIRY,
+    DEAL_NOTE_REMINDER,
 )
 
 
