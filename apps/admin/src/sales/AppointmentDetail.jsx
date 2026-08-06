@@ -138,6 +138,31 @@ function describeActivity(row) {
   return `${who}: ${verb}`
 }
 
+// Mirrors _ARRIVAL_ADVANCE in modules/booking/services/sales_appointments.py:
+// marking a customer Arrived advances an unworked deal to the stage that
+// reflects human contact. Any status not listed is left untouched. Keep in
+// sync — this drives the confirmation text a rep reads before they tap.
+const INITIAL_DEAL_STATUS = 'new_lead'
+const ARRIVAL_ADVANCE = {
+  new_lead: 'contacted',
+  lead: 'consulted', // legacy Bella's-era quinceañera rows
+}
+
+// Board labels, so the preview says "New Lead" rather than "new_lead".
+const STATUS_LABELS = {
+  new_lead: 'New Lead',
+  contacted: 'Contacted',
+  follow_up: 'Follow Up',
+  sold: 'Sold',
+  lost: 'Lost',
+  lead: 'Lead',
+  consulted: 'Consulted',
+}
+
+function statusLabel(code) {
+  return STATUS_LABELS[code] || String(code || '').replace(/_/g, ' ')
+}
+
 function describePreview(appt, event, action) {
   const time = formatTime(appt.slot_start_at, appt.timezone)
   const who =
@@ -145,12 +170,19 @@ function describePreview(appt, event, action) {
     'this appointment'
   if (action === 'arrived') {
     if (!event) {
-      return `Mark ${who}'s ${time} appointment as Arrived. We'll create a CRM event in Lead and immediately move it to Consulted.`
+      return `Mark ${who}'s ${time} appointment as Arrived. We'll create a deal in ${statusLabel(
+        INITIAL_DEAL_STATUS,
+      )} and immediately move it to ${statusLabel(ARRIVAL_ADVANCE[INITIAL_DEAL_STATUS])}.`
     }
-    if (event.status === 'lead') {
-      return `Mark ${who}'s ${time} appointment as Arrived. We'll move the linked event from Lead to Consulted.`
+    const advanced = ARRIVAL_ADVANCE[event.status]
+    if (advanced) {
+      return `Mark ${who}'s ${time} appointment as Arrived. We'll move the linked deal from ${statusLabel(
+        event.status,
+      )} to ${statusLabel(advanced)}.`
     }
-    return `Mark ${who}'s ${time} appointment as Arrived. The event is already ${event.status}, so its status will not change.`
+    return `Mark ${who}'s ${time} appointment as Arrived. The deal is already ${statusLabel(
+      event.status,
+    )}, so its status will not change.`
   }
   if (action === 'no_show') {
     return `Mark ${who}'s ${time} appointment as a no-show. The CRM event status doesn't change.`

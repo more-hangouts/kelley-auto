@@ -33,13 +33,16 @@ from modules.booking.services.event_workflow import (
 )
 
 # Day 3: when a vehicle_sale deal reaches one of these statuses, the linked
-# vehicle's inventory status is driven to match — so a car is marked sold/
-# delivered by the deal closing, not by a casual inventory edit. Only these
-# forward states propagate; backward moves and 'lost' leave inventory alone
-# for staff to adjust deliberately.
+# vehicle's inventory status is driven to match — so a car is marked sold by
+# the deal closing, not by a casual inventory edit. Only these forward states
+# propagate; backward moves and 'lost' leave inventory alone for staff to
+# adjust deliberately.
+#
+# The `delivered` deal column was removed in migration 099, so nothing
+# auto-drives a car to the `delivered` INVENTORY status any more — that
+# remains a valid vehicle_status staff can set by hand on the vehicle.
 _DEAL_STATUS_TO_VEHICLE_STATUS: dict[str, str] = {
     "sold": "sold",
-    "delivered": "delivered",
 }
 
 
@@ -289,11 +292,11 @@ def change_event_status(
 def _propagate_vehicle_status(db: Session, event: Event, new_status: str) -> None:
     """Drive the linked car's inventory status from the deal's status.
 
-    A ``vehicle_sale`` deal reaching ``sold``/``delivered`` marks its linked
-    vehicle the same way — so inventory reflects closed deals rather than
-    relying on a staffer to remember to flip the catalog row. No-ops unless:
+    A ``vehicle_sale`` deal reaching ``sold`` marks its linked vehicle the
+    same way — so inventory reflects closed deals rather than relying on a
+    staffer to remember to flip the catalog row. No-ops unless:
       * the event is a ``vehicle_sale``,
-      * the new status is one we propagate (``sold``/``delivered``),
+      * the new status is one we propagate (``sold``),
       * the deal is linked to a catalog row, and
       * that row is actually a vehicle (``is_vehicle = true``).
 

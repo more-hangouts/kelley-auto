@@ -313,7 +313,7 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Scenario A: arrived on appointment with NO event.
     # Expectation: a vehicle_sale event is created (status starts at
-    # 'new_lead', then the arrival advance bumps it to 'appointment');
+    # 'new_lead', then the arrival advance bumps it to 'contacted');
     # both event.status_changed and appointment.arrived rows land in
     # activity_log.
     # ------------------------------------------------------------------
@@ -330,7 +330,7 @@ def main() -> None:
     assert body["appointment_status"] == "attended"
     assert body["promoted_event"] is True
     assert body["prior_event_status"] is None
-    assert body["new_event_status"] == "appointment"
+    assert body["new_event_status"] == "contacted"
     assert body["changed"] is True
 
     appt_a_row = _refresh_appt(appt_a)
@@ -343,16 +343,16 @@ def main() -> None:
     assert arrived_rows[0].subject_kind == "appointment"
     assert arrived_rows[0].subject_id == appt_a
     assert arrived_rows[0].payload["promoted_event"] is True
-    assert arrived_rows[0].payload["new_event_status"] == "appointment"
+    assert arrived_rows[0].payload["new_event_status"] == "contacted"
 
     status_changed_rows = _activity_for_event(new_event_id, "event.status_changed")
     assert len(status_changed_rows) == 1
     assert status_changed_rows[0].payload["from_status"] == "new_lead"
-    assert status_changed_rows[0].payload["to_status"] == "appointment"
+    assert status_changed_rows[0].payload["to_status"] == "contacted"
 
     # promote_appointment_to_event seeds an initial null→new_lead audit
     # row in event_status_change_events; change_event_status appends
-    # another row (new_lead→appointment) in the same transaction. So we
+    # another row (new_lead→contacted) in the same transaction. So we
     # expect 2.
     assert len(_event_status_changes(new_event_id)) == 2
 

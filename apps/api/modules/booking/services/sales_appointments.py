@@ -394,10 +394,14 @@ _ACTION_TO_ACTIVITY_TYPE: dict[str, str] = {
 # Per-workflow status bump applied when a customer arrives for an
 # appointment: {event_type: {current_status: advanced_status}}. Statuses
 # not listed (already at or past the visit stage) are left untouched.
+#
+# The vehicle_sale board lost its `appointment` column in migration 099, so
+# showing up now advances an unworked lead to `contacted` — the deal has
+# demonstrably been talked to. A deal already in `contacted` or beyond is
+# left alone; `attended_at` on the appointment carries the arrival fact.
 _ARRIVAL_ADVANCE: dict[str, dict[str, str]] = {
     "vehicle_sale": {
-        "new_lead": "appointment",
-        "contacted": "appointment",
+        "new_lead": "contacted",
     },
     # legacy Bella's-era rows keep their historical behavior
     "quinceanera": {"lead": "consulted"},
@@ -515,11 +519,11 @@ def apply_status_action(
             prior_event_status = event.status
             new_event_status = event.status
 
-        # Arrival auto-advance: showing up moves a pre-visit event to the
-        # stage that reflects a showroom visit. The pipeline has no
-        # dedicated "visited" bucket, so vehicle_sale caps at
-        # 'appointment' (attended_at carries the arrival fact); legacy
-        # quinceanera rows keep their historical lead -> consulted bump.
+        # Arrival auto-advance: showing up moves an unworked lead to the
+        # stage that reflects human contact. The pipeline has no dedicated
+        # "visited" bucket, so vehicle_sale caps at 'contacted'
+        # (attended_at carries the arrival fact); legacy quinceanera rows
+        # keep their historical lead -> consulted bump.
         arrival_target = _ARRIVAL_ADVANCE.get(event.event_type, {}).get(
             new_event_status
         )

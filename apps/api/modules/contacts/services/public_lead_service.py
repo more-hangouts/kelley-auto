@@ -364,8 +364,8 @@ def _application_input_from_lead(lead: LeadInput) -> ApplicationInput:
 
 
 def _open_vehicle_sale_statuses() -> set[str]:
-    # Non-terminal columns = the deal is still live (delivered/lost are
-    # terminal). Derived from the workflow so it tracks any future column.
+    # Non-terminal columns = the deal is still live (sold/lost are terminal).
+    # Derived from the workflow so it tracks any future column.
     return {s.code for s in all_statuses(_VEHICLE_SALE) if not s.is_terminal}
 
 

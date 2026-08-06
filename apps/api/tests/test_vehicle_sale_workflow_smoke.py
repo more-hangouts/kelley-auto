@@ -1,16 +1,18 @@
 """Smoke tests for the Kelley Autoplex vehicle-sale deal pipeline.
 
 Day 3 / migration 086 adds a `vehicle_sale` workflow to the existing CRM
-`events` table. This smoke proves a car deal can be created, walked through
-every status, and that:
+`events` table; migration 099 trims it to the columns the floor actually
+works. This smoke proves a car deal can be created, walked through every
+status, and that:
 
-  - the workflow definition exposes the nine vehicle-sale columns with the
-    right terminal semantics (`delivered`/`lost` terminal, `sold` not),
+  - the workflow definition exposes the five vehicle-sale columns
+    (new_lead -> contacted -> follow_up -> sold | lost) with the right
+    terminal semantics (`sold`/`lost` terminal),
   - an out-of-workflow status is rejected (incl. a status that is valid for
-    the quinceañera workflow but not for vehicle_sale),
+    the quinceañera workflow but not for vehicle_sale, and vice versa),
   - audit rows are written for create + every transition,
-  - moving a deal to `sold`/`delivered` drives the LINKED vehicle's
-    `vehicle_status` to match,
+  - moving a deal to `sold` drives the LINKED vehicle's `vehicle_status`
+    to match,
   - the `is_vehicle` boundary holds: a deal linked to a non-vehicle
     (dress) catalog row never has its inventory status touched,
   - the legacy quinceañera workflow still creates + transitions normally.
@@ -239,21 +241,15 @@ def main() -> int:  # noqa: C901 - linear smoke script
             == [
                 "new_lead",
                 "contacted",
-                "appointment",
-                "test_drive",
-                "negotiation",
-                "financing",
+                "follow_up",
                 "sold",
-                "delivered",
                 "lost",
             ],
             "vehicle_sale status order",
             codes,
         )
         terminals = [s["code"] for s in wf["statuses"] if s["is_terminal"]]
-        _assert(terminals == ["delivered", "lost"], "terminals", terminals)
-        sold = next(s for s in wf["statuses"] if s["code"] == "sold")
-        _assert(sold["is_terminal"] is False, "sold non-terminal", sold)
+        _assert(terminals == ["sold", "lost"], "terminals", terminals)
         print("workflow definition ok")
 
         # --- create a vehicle + a deal linked to it -----------------------
@@ -298,12 +294,8 @@ def main() -> int:  # noqa: C901 - linear smoke script
         # --- walk through every status ------------------------------------
         walk = [
             "contacted",
-            "appointment",
-            "test_drive",
-            "negotiation",
-            "financing",
+            "follow_up",
             "sold",
-            "delivered",
         ]
         for status in walk:
             resp = client.patch(
@@ -319,15 +311,15 @@ def main() -> int:  # noqa: C901 - linear smoke script
                 _assert(isveh is True, "linked row is a vehicle", isveh)
         print("walk through every status ok")
 
-        # delivered deal drove the vehicle to delivered
+        # the sold deal drove the vehicle to sold and left it there
         vs, _ = _vehicle_status(veh_id)
-        _assert(vs == "delivered", "vehicle marked delivered by deal", vs)
-        print("sold/delivered propagation ok")
+        _assert(vs == "sold", "vehicle still sold after walk", vs)
+        print("sold propagation ok")
 
-        # audit: initial + 7 transitions = 8 rows
+        # audit: initial + 3 transitions = 4 rows
         hist = _status_history(deal_id)
-        _assert(len(hist) == 8, "audit row count", hist)
-        _assert(hist[-1] == ("sold", "delivered"), "last transition", hist[-1])
+        _assert(len(hist) == 4, "audit row count", hist)
+        _assert(hist[-1] == ("follow_up", "sold"), "last transition", hist[-1])
         print("audit rows for every transition ok")
 
         # --- invalid status rejected --------------------------------------
@@ -401,11 +393,11 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(board["event_type"] == "vehicle_sale", "board type", board)
         board_codes = [c["code"] for c in board["columns"]]
         _assert(board_codes == codes, "board columns match workflow", board_codes)
-        delivered_col = next(c for c in board["columns"] if c["code"] == "delivered")
+        sold_col = next(c for c in board["columns"] if c["code"] == "sold")
         _assert(
-            any(card["id"] == deal_id for card in delivered_col["cards"]),
-            "delivered deal on board",
-            delivered_col,
+            any(card["id"] == deal_id for card in sold_col["cards"]),
+            "sold deal on board",
+            sold_col,
         )
         print("vehicle_sale board ok")
 
@@ -429,7 +421,10 @@ def main() -> int:  # noqa: C901 - linear smoke script
         _assert(
             quince["vehicle_catalog_item_id"] is None, "quince has no vehicle", quince
         )
-        _assert(_participant_count(quince_id) == 1, "quince participant seeded")
+        # The quince-only auto-participant (role='quinceanera') was removed
+        # from event creation in f6d207f; historical rows still carry theirs,
+        # but a newly created quinceañera event seeds none.
+        _assert(_participant_count(quince_id) == 0, "no participant on quince")
         resp = client.patch(
             f"/api/events/{quince_id}/status",
             headers=auth,
@@ -441,7 +436,7 @@ def main() -> int:  # noqa: C901 - linear smoke script
         resp = client.patch(
             f"/api/events/{quince_id}/status",
             headers=auth,
-            json={"status": "test_drive"},
+            json={"status": "follow_up"},
         )
         _assert(resp.status_code == 422, "quince rejects vehicle status", resp.text)
         print("legacy quinceañera workflow still works ok")

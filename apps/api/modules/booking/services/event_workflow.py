@@ -1,8 +1,12 @@
 """Event workflow definitions — the kanban columns and their semantics.
 
-Status codes here are mirrored in the chk_events_status CHECK constraint in
-database/migrations/015_create_events.py. When adding or removing a status,
-update both — Postgres won't accept a status the constraint doesn't list.
+Status codes here are mirrored in the chk_events_status CHECK constraint,
+created in database/migrations/015_create_events.py and last rewritten by
+099_vehicle_sale_board_simplification.py (which added `follow_up` and
+dropped the unused middle of the vehicle-sale funnel). When adding or
+removing a status, write a new migration too — Postgres won't accept a
+status the constraint doesn't list, and the constraint is the union of
+every workflow's codes.
 """
 
 from dataclasses import dataclass
@@ -81,12 +85,17 @@ QUINCEANERA_STATUSES: tuple[EventStatus, ...] = (
 )
 
 
-# Kelley Autoplex car-deal pipeline (Day 3). Mirrored in the chk_events_status
-# CHECK widened by database/migrations/086_vehicle_sale_workflow.py — keep the
-# two in sync. `sold` is intentionally NON-terminal: the deal stays open after
-# the sale so the team can finish paperwork and delivery. `delivered` and
-# `lost` are the only terminal columns. Note `sold` is shared with the
-# quinceañera workflow; the union CHECK lists it once.
+# Kelley Autoplex car-deal pipeline. Mirrored in the chk_events_status CHECK
+# (widened by migration 086, narrowed to this set by 099) — keep the two in
+# sync. Note `sold` is shared with the quinceañera workflow; the union CHECK
+# lists it once, and each workflow carries its own is_terminal flag for it
+# (terminal here, non-terminal there, where an order still has stages left).
+#
+# Deliberately short: this is a sales-facing board, and financing runs on its
+# own system, so the columns only answer "did we talk to them, do we owe them
+# a follow-up, did we win or lose it?". The old middle of the funnel
+# (`appointment`, `test_drive`, `negotiation`, `financing`) and the separate
+# `delivered` close were dropped in 099 — no deal had ever reached them.
 VEHICLE_SALE_STATUSES: tuple[EventStatus, ...] = (
     EventStatus(
         code="new_lead",
@@ -98,49 +107,25 @@ VEHICLE_SALE_STATUSES: tuple[EventStatus, ...] = (
         code="contacted",
         label="Contacted",
         sort_order=2,
-        description="Salesperson has reached out.",
+        description="Salesperson has reached out — waiting on the customer.",
     ),
     EventStatus(
-        code="appointment",
-        label="Appointment",
+        code="follow_up",
+        label="Follow Up",
         sort_order=3,
-        description="Showroom visit scheduled.",
-    ),
-    EventStatus(
-        code="test_drive",
-        label="Test Drive",
-        sort_order=4,
-        description="Customer has driven the vehicle.",
-    ),
-    EventStatus(
-        code="negotiation",
-        label="Negotiation",
-        sort_order=5,
-        description="Working numbers — price, trade-in, terms.",
-    ),
-    EventStatus(
-        code="financing",
-        label="Financing",
-        sort_order=6,
-        description="Credit application / lender approval in progress.",
+        description="Owed a callback — the working list to chase today.",
     ),
     EventStatus(
         code="sold",
         label="Sold",
-        sort_order=7,
-        description="Deal closed — paperwork and delivery still to finish.",
-    ),
-    EventStatus(
-        code="delivered",
-        label="Delivered",
-        sort_order=8,
+        sort_order=4,
         is_terminal=True,
-        description="Keys handed over — deal complete.",
+        description="Deal closed — car sold.",
     ),
     EventStatus(
         code="lost",
         label="Lost",
-        sort_order=9,
+        sort_order=5,
         is_terminal=True,
         description="Customer walked or bought elsewhere.",
     ),
