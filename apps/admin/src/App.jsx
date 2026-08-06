@@ -39,7 +39,6 @@ const ContactDetail = lazy(() => import('./pages/ContactDetail'))
 const Contacts = lazy(() => import('./pages/Contacts'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const SalesActivity = lazy(() => import('./pages/SalesActivity'))
-const CallActivity = lazy(() => import('./pages/CallActivity'))
 const StorefrontAnalytics = lazy(() => import('./pages/StorefrontAnalytics'))
 const EventDetailLayout = lazy(() => import('./pages/event/EventDetailLayout'))
 const Timeline = lazy(() => import('./pages/event/tabs/Timeline'))
@@ -164,7 +163,7 @@ export default function App() {
                 <Route path="contacts" element={<Suspense fallback={<RouteFallback />}><Contacts /></Suspense>} />
                 <Route path="contacts/:contactId" element={<Suspense fallback={<RouteFallback />}><ContactDetail /></Suspense>} />
                 <Route path="sales-activity" element={<Suspense fallback={<RouteFallback />}><SalesActivity /></Suspense>} />
-                <Route path="call-activity" element={<Suspense fallback={<RouteFallback />}><CallActivity /></Suspense>} />
+                <Route path="call-activity" element={<Navigate to="/sales-activity" replace />} />
                 <Route path="analytics" element={<Suspense fallback={<RouteFallback />}><StorefrontAnalytics /></Suspense>} />
                 <Route path="invoices" element={<Suspense fallback={<RouteFallback />}><InvoicesGlobal /></Suspense>} />
                 <Route path="inventory" element={<Suspense fallback={<RouteFallback />}><AdminVehicles /></Suspense>} />

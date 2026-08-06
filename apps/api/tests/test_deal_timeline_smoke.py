@@ -52,6 +52,15 @@ client = TestClient(app)
 
 _TAG = uuid.uuid4().hex[:8]
 
+# Phone numbers are UNIQUE in contacts, and this box's CRM holds real rows
+# on the tidy-looking 555 numbers, so a hardcoded literal collides with
+# production data rather than with a previous run. Derive per-run numbers.
+_PHONE_SEED = int(_TAG[:4], 16) % 9000 + 1000
+_BUYER_PHONE = f"+1210{_PHONE_SEED}0143"
+_OTHER_PHONE = f"+1210{_PHONE_SEED}0199"
+_WALKIN_PHONE = f"+1210{_PHONE_SEED}0177"
+_SHOP_PHONE = f"+1210{_PHONE_SEED}1000"
+
 
 def _assert(cond: bool, label: str, detail: object = "") -> None:
     if not cond:
@@ -163,8 +172,8 @@ def _seed_message(conversation_id: int, direction: str, body: str, minutes_ago: 
             {
                 "cid": conversation_id,
                 "dir": direction,
-                "sender": "+12105550143" if direction == "inbound" else "+12105551000",
-                "recipient": "+12105551000" if direction == "inbound" else "+12105550143",
+                "sender": _BUYER_PHONE if direction == "inbound" else _SHOP_PHONE,
+                "recipient": _SHOP_PHONE if direction == "inbound" else _BUYER_PHONE,
                 "body": body,
                 "mins": minutes_ago,
             },
@@ -225,7 +234,7 @@ def main() -> int:
         auth = {"Authorization": f"Bearer {resp.json()['access_token']}"}
         print("login ok")
 
-        buyer_id = _make_contact("Tessa Rivera", "+12105550143")
+        buyer_id = _make_contact("Tessa Rivera", _BUYER_PHONE)
         contact_ids.append(buyer_id)
         resp = client.post(
             "/api/events",
@@ -285,7 +294,7 @@ def main() -> int:
             f"/api/contacts/{buyer_id}/call-attempts",
             headers=auth,
             json={
-                "phone": "+12105550143",
+                "phone": _BUYER_PHONE,
                 "event_id": deal_id,
                 "source": "deal_overview",
             },
@@ -334,7 +343,7 @@ def main() -> int:
         flags = {f["code"]: f for f in body["summary"]["flags"]}
         _assert("wrong_number" in flags, "wrong number flagged", flags)
         _assert(
-            "+12105550143" in flags["wrong_number"]["detail"],
+            _BUYER_PHONE in flags["wrong_number"]["detail"],
             "flag names the number",
             flags["wrong_number"],
         )
@@ -374,7 +383,7 @@ def main() -> int:
         print("follow-up flag ok")
 
         # --- another deal's texts never leak in ---------------------------
-        other_id = _make_contact("Other Buyer", "+12105550199")
+        other_id = _make_contact("Other Buyer", _OTHER_PHONE)
         contact_ids.append(other_id)
         resp = client.post(
             "/api/events",
@@ -404,6 +413,57 @@ def main() -> int:
             other_body["summary"]["flags"],
         )
         print("deal isolation ok")
+
+        # --- a walk-in is contact: it must NOT read "nobody reached out" ---
+        # The deal only exists because a rep stood in front of the customer
+        # and typed them in, so flagging it as untouched was nonsense — and
+        # the rep who took it should be named.
+        walkin_contact = _make_contact("Walk In Wanda", _WALKIN_PHONE)
+        contact_ids.append(walkin_contact)
+        resp = client.post(
+            "/api/events",
+            headers=auth,
+            json={
+                "primary_contact_id": walkin_contact,
+                "event_type": "vehicle_sale",
+                "event_name": "Walk-in deal",
+            },
+        )
+        walkin_deal = resp.json()["id"]
+
+        db = SessionLocal()
+        try:
+            db.execute(
+                sql_text(
+                    "INSERT INTO activity_log (event_id, actor_kind, actor_user_id, "
+                    " actor_display_name, activity_type, payload) "
+                    "VALUES (:e, 'staff', :u, 'Randy Kelley', "
+                    "        'event.walk_in_created', '{}'::jsonb)"
+                ),
+                {"e": walkin_deal, "u": admin_id},
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        body = client.get(f"/api/events/{walkin_deal}/timeline", headers=auth).json()
+        codes = [f["code"] for f in body["summary"]["flags"]]
+        _assert(
+            "needs_first_contact" not in codes,
+            "a walk-in is not an untouched lead",
+            codes,
+        )
+        _assert(
+            body["summary"]["created_via"] == "Walk-in",
+            "walk-in origin reported",
+            body["summary"],
+        )
+        _assert(
+            body["summary"]["created_by_name"] == "Randy Kelley",
+            "the rep who took it is named",
+            body["summary"],
+        )
+        print("walk-in origin + flag suppression ok")
 
         # --- 404 ------------------------------------------------------------
         resp = client.get("/api/events/99999999/timeline", headers=auth)

@@ -921,6 +921,102 @@ def _event_vehicle_label(
     return None
 
 
+def _beacon_vehicle_label(
+    e: StorefrontEvent, by_id: dict[int, str], by_code: dict[str, str]
+) -> str | None:
+    """The car this event was about, preferring what the beacon captured.
+
+    The beacon stamps year/make/model into the event metadata, which
+    survives a catalog row being edited or retired; the catalog lookup is
+    the fallback for events that predate that or carry only a stock code.
+    """
+    meta = e.event_metadata or {}
+    label = " ".join(
+        str(meta[k])
+        for k in ("vehicle_year", "vehicle_make", "vehicle_model")
+        if meta.get(k)
+    ).strip()
+    return label or _event_vehicle_label(e, by_id, by_code)
+
+
+# A shopper's return trip. Two events more than this far apart are two
+# separate visits, not one long one — the raw stream has no session
+# boundary of its own, and "138 events" reads like surveillance until it
+# is grouped back into the handful of times someone actually came back.
+_VISIT_GAP_MINUTES = 30
+
+
+def _group_visits(events: list[StorefrontEvent], by_id, by_code) -> list[dict[str, Any]]:
+    """Collapse the raw event stream into return visits.
+
+    Within a visit, ``page_view`` and ``vehicle_view`` on the same car are
+    the SAME act — the beacon fires both when a shopper opens a listing —
+    so vehicles are de-duplicated per visit. What a rep wants is "on Aug 4
+    they looked at these five cars", not forty rows.
+    """
+    visits: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    last_at = None
+
+    for e in events:
+        if (
+            current is None
+            or last_at is None
+            or (e.occurred_at - last_at).total_seconds() > _VISIT_GAP_MINUTES * 60
+        ):
+            current = {
+                "started_at": _iso(e.occurred_at),
+                "ended_at": _iso(e.occurred_at),
+                "vehicles": [],
+                "event_count": 0,
+                "converted": False,
+                "_seen": set(),
+            }
+            visits.append(current)
+        current["ended_at"] = _iso(e.occurred_at)
+        current["event_count"] += 1
+        last_at = e.occurred_at
+
+        if e.event_name == _CONVERSION_EVENT:
+            current["converted"] = True
+
+        label = _beacon_vehicle_label(e, by_id, by_code)
+        if label and label not in current["_seen"]:
+            current["_seen"].add(label)
+            current["vehicles"].append(label)
+
+    for v in visits:
+        v.pop("_seen", None)
+    return visits
+
+
+def _rank_interest(events: list[StorefrontEvent], by_id, by_code) -> list[dict[str, Any]]:
+    """Which cars they kept coming back to, most-viewed first.
+
+    Counts DISTINCT VISITS per vehicle rather than raw views: opening the
+    same listing twice in one sitting is one act of interest, while
+    returning to it on three different days is the signal a rep can use.
+    """
+    per_vehicle: dict[str, set[int]] = {}
+    visit_index = 0
+    last_at = None
+    for e in events:
+        if last_at is not None and (
+            (e.occurred_at - last_at).total_seconds() > _VISIT_GAP_MINUTES * 60
+        ):
+            visit_index += 1
+        last_at = e.occurred_at
+        label = _beacon_vehicle_label(e, by_id, by_code)
+        if label:
+            per_vehicle.setdefault(label, set()).add(visit_index)
+
+    ranked = sorted(
+        ({"label": k, "visits": len(v)} for k, v in per_vehicle.items()),
+        key=lambda r: (-r["visits"], r["label"]),
+    )
+    return [r for r in ranked if r["visits"] > 1][:3] or ranked[:3]
+
+
 def get_lead_journey(db: Session, *, crm_event_id: int) -> dict[str, Any]:
     """Read-only browsing journey for a deal, for the admin Lead Journey panel.
 
@@ -989,15 +1085,7 @@ def get_lead_journey(db: Session, *, crm_event_id: int) -> dict[str, Any]:
         if key in seen_vehicles:
             continue
         seen_vehicles.add(key)
-        meta = e.event_metadata or {}
-        label = (
-            " ".join(
-                str(meta[k])
-                for k in ("vehicle_year", "vehicle_make", "vehicle_model")
-                if meta.get(k)
-            ).strip()
-            or _event_vehicle_label(e, by_id, by_code)
-        )
+        label = _beacon_vehicle_label(e, by_id, by_code)
         vehicles_viewed.append(
             {
                 "label": label,
@@ -1023,11 +1111,18 @@ def get_lead_journey(db: Session, *, crm_event_id: int) -> dict[str, Any]:
         delta = converted_at - events[0].occurred_at
         minutes_to_convert = round(delta.total_seconds() / 60.0, 1)
 
+    visits = _group_visits(events, by_id, by_code)
+
     return {
         "has_attribution": True,
         "source": source,
         "session": session_info,
         "vehicles_viewed": vehicles_viewed,
+        # Grouped for the rep-facing summary; `path` stays for the raw
+        # "technical details" view.
+        "visits": visits,
+        "top_interests": _rank_interest(events, by_id, by_code),
+        "first_seen_at": _iso(events[0].occurred_at) if events else None,
         "path": path,
         "event_count": len(events),
         "converted_at": _iso(converted_at),

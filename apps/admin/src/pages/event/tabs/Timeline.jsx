@@ -91,6 +91,7 @@ const ACTIVITY_PHRASE = {
   'lead.confirmation_sent': () => 'Customer was emailed a confirmation',
   'lead.confirmation_failed': () => 'Customer confirmation email failed',
   'call.initiated': (i) => `${i.actor_name || 'Someone'} called`,
+  'appointment.arrived': () => 'Customer arrived for their appointment',
   'call.outcome_recorded': (i) =>
     `Call result: ${CALL_OUTCOME_PHRASE[i.payload?.outcome] || i.payload?.outcome || 'recorded'}`,
   'event.status_changed': (i) => {
@@ -99,12 +100,12 @@ const ACTIVITY_PHRASE = {
     if (!from) return `Deal started in ${to || 'the first column'}`
     return `Moved from ${from} to ${to}`
   },
-  'event.walk_in_created': () => 'Captured as a walk-in',
+  'event.walk_in_created': (i) =>
+    `${i.actor_name || 'Someone'} logged this walk-in`,
   'event.archived': () => 'Deal archived',
   'event.restored': () => 'Deal restored',
   'event.reassigned': (i) =>
     `Deal reassigned${i.payload?.to_display_name ? ` to ${i.payload.to_display_name}` : ''}`,
-  'appointment.arrived': () => 'Customer arrived for their appointment',
   'appointment.cancelled': () => 'Appointment cancelled',
 }
 

@@ -23,6 +23,23 @@ function stepDetail(p) {
   return p.vehicle_label || p.path || ''
 }
 
+function Fact({ label, value }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      {typeof value === 'string' || typeof value === 'number' ? (
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {value}
+        </Typography>
+      ) : (
+        <Box mt={0.25}>{value}</Box>
+      )}
+    </Box>
+  )
+}
+
 function SourceChips({ source }) {
   const utm = source?.utm || {}
   const chips = []
@@ -62,7 +79,7 @@ export default function LeadJourneyPanel({ eventId }) {
       color="text.secondary"
       sx={{ fontWeight: 600 }}
     >
-      Lead Journey
+      Website activity
     </Typography>
   )
 
@@ -88,81 +105,106 @@ export default function LeadJourneyPanel({ eventId }) {
     )
   }
 
-  const { source, session, vehicles_viewed, path, minutes_to_convert, event_count } =
-    data
+  const {
+    source,
+    session,
+    vehicles_viewed,
+    path,
+    event_count,
+    visits = [],
+    top_interests = [],
+    first_seen_at,
+    converted_at,
+  } = data
+
+  // Days they actually came back, not raw event count. "138 events" reads
+  // like surveillance; "came back on 7 days" is the same fact, useful.
+  const returnDays = new Set(
+    visits.map((v) => dayjs(v.started_at).format('YYYY-MM-DD')),
+  ).size
 
   return (
     <Paper sx={{ p: 2.5, mb: 2 }}>
       {title}
 
-      <Box mt={1.5}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-          Source
-        </Typography>
-        <Box mt={0.5}>
-          <SourceChips source={source} />
-        </Box>
-        {source?.landing_page && (
-          <Typography variant="caption" color="text.secondary" display="block" mt={0.75}>
-            Landing: {source.landing_page}
-          </Typography>
+      {/* The whole story in one line, before any detail. */}
+      <Stack direction="row" spacing={3} mt={1.5} flexWrap="wrap" useFlexGap>
+        {first_seen_at && (
+          <Fact label="First seen" value={dayjs(first_seen_at).format('MMM D')} />
         )}
-        {source?.referrer && (
-          <Typography variant="caption" color="text.secondary" display="block">
-            Referrer: {source.referrer}
-          </Typography>
+        {converted_at && (
+          <Fact label="Became a lead" value={dayjs(converted_at).format('MMM D')} />
         )}
-      </Box>
-
-      <Stack direction="row" spacing={2} mt={1.5} flexWrap="wrap" useFlexGap>
-        {minutes_to_convert != null && (
-          <Chip
-            size="small"
-            color="success"
-            variant="outlined"
-            label={`Converted after ${minutes_to_convert} min`}
+        {visits.length > 0 && (
+          <Fact
+            label="Came back"
+            value={`${returnDays} day${returnDays === 1 ? '' : 's'}`}
           />
         )}
-        <Chip size="small" variant="outlined" label={`${event_count} events`} />
         {vehicles_viewed?.length > 0 && (
-          <Chip
-            size="small"
-            variant="outlined"
-            icon={<DirectionsCarFilledOutlinedIcon fontSize="inherit" />}
-            label={`${vehicles_viewed.length} vehicle${
-              vehicles_viewed.length === 1 ? '' : 's'
-            } viewed`}
-          />
+          <Fact label="Vehicles viewed" value={vehicles_viewed.length} />
         )}
+        <Fact label="Source" value={<SourceChips source={source} />} />
       </Stack>
 
-      {vehicles_viewed?.length > 0 && (
-        <Box mt={1.5}>
+      {top_interests.length > 0 && (
+        <Box mt={2}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-            Vehicles viewed
+            Kept coming back to
           </Typography>
-          <Stack spacing={0.25} mt={0.5}>
-            {vehicles_viewed.map((v, i) => (
-              <Typography key={i} variant="body2">
-                {/* `label` is the current shape; fall back to the older
-                    year/make/model fields so the panel reads correctly even
-                    before the backend serving labels is restarted. */}
-                •{' '}
-                {v.label ||
-                  [v.vehicle_year, v.vehicle_make, v.vehicle_model]
-                    .filter(Boolean)
-                    .join(' ') ||
-                  'Vehicle'}
-              </Typography>
+          <Stack direction="row" spacing={0.75} mt={0.5} flexWrap="wrap" useFlexGap>
+            {top_interests.map((t) => (
+              <Chip
+                key={t.label}
+                size="small"
+                color="primary"
+                variant="outlined"
+                icon={<DirectionsCarFilledOutlinedIcon fontSize="inherit" />}
+                label={
+                  t.visits > 1 ? `${t.label} · ${t.visits} visits` : t.label
+                }
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      {/* One line per visit, not one per beacon event. Within a visit the
+          same car is listed once — the beacon fires page_view AND
+          vehicle_view for a single listing open, which made the raw list
+          look twice as busy as the shopper actually was. */}
+      {visits.length > 0 && (
+        <Box mt={2}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Visits
+          </Typography>
+          <Stack spacing={1} mt={0.75}>
+            {[...visits].reverse().map((v, i) => (
+              <Box key={i}>
+                <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                  <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 128 }}>
+                    {dayjs(v.started_at).format('MMM D, h:mm A')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                    {v.vehicles.length
+                      ? `Viewed ${v.vehicles.join(', ')}`
+                      : 'Browsed the site'}
+                    {v.converted ? ', then submitted the lead.' : ''}
+                  </Typography>
+                  {v.converted && (
+                    <Chip size="small" color="success" label="Became a lead" />
+                  )}
+                </Stack>
+              </Box>
             ))}
           </Stack>
         </Box>
       )}
 
       {path?.length > 0 && (
-        <Box mt={1.5}>
-          {/* Secondary detail — the source, vehicles, and timing above are the
-              at-a-glance signal, so the step-by-step path is collapsed. */}
+        <Box mt={2}>
+          {/* Every beacon hit. Useful when something looks wrong with
+              tracking; noise for a salesperson, so it stays closed. */}
           <Link
             component="button"
             type="button"
@@ -182,9 +224,19 @@ export default function LeadJourneyPanel({ eventId }) {
             ) : (
               <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
             )}
-            Path to conversion ({path.length} steps)
+            Show technical details ({event_count} tracked events)
           </Link>
           <Collapse in={showPath} unmountOnExit>
+            {source?.landing_page && (
+              <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+                Landing: {source.landing_page}
+              </Typography>
+            )}
+            {source?.referrer && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                Referrer: {source.referrer}
+              </Typography>
+            )}
             <Stack spacing={0.25} mt={0.75}>
               {path.map((p, i) => (
                 <Stack

@@ -72,6 +72,17 @@ function LeadSourceStrip({ summary }) {
   if (!summary) return null
 
   const bits = []
+  // Who took this deal, and how. First question a rep asks about a deal
+  // they don't recognize.
+  if (summary.created_via) {
+    bits.push({
+      key: 'created',
+      label: 'Created',
+      value: summary.created_by_name
+        ? `${summary.created_via} · ${summary.created_by_name}`
+        : summary.created_via,
+    })
+  }
   if (summary.lead_source) {
     const page = summary.lead_source_page
     bits.push({

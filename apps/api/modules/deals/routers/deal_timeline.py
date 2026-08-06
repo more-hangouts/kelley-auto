@@ -37,6 +37,9 @@ class TimelineFlag(BaseModel):
 
 
 class TimelineSummary(BaseModel):
+    created_via: str | None
+    created_by_name: str | None
+    created_at: datetime | None
     lead_source: str | None
     lead_source_page: str | None
     lead_message: str | None
@@ -84,6 +87,9 @@ def get_deal_timeline(
     return TimelineResponse(
         event_id=event_id,
         summary=TimelineSummary(
+            created_via=summary.created_via,
+            created_by_name=summary.created_by_name,
+            created_at=summary.created_at,
             lead_source=summary.lead_source,
             lead_source_page=summary.lead_source_page,
             lead_message=summary.lead_message,

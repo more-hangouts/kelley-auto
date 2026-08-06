@@ -21,10 +21,17 @@ import {
 } from '@mui/material'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight'
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 
-import { getSalesActivityRepRecent, getSalesActivitySummary } from '../services/api'
+import {
+  getCallActivitySummary,
+  getRecentCallActivity,
+  getSalesActivityRepRecent,
+  getSalesActivitySummary,
+} from '../services/api'
 
 // Phase 14.4: owner-visible view of commission-mode sales activity — who
 // is actually using the app and reviewing leads/contacts. Reads the
@@ -43,6 +50,26 @@ const ACTIVITY_LABELS = {
   'sales.appointment_viewed': 'Appointment viewed',
   'sales.contact_viewed': 'Contact viewed',
   'sales.search_performed': 'Search',
+}
+
+const OUTCOME_LABELS = {
+  call_initiated: 'Call initiated',
+  connected: 'Connected',
+  left_voicemail: 'Left voicemail',
+  no_answer: 'No answer',
+  busy: 'Busy',
+  wrong_number: 'Wrong number',
+  cancelled: 'Cancelled',
+}
+
+const OUTCOME_COLOR = {
+  connected: 'success',
+  left_voicemail: 'info',
+  busy: 'warning',
+  wrong_number: 'error',
+  no_answer: 'default',
+  cancelled: 'default',
+  call_initiated: 'default',
 }
 
 // "Active in the last 5 minutes" — mirrors the recorder's throttle window
@@ -156,6 +183,134 @@ function CountCell({ value }) {
   )
 }
 
+function callSummaryDate(range) {
+  if (range === 'yesterday') return dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+  if (range === 'today') return dayjs().format('YYYY-MM-DD')
+  return null
+}
+
+function CallsSection({ range }) {
+  const date = callSummaryDate(range)
+  const summaryQ = useQuery({
+    queryKey: ['call-activity-summary', date || 'today'],
+    queryFn: () => getCallActivitySummary(date ? { date } : {}),
+    refetchInterval: 30_000,
+  })
+  const recentQ = useQuery({
+    queryKey: ['call-activity-recent'],
+    queryFn: () => getRecentCallActivity({ limit: 25 }),
+    refetchInterval: 30_000,
+  })
+
+  const summary = summaryQ.data
+  const reps = Array.isArray(summary?.reps) ? summary.reps : []
+  const recent = Array.isArray(recentQ.data?.recent) ? recentQ.data.recent : []
+  const label = range === 'yesterday' ? 'Calls yesterday' : 'Calls today'
+
+  return (
+    <Stack spacing={2.5} sx={{ mt: 3 }}>
+      <Stack direction="row" spacing={1.25} alignItems="center">
+        <PhoneOutlinedIcon color="primary" />
+        <Box>
+          <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
+            {label}
+            {summary?.calls_today != null ? ` · ${summary.calls_today}` : ''}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Call outcomes are manager analytics; pending means a rep has not logged the result yet.
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Paper variant="outlined">
+        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Calls by rep
+          </Typography>
+        </Box>
+        {summaryQ.isLoading ? (
+          <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+            <CircularProgress size={20} />
+          </Box>
+        ) : reps.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+            No calls logged for this day.
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Rep</TableCell>
+                  <TableCell align="right">Initiated</TableCell>
+                  <TableCell align="right">Connected</TableCell>
+                  <TableCell align="right">Voicemail</TableCell>
+                  <TableCell align="right">No answer</TableCell>
+                  <TableCell align="right">Pending</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {reps.map((r) => (
+                  <TableRow key={r.salesperson_user_id ?? 'unknown'}>
+                    <TableCell>{r.salesperson_display_name || 'Unknown rep'}</TableCell>
+                    <CountCell value={r.initiated} />
+                    <CountCell value={r.connected} />
+                    <CountCell value={r.left_voicemail} />
+                    <CountCell value={r.no_answer} />
+                    <CountCell value={r.pending} />
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+
+      <Paper variant="outlined">
+        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Recent calls
+          </Typography>
+        </Box>
+        {recentQ.isLoading ? (
+          <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
+            <CircularProgress size={20} />
+          </Box>
+        ) : recent.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+            No recent calls.
+          </Typography>
+        ) : (
+          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}>
+            {recent.map((c) => (
+              <Box
+                key={c.id}
+                sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5 }}
+              >
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                    {c.contact_display_name || 'Unknown contact'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {c.salesperson_display_name || 'Unknown rep'}
+                    {c.created_at ? ` · ${dayjs(c.created_at).format('MMM D, h:mm A')}` : ''}
+                  </Typography>
+                </Box>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color={OUTCOME_COLOR[c.outcome] || 'default'}
+                  label={OUTCOME_LABELS[c.outcome] || OUTCOME_LABELS.call_initiated}
+                />
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Paper>
+    </Stack>
+  )
+}
+
 export default function SalesActivity() {
   const [range, setRange] = useState('today')
   const [expanded, setExpanded] = useState(null)
@@ -180,11 +335,11 @@ export default function SalesActivity() {
       >
         <Box>
           <Typography variant="h4" gutterBottom>
-            Rep activity
+            Sales activity
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Who's active in the app and reviewing leads &amp; contacts. App-usage
-            signals only — not payroll hours.
+            Rep app usage and call outcomes in one manager view. These are
+            activity signals only — not payroll hours.
           </Typography>
         </Box>
         <Tooltip title="Refresh">
@@ -309,6 +464,8 @@ export default function SalesActivity() {
           </Table>
         </TableContainer>
       )}
+
+      <CallsSection range={range} />
     </Box>
   )
 }

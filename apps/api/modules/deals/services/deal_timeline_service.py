@@ -63,9 +63,28 @@ MAX_ITEMS = 300
 
 ItemKind = Literal["activity", "note", "message"]
 
-# What counts as a human on our side reaching out. Used by
+# What counts as a human on our side making contact. Used by
 # ``needs_first_contact`` — a lead nobody has worked yet.
-_STAFF_TOUCH_ACTIVITY = frozenset({"call.initiated", "call.outcome_recorded"})
+#
+# Walk-ins and arrivals count: a rep stood in front of this person and
+# typed them into the CRM. Flagging "no one has reached out" on a deal
+# that only exists BECAUSE someone talked to them is exactly the kind of
+# nonsense that teaches reps to ignore flags.
+_STAFF_TOUCH_ACTIVITY = frozenset(
+    {
+        "call.initiated",
+        "call.outcome_recorded",
+        "event.walk_in_created",
+        "appointment.arrived",
+    }
+)
+
+# How a deal came into existence, in the order we prefer to report it.
+# The value is the rep-facing phrase for "where did this come from".
+_ORIGIN_ACTIVITY = {
+    "event.walk_in_created": "Walk-in",
+    "lead.public_submitted": "Website lead",
+}
 
 # "wrong number", "wrong #", "u have the wrong number". Anchored on the
 # word so "wrongfully" and similar don't trip it.
@@ -87,6 +106,9 @@ class TimelineItem:
 
 @dataclass
 class DealSummary:
+    created_via: str | None = None
+    created_by_name: str | None = None
+    created_at: datetime | None = None
     lead_source: str | None = None
     lead_source_page: str | None = None
     lead_message: str | None = None
@@ -299,6 +321,32 @@ def _build_flags(
     return flags
 
 
+def _creation_facts(db: Session, event: Event) -> tuple[str | None, str | None, datetime | None]:
+    """Who put this deal in the CRM, and how.
+
+    A rep looking at an unfamiliar deal asks "who took this?" first. The
+    answer is already in the earliest activity row — walk-ins carry the
+    staffer who logged them, website leads carry no actor because the
+    customer did it themselves — it just wasn't being surfaced.
+    """
+    row = db.execute(
+        select(ActivityLog)
+        .where(
+            ActivityLog.event_id == event.id,
+            ActivityLog.activity_type.in_(tuple(_ORIGIN_ACTIVITY)),
+        )
+        .order_by(ActivityLog.created_at.asc())
+        .limit(1)
+    ).scalars().first()
+    if row is None:
+        return None, None, _aware(event.created_at)
+    return (
+        _ORIGIN_ACTIVITY.get(row.activity_type),
+        row.actor_display_name,
+        _aware(row.created_at),
+    )
+
+
 def _lead_summary(db: Session, event: Event, items: list[TimelineItem]) -> dict:
     attribution = db.execute(
         select(LeadAttribution)
@@ -342,7 +390,12 @@ def build_deal_timeline(db: Session, event_id: int) -> tuple[DealSummary, list[T
     contact = db.get(Contact, event.primary_contact_id)
     last = items[0] if items else None
 
+    created_via, created_by_name, created_at = _creation_facts(db, event)
+
     summary = DealSummary(
+        created_via=created_via,
+        created_by_name=created_by_name,
+        created_at=created_at,
         lead_source=lead["source"],
         lead_source_page=lead["source_page"],
         lead_message=lead["message"],
