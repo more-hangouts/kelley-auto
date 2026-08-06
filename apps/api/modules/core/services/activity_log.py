@@ -51,6 +51,10 @@ SubjectKind = Literal[
     # kinds didn't cover them.
     "event_participant",
     "special_order",
+    # Phase 7 call tracking (migration 098) lives in its own table because a
+    # call's OUTCOME transitions in place; these rows mirror the milestones
+    # onto the deal timeline so a rep sees calls next to everything else.
+    "contact_call_attempt",
 ]
 
 
@@ -185,6 +189,16 @@ SPECIAL_ORDER_ARCHIVED = "special_order.archived"
 SPECIAL_ORDER_RESTORED = "special_order.restored"
 
 
+# Native-dialer / Twilio-bridge call attempts (contact_call_attempts,
+# migration 098). Only attempts LINKED TO A DEAL are mirrored here —
+# activity_log.event_id is NOT NULL, and a contact-only call has no deal
+# timeline to land on. Payload carries {attempt_id, outcome, source} and
+# deliberately NO phone number or call notes: this table forbids PII in
+# metadata, and the call row itself remains the record of those.
+CALL_INITIATED = "call.initiated"
+CALL_OUTCOME_RECORDED = "call.outcome_recorded"
+
+
 _KNOWN_TYPES = frozenset(
     {
         INVOICE_CREATED,
@@ -248,6 +262,8 @@ _KNOWN_TYPES = frozenset(
         EVENT_PARTICIPANT_RESTORED,
         SPECIAL_ORDER_ARCHIVED,
         SPECIAL_ORDER_RESTORED,
+        CALL_INITIATED,
+        CALL_OUTCOME_RECORDED,
     }
 )
 

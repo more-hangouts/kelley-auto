@@ -44,6 +44,7 @@ client = TestClient(app)
 _TAG = uuid.uuid4().hex[:8]
 _user_ids: list[int] = []
 _contact_ids: list[int] = []
+_event_ids: list[int] = []
 
 
 def _assert(cond, label, detail=""):
@@ -109,6 +110,12 @@ def _cleanup():
         if _contact_ids:
             db.execute(
                 sql_text("DELETE FROM contact_call_attempts WHERE contact_id = ANY(:ids)"),
+                {"ids": _contact_ids},
+            )
+            # activity_log rows cascade with their event; events RESTRICT on
+            # contact delete, so the deal has to go first.
+            db.execute(
+                sql_text("DELETE FROM events WHERE primary_contact_id = ANY(:ids)"),
                 {"ids": _contact_ids},
             )
             db.execute(
@@ -433,6 +440,133 @@ def test_outcome_allowlist_in_sync():
     print("outcome allowlist in sync ok")
 
 
+def _make_deal(contact_id: int) -> int:
+    """A vehicle_sale deal to hang call attempts on."""
+    db = SessionLocal()
+    try:
+        eid = db.execute(
+            sql_text(
+                "INSERT INTO events "
+                "(primary_contact_id, event_type, event_name, status) "
+                "VALUES (:cid, 'vehicle_sale', 'Call Mirror Deal', 'contacted') "
+                "RETURNING id"
+            ),
+            {"cid": contact_id},
+        ).scalar()
+        db.commit()
+        _event_ids.append(int(eid))
+        return int(eid)
+    finally:
+        db.close()
+
+
+def _call_activity(event_id: int) -> list[tuple[str, int]]:
+    db = SessionLocal()
+    try:
+        return [
+            (r[0], r[1])
+            for r in db.execute(
+                sql_text(
+                    "SELECT activity_type, subject_id FROM activity_log "
+                    "WHERE event_id = :eid AND subject_kind = 'contact_call_attempt' "
+                    "ORDER BY id"
+                ),
+                {"eid": event_id},
+            ).all()
+        ]
+    finally:
+        db.close()
+
+
+def test_deal_linked_calls_mirror_to_activity():
+    """A call on a deal shows up on that deal's Activity timeline.
+
+    Calls live in their own table because outcomes transition in place;
+    the timeline is append-only. Both milestones get mirrored so a rep
+    reading a deal can see the phone rang and how it went.
+    """
+    contact_id, _phone = _make_contact()
+    event_id = _make_deal(contact_id)
+    sales_id = _make_user("sales")
+    sh = {"Authorization": f"Bearer {_token(sales_id, sales=True)}"}
+
+    r = client.post(
+        f"/api/contacts/{contact_id}/call-attempts",
+        headers=sh,
+        json={"phone": "+12105551212", "event_id": event_id, "source": "deal_overview"},
+    )
+    _assert(r.status_code == 201, "create on deal 201", r.text)
+    attempt_id = r.json()["id"]
+
+    rows = _call_activity(event_id)
+    _assert(rows == [("call.initiated", attempt_id)], "initiated mirrored", rows)
+
+    # Reporting an outcome adds the second milestone.
+    r = client.patch(
+        f"/api/contacts/{contact_id}/call-attempts/{attempt_id}",
+        headers=sh,
+        json={"outcome": "no_answer"},
+    )
+    _assert(r.status_code == 200, "record outcome 200", r.text)
+    rows = _call_activity(event_id)
+    _assert(
+        rows == [("call.initiated", attempt_id), ("call.outcome_recorded", attempt_id)],
+        "outcome mirrored",
+        rows,
+    )
+
+    # Payload carries the milestone facts and NO PII — activity_log forbids
+    # phone numbers and note bodies in metadata.
+    db = SessionLocal()
+    try:
+        payload = db.execute(
+            sql_text(
+                "SELECT payload FROM activity_log WHERE subject_kind = "
+                "'contact_call_attempt' AND subject_id = :sid "
+                "AND activity_type = 'call.outcome_recorded'"
+            ),
+            {"sid": attempt_id},
+        ).scalar()
+    finally:
+        db.close()
+    _assert(payload.get("outcome") == "no_answer", "payload outcome", payload)
+    _assert("phone" not in payload and "notes" not in payload, "no PII in payload", payload)
+    print("deal-linked calls mirror to activity ok")
+
+
+def test_contact_only_call_writes_no_activity():
+    """A call with no deal has no timeline to write to and must not crash.
+
+    activity_log.event_id is NOT NULL, so the mirror has to no-op rather
+    than invent an anchor.
+    """
+    contact_id, _phone = _make_contact()
+    sales_id = _make_user("sales")
+    sh = {"Authorization": f"Bearer {_token(sales_id, sales=True)}"}
+
+    r = client.post(
+        f"/api/contacts/{contact_id}/call-attempts",
+        headers=sh,
+        json={"phone": "+12105551212"},
+    )
+    _assert(r.status_code == 201, "contact-only create 201", r.text)
+    attempt_id = r.json()["id"]
+
+    db = SessionLocal()
+    try:
+        n = db.execute(
+            sql_text(
+                "SELECT COUNT(*) FROM activity_log WHERE subject_kind = "
+                "'contact_call_attempt' AND subject_id = :sid"
+            ),
+            {"sid": attempt_id},
+        ).scalar()
+    finally:
+        db.close()
+    _assert(n == 0, "no activity row for contact-only call", n)
+    print("contact-only call writes no activity ok")
+
+
 if __name__ == "__main__":
     try:
         test_authz_and_not_found()
@@ -444,6 +578,8 @@ if __name__ == "__main__":
         test_cross_contact_and_missing_attempt_isolation()
         test_business_local_date_boundary()
         test_outcome_allowlist_in_sync()
+        test_deal_linked_calls_mirror_to_activity()
+        test_contact_only_call_writes_no_activity()
     finally:
         _cleanup()
     print("ALL CALL ATTEMPT SMOKES PASSED")

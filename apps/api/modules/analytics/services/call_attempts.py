@@ -18,6 +18,8 @@ Design invariants:
 
 from __future__ import annotations
 
+import logging
+
 from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import Integer as _INT, func
@@ -25,8 +27,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.models import Contact, ContactCallAttempt, User
-from modules.core.services import business_time
+from modules.core.services import activity_log, business_time
 from modules.core.services.phone import normalize_phone_e164
+
+log = logging.getLogger(__name__)
 
 # Kept in sync with migration 098's CHECK and the API OUTCOME literal.
 CALL_OUTCOMES: frozenset[str] = frozenset(
@@ -55,6 +59,52 @@ class CallAttemptError(Exception):
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _mirror_to_activity(
+    db: Session,
+    *,
+    attempt: ContactCallAttempt,
+    activity_type: str,
+    user: User | None,
+) -> None:
+    """Mirror a call milestone onto the linked deal's Activity timeline.
+
+    Calls live in their own table (migration 098) because an outcome
+    transitions in place, which an append-only audit stream can't model.
+    The cost was that the deal timeline never showed calls at all — a rep
+    looking at a deal couldn't see that anyone had phoned. This writes the
+    two milestones worth seeing there: the call going out, and the outcome
+    coming back.
+
+    No-ops for a contact-only call: ``activity_log.event_id`` is NOT NULL,
+    so an attempt with no deal has no timeline to write to. Never raises —
+    a failed mirror must not roll back the call tracking that is the
+    caller's actual job.
+    """
+    if attempt.event_id is None:
+        return
+
+    actor_user_id = user.id if user is not None else attempt.salesperson_user_id
+    try:
+        activity_log.log_activity(
+            db,
+            event_id=attempt.event_id,
+            actor_kind="staff" if actor_user_id else "system",
+            actor_user_id=actor_user_id,
+            activity_type=activity_type,
+            subject_kind="contact_call_attempt",
+            subject_id=attempt.id,
+            # No phone number, no call notes — activity_log forbids PII in
+            # metadata; the contact_call_attempts row keeps both.
+            payload={
+                "attempt_id": attempt.id,
+                "outcome": attempt.outcome,
+                "source": attempt.source,
+            },
+        )
+    except Exception:  # pragma: no cover — defensive
+        log.exception("call attempt %s could not be mirrored to activity", attempt.id)
 
 
 def log_call_attempt(
@@ -116,6 +166,13 @@ def log_call_attempt(
             if winner is not None:
                 return winner, False
         raise
+
+    _mirror_to_activity(
+        db,
+        attempt=attempt,
+        activity_type=activity_log.CALL_INITIATED,
+        user=user,
+    )
     return attempt, True
 
 
@@ -220,6 +277,14 @@ def record_outcome(
 
     attempt.updated_at = _now()
     db.flush()
+
+    if outcome is not None:
+        _mirror_to_activity(
+            db,
+            attempt=attempt,
+            activity_type=activity_log.CALL_OUTCOME_RECORDED,
+            user=None,
+        )
     return attempt
 
 
