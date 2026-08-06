@@ -26,13 +26,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from sqlalchemy import BigInteger, cast, func, or_, select
+from sqlalchemy import BigInteger, String, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from config.settings import APP_TIMEZONE
 from database.models import (
     CatalogItem,
+    Event,
     LeadAttribution,
     StorefrontEvent,
     StorefrontSession,
@@ -663,6 +664,29 @@ _FUNNEL_ORDER = (
 )
 
 
+def _live_deal_exists(ev):
+    """Predicate: this server milestone's deal still exists.
+
+    Milestones record ``crm_event_id`` in metadata and outlive the deal
+    they describe. A smoke run creates a deal, takes a payment, then
+    deletes the deal on cleanup — and the milestone stays. Those orphans
+    were being summed as revenue: the dashboard reported "$207,230
+    attributed" from 381 rows whose deals were every one of them gone,
+    against a payments table with nothing in it.
+
+    Compared as TEXT rather than casting the JSON value to an int, so a
+    malformed metadata value can never fault the whole dashboard query.
+    """
+    return (
+        select(Event.id)
+        .where(
+            cast(Event.id, String) == ev.event_metadata["crm_event_id"].astext,
+            Event.deleted_at.is_(None),
+        )
+        .exists()
+    )
+
+
 def summary(db: Session, *, days: int = 30) -> dict[str, Any]:
     """Aggregate storefront analytics for the admin dashboard: funnel counts,
     leads and revenue by channel, daily traffic, and most-viewed vehicles.
@@ -680,6 +704,16 @@ def summary(db: Session, *, days: int = 30) -> dict[str, Any]:
             .group_by(ev.event_name)
         ).all()
     )
+    # Same guard for the funnel's payments step — a funnel that counts 381
+    # payments above a $0 revenue tile is its own kind of misleading.
+    funnel_counts["payment_received"] = db.execute(
+        select(func.count(ev.id)).where(
+            in_window,
+            ev.event_name == "payment_received",
+            _live_deal_exists(ev),
+        )
+    ).scalar_one()
+
     unique_visitors = db.execute(
         select(func.count(func.distinct(ev.visitor_id))).where(
             in_window, ev.visitor_id.is_not(None)
@@ -694,6 +728,8 @@ def summary(db: Session, *, days: int = 30) -> dict[str, Any]:
     src = func.coalesce(ev.source, "(direct)")
     med = func.coalesce(ev.medium, "(none)")
     amount = cast(ev.event_metadata["amount_cents"].astext, BigInteger)
+
+    live_deal = _live_deal_exists(ev)
 
     # --- traffic by channel -------------------------------------------------
     traffic_by_source = [
@@ -751,7 +787,7 @@ def summary(db: Session, *, days: int = 30) -> dict[str, Any]:
                 func.count(ev.id).label("payments"),
                 func.coalesce(func.sum(amount), 0).label("revenue_cents"),
             )
-            .where(in_window, ev.event_name == "payment_received")
+            .where(in_window, ev.event_name == "payment_received", live_deal)
             .group_by(src, med)
             .order_by(func.coalesce(func.sum(amount), 0).desc())
             .limit(15)
@@ -760,7 +796,7 @@ def summary(db: Session, *, days: int = 30) -> dict[str, Any]:
     total_revenue_cents = int(
         db.execute(
             select(func.coalesce(func.sum(amount), 0)).where(
-                in_window, ev.event_name == "payment_received"
+                in_window, ev.event_name == "payment_received", live_deal
             )
         ).scalar_one()
         or 0

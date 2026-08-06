@@ -243,7 +243,36 @@ def test_milestone_and_summary() -> None:
             "funnel includes payments",
         )
         _assert(s["total_revenue_cents"] >= 123400, "revenue summed", s["total_revenue_cents"])
-        db.rollback()  # never persist the fake payment milestone
+        real_revenue = s["total_revenue_cents"]
+
+        # A milestone whose deal no longer exists is NOT revenue. Smoke runs
+        # create a deal, take a payment, then delete the deal on cleanup —
+        # the milestone outlives it, and those orphans were being summed into
+        # the dashboard's "Revenue attributed" tile ($207,230 of them, against
+        # an empty payments table).
+        orphan = svc.record_milestone(
+            db,
+            event_name="payment_received",
+            crm_event_id=999_999_999,
+            amount_cents=5_000_000,
+            dedupe_key=f"smoke-orphan:{_TAG}",
+        )
+        _assert(orphan is not None, "orphan milestone written")
+        s2 = svc.summary(db, days=7)
+        _assert(
+            s2["total_revenue_cents"] == real_revenue,
+            "orphaned milestone excluded from revenue",
+            (s2["total_revenue_cents"], real_revenue),
+        )
+        payments_step = next(
+            step for step in s2["funnel"] if step["event_name"] == "payment_received"
+        )
+        _assert(
+            payments_step["count"] == 1,
+            "funnel payments count excludes the orphan too",
+            payments_step,
+        )
+        db.rollback()  # never persist the fake payment milestones
     finally:
         db.close()
     print("milestone + summary ok")
