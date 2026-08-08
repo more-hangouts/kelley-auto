@@ -56,6 +56,13 @@ class CatalogItem(Base):
     category = Column(String(40), nullable=False)
     description_text = Column(Text)
     image_urls = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    # Per-photo alt text (migration 102), keyed by the URL in `image_urls`
+    # rather than by position — the admin grid reorders photos, and a
+    # positional map would silently start describing the wrong picture.
+    image_alts = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    # How this car is sold (migration 103): 'bhph' (dealer carries the
+    # note — the lot's default) or 'cash' (sold outright, no financing).
+    sale_type = Column(String(16), nullable=False, server_default=text("'bhph'"))
     source_platform = Column(String(40))
     source_product_id = Column(String(80))
     source_product_handle = Column(String(160))

@@ -2280,18 +2280,28 @@ def render_admin_walk_in_lead_created(
     contact,
     notes: str | None = None,
     admin_url: str,
+    customer_name: str | None = None,
+    lead_kind: str = "walk-in",
 ) -> RenderedEmail:
     """Admin-internal alert when a staff member logs a walk-in or phone
     lead via the dashboard. ``appointment`` is the placeholder
     appointment row that backs the lead; ``contact`` is the (possibly
     new) Contact the lead is attached to.
+
+    ``appointment`` is None for a phone lead — nobody arrived, so there is
+    no arrival receipt to read the customer's name off. ``customer_name``
+    carries it instead, and ``lead_kind`` ("walk-in" / "phone") keeps the
+    subject line honest about which one this was.
     """
     actor = captured_by.full_name or captured_by.username
     # celebrant_* are the legacy Bella's-era column names; they now hold
     # the customer's name.
-    customer = (appointment.celebrant_first_name or "").strip()
-    if appointment.celebrant_last_name:
-        customer = f"{customer} {appointment.celebrant_last_name}".strip()
+    if appointment is not None:
+        customer = (appointment.celebrant_first_name or "").strip()
+        if appointment.celebrant_last_name:
+            customer = f"{customer} {appointment.celebrant_last_name}".strip()
+    else:
+        customer = (customer_name or "").strip()
     customer = customer or contact.display_name or "(name unknown)"
     contact_label = (
         contact.display_name
@@ -2300,15 +2310,18 @@ def render_admin_walk_in_lead_created(
         ).strip()
         or "(no name)"
     )
+    event_date_label = (
+        _format_event_date(appointment) if appointment is not None else "Not shared yet"
+    )
     notes_clean = (notes or "").strip()
-    subject = f"New walk-in lead: {customer}"
+    subject = f"New {lead_kind} lead: {customer}"
     text = (
-        f"{actor} just logged a walk-in lead.\n\n"
+        f"{actor} just logged a {lead_kind} lead.\n\n"
         f"  Customer: {customer}\n"
         f"  Contact: {contact_label}\n"
         f"  Phone: {contact.phone_e164 or contact.phone or '(not provided)'}\n"
         f"  Email: {contact.email or '(not provided)'}\n"
-        f"  Event date: {_format_event_date(appointment)}\n"
+        f"  Event date: {event_date_label}\n"
         + (f"  Notes: {notes_clean}\n" if notes_clean else "")
         + f"\nOpen the lead in admin:\n    {admin_url}\n"
     )
@@ -2319,22 +2332,22 @@ def render_admin_walk_in_lead_created(
     )
     html = _wrap_html(
         f"<h1 style=\"font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; "
-        f"margin-top:0;\">New walk-in lead</h1>"
-        f"<p><strong>{escape(actor)}</strong> just logged a walk-in lead.</p>"
+        f"margin-top:0;\">New {escape(lead_kind)} lead</h1>"
+        f"<p><strong>{escape(actor)}</strong> just logged a {escape(lead_kind)} lead.</p>"
         + _details_table(
             [
                 ("Customer", customer),
                 ("Contact", contact_label),
                 ("Phone", contact.phone_e164 or contact.phone or "(not provided)"),
                 ("Email", contact.email or "(not provided)"),
-                ("Event date", _format_event_date(appointment)),
+                ("Event date", event_date_label),
             ]
         )
         + notes_html
         + f"<p style=\"margin-top:22px;\">"
         + _html_button("Open the lead", admin_url)
         + "</p>",
-        preheader=f"{actor} logged a walk-in lead.",
+        preheader=f"{actor} logged a {lead_kind} lead.",
     )
     return RenderedEmail(subject=subject, text=text, html=html)
 

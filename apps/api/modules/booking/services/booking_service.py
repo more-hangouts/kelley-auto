@@ -40,6 +40,25 @@ _CODE_PREFIX = "BX"  # No hyphen in stored canonical form; display layer adds it
 
 _LIVE_STATUSES = ("pending", "confirmed")
 
+# Appointment origin vocabulary (migration 104). Keep in sync with the
+# CHECK constraints in 104_lead_origin_and_appointment_source.py.
+#
+#   public_booking      the public widget, or the storefront lead form's
+#                       requested-slot placeholder
+#   staff_created       a staff member booked it from the CRM
+#   walk_in_placeholder the arrival receipt behind a walk-in lead — a record
+#                       that someone showed up, not a slot on the calendar
+#   customer_reschedule the new row a customer's reschedule link produced
+APPOINTMENT_SOURCE_VALUES: frozenset[str] = frozenset(
+    {"public_booking", "staff_created", "walk_in_placeholder", "customer_reschedule"}
+)
+
+# What the staff member was doing when they created the row. NULL for
+# anything the public created — nobody on staff was in the loop.
+BOOKING_CONTEXT_VALUES: frozenset[str] = frozenset(
+    {"walk_in", "phone_call", "existing_customer", "admin", "other"}
+)
+
 
 # ---------------------------------------------------------------------------
 # Timezone helpers

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Box, Button, Chip, Collapse, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined'
+import AccessibilityNewOutlinedIcon from '@mui/icons-material/AccessibilityNewOutlined'
 import BrokenImageOutlinedIcon from '@mui/icons-material/BrokenImageOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
@@ -149,10 +150,13 @@ export default function VehiclePhotoManager({
   uploading = false,
   maxMb = 10,
   onError,
+  alts = {},
+  onAltsChange,
 }) {
   const [broken, setBroken] = useState(() => new Set())
   const [urlOpen, setUrlOpen] = useState(false)
   const [urlDraft, setUrlDraft] = useState('')
+  const [altsOpen, setAltsOpen] = useState(false)
 
   const isCreate = mode === 'create'
   const sensors = useSensors(
@@ -229,6 +233,10 @@ export default function VehiclePhotoManager({
       onStagedChange([...staged, ...fresh])
     }
   }
+
+  // Only count non-blank descriptions — a whitespace-only value is
+  // cleared on save, so counting it would overstate coverage.
+  const describedCount = tiles.filter((t) => (alts[t.key] ?? '').trim()).length
 
   function addUrl() {
     const v = urlDraft.trim()
@@ -338,6 +346,66 @@ export default function VehiclePhotoManager({
             </Box>
           </SortableContext>
         </DndContext>
+      )}
+
+      {!isCreate && tiles.length > 0 && onAltsChange && (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<AccessibilityNewOutlinedIcon />}
+            onClick={() => setAltsOpen((o) => !o)}
+          >
+            {altsOpen ? 'Hide descriptions' : `Descriptions (${describedCount}/${tiles.length})`}
+          </Button>
+
+          <Collapse in={altsOpen}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', mt: 1, mb: 1.5 }}
+            >
+              What each photo shows, read aloud to shoppers using a screen
+              reader and indexed by search engines. Say the angle and what’s
+              visible — “Driver-side profile, black paint, alloy wheels” —
+              not “car photo 3”. Descriptions stay attached to their photo
+              when you drag to reorder.
+            </Typography>
+
+            <Stack spacing={1.5}>
+              {tiles.map((t, idx) => (
+                <Stack key={t.key} direction="row" spacing={1.5} alignItems="flex-start">
+                  <Box
+                    component="img"
+                    src={t.src}
+                    alt=""
+                    sx={{
+                      width: 64,
+                      height: 48,
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                      flexShrink: 0,
+                      bgcolor: 'action.hover',
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    fullWidth
+                    multiline
+                    maxRows={3}
+                    label={idx === 0 ? 'Cover photo' : `Photo ${idx + 1}`}
+                    placeholder="Describe what this photo shows"
+                    value={alts[t.key] ?? ''}
+                    inputProps={{ maxLength: 300 }}
+                    onChange={(e) =>
+                      onAltsChange({ ...alts, [t.key]: e.target.value })
+                    }
+                  />
+                </Stack>
+              ))}
+            </Stack>
+          </Collapse>
+        </Box>
       )}
     </Box>
   )

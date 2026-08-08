@@ -257,6 +257,9 @@ def create_appointment(
         customer_note=payload.note,
         contact_id=contact.id,
         status="confirmed",
+        # Migration 104: the customer booked this themselves. booking_context
+        # stays NULL — no staff member was in the loop.
+        source="public_booking",
         visitor_id=visitor_uuid,
         session_id=payload.session_id,
         event_id=payload.event_id,
@@ -580,6 +583,9 @@ def post_reschedule(
         # /api/sales/appointments/{id}/assignment can still move it later.
         assigned_user_id=original.assigned_user_id,
         status="confirmed",
+        # Migration 104: a reschedule is its own act, whatever the original
+        # row's origin was — matching the migration's backfill rule.
+        source="customer_reschedule",
         rescheduled_from_id=original.id,
         visitor_id=original.visitor_id,
         utm_source=original.utm_source,

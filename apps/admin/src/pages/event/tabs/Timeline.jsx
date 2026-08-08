@@ -39,6 +39,7 @@ import {
   resolveEventNote,
   updateEventNote,
 } from '../../../services/api'
+import { walkInSourceLabel } from '../../../utils/leadOrigin'
 
 dayjs.extend(relativeTime)
 
@@ -100,8 +101,27 @@ const ACTIVITY_PHRASE = {
     if (!from) return `Deal started in ${to || 'the first column'}`
     return `Moved from ${from} to ${to}`
   },
-  'event.walk_in_created': (i) =>
-    `${i.actor_name || 'Someone'} logged this walk-in`,
+  'event.walk_in_created': (i) => {
+    const who = i.actor_name || 'Someone'
+    const origin = walkInSourceLabel(i.payload?.walk_in_source)
+    const detail = i.payload?.walk_in_source_detail
+    // Rows written before migration 104 carry no context and stay
+    // phrased as walk-ins, which is what they were.
+    const what =
+      i.payload?.booking_context === 'phone_call'
+        ? 'logged this phone lead'
+        : 'logged this walk-in'
+    if (!origin) return `${who} ${what}`
+    return `${who} ${what} — came from ${origin.toLowerCase()}${
+      detail ? ` (${detail})` : ''
+    }`
+  },
+  'appointment.scheduled': (i) => {
+    const when = i.payload?.slot_start_at
+      ? dayjs(i.payload.slot_start_at).format('MMM D [at] h:mm A')
+      : 'a future slot'
+    return `${i.actor_name || 'Someone'} booked an appointment for ${when}`
+  },
   'event.archived': () => 'Deal archived',
   'event.restored': () => 'Deal restored',
   'event.reassigned': (i) =>

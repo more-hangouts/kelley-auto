@@ -44,6 +44,7 @@ import {
   listVehicles,
   scanVin,
   updateVehicle,
+  updateVehiclePhotoAlts,
   uploadVehiclePhoto,
 } from '../services/api'
 import { formatDollars, formatUSD, parseDollars } from '../utils/money'
@@ -75,6 +76,14 @@ const VEHICLE_STATUSES = [
   { value: 'delivered', label: 'Delivered', color: 'info' },
   { value: 'wholesale', label: 'Wholesale', color: 'secondary' },
   { value: 'hidden', label: 'Hidden', color: 'default' },
+]
+
+// How the car is sold (migration 103). Default 'bhph' matches the lot and
+// the column default; 'cash' also surfaces it under the storefront's Cash
+// Cars tab. Keep in sync with SALE_TYPE_VALUES in catalog_service.py.
+const SALE_TYPES = [
+  { value: 'bhph', label: 'Buy here, pay here' },
+  { value: 'cash', label: 'Cash car' },
 ]
 
 function statusMeta(value) {
@@ -112,6 +121,7 @@ const ERROR_MESSAGES = {
   vehicle_year_out_of_range: 'Year is outside the allowed range.',
   vehicle_mileage_invalid: 'Mileage must be a non-negative whole number.',
   vehicle_status_invalid: 'That status is not allowed.',
+  vehicle_sale_type_invalid: 'Sale type must be buy-here-pay-here or cash.',
   vehicle_features_invalid: 'Features must be a list of text values.',
   unit_price_cents_negative: 'Price must be a non-negative amount.',
   unit_price_cents_invalid: 'Price must be a valid amount.',
@@ -165,10 +175,12 @@ const DEFAULT_FORM = {
   drivetrain: '',
   condition: '',
   vehicle_status: 'available',
+  sale_type: 'bhph',
   description_text: '',
   carfax_url: '',
   video_url: '',
   image_urls: [],
+  image_alts: {},
   features: [],
   active: true,
 }
@@ -191,10 +203,12 @@ function formFromRow(row) {
     drivetrain: row.drivetrain || '',
     condition: row.condition || '',
     vehicle_status: row.vehicle_status || 'available',
+    sale_type: row.sale_type || 'bhph',
     description_text: row.description_text || '',
     carfax_url: row.carfax_url || '',
     video_url: row.video_url || '',
     image_urls: [...(row.image_urls || [])],
+    image_alts: { ...(row.image_alts || {}) },
     features: [...(row.features_json || [])],
     active: row.active !== false,
   }
@@ -305,6 +319,7 @@ function buildPayload(form, { isEdit }) {
     drivetrain: form.drivetrain.trim() || null,
     condition: form.condition.trim() || null,
     vehicle_status: form.vehicle_status,
+    sale_type: form.sale_type,
     description_text: form.description_text.trim() || null,
     carfax_url: form.carfax_url.trim() || null,
     video_url: form.video_url.trim() || null,
@@ -721,6 +736,20 @@ export default function AdminVehicles() {
     try {
       if (editing) {
         await updateVehicle(editing.id, body)
+        // Alt text has its own endpoint: it is keyed by photo URL, so it
+        // must be written AFTER image_urls lands — a description for a
+        // photo this save just removed would be rejected as unknown.
+        // Only send keys that survived, and only if something changed.
+        const liveAlts = Object.fromEntries(
+          body.image_urls.map((u) => [u, (form.image_alts?.[u] ?? '').trim()]),
+        )
+        const originalAlts = editing.image_alts || {}
+        const altsChanged = body.image_urls.some(
+          (u) => (liveAlts[u] || '') !== (originalAlts[u] || ''),
+        )
+        if (altsChanged) {
+          await updateVehiclePhotoAlts(editing.id, liveAlts)
+        }
       } else {
         const created = await createVehicle(body)
         // Upload staged photos in order so the first stays the cover. A
@@ -780,7 +809,13 @@ export default function AdminVehicles() {
       for (const file of files) {
         latest = await uploadVehiclePhoto(editing.id, file)
       }
-      if (latest) setForm((f) => ({ ...f, image_urls: latest.image_urls || [] }))
+      if (latest) {
+        setForm((f) => ({
+          ...f,
+          image_urls: latest.image_urls || [],
+          image_alts: { ...(f.image_alts || {}), ...(latest.image_alts || {}) },
+        }))
+      }
     } catch (err) {
       setActionError(extractApiError(err))
     } finally {
@@ -1136,6 +1171,25 @@ export default function AdminVehicles() {
                 </Select>
                 <FormHelperText>{statusHelp(form.vehicle_status)}</FormHelperText>
               </FormControl>
+              <FormControl sx={{ flex: 1, maxWidth: { sm: 320 } }}>
+                <InputLabel>Sale type</InputLabel>
+                <Select
+                  label="Sale type"
+                  value={form.sale_type}
+                  onChange={(e) => setForm({ ...form, sale_type: e.target.value })}
+                >
+                  {SALE_TYPES.map((t) => (
+                    <MenuItem key={t.value} value={t.value}>
+                      {t.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {form.sale_type === 'cash'
+                    ? 'Sold outright — also listed under Cash Cars on the website.'
+                    : 'Dealer-financed. This is the default for the lot.'}
+                </FormHelperText>
+              </FormControl>
             </Stack>
 
             <Divider />
@@ -1277,6 +1331,8 @@ export default function AdminVehicles() {
               mode={editing ? 'edit' : 'create'}
               urls={form.image_urls}
               onChange={(image_urls) => setForm({ ...form, image_urls })}
+              alts={form.image_alts}
+              onAltsChange={(image_alts) => setForm({ ...form, image_alts })}
               staged={stagedPhotos}
               onStagedChange={setStagedPhotos}
               onUpload={handlePhotoUpload}

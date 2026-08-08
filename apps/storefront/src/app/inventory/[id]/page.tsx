@@ -6,7 +6,7 @@ import NavbarWrapper from "@/app/components/NavbarWrapper";
 import Features from "@/app/components/Features";
 import Footer from "@/app/components/Footer";
 import { getVehicle, displayYear, displayColor, isSold, lexicalToText } from "@/lib/api";
-import { downPaymentHeadline, formatDownPayment } from "@/lib/pricing";
+import { downPaymentHeadline, formatCashPrice, formatDownPayment } from "@/lib/pricing";
 import { resolveNap } from "@/lib/nap";
 import ImageGallery from "./ImageGallery";
 import InquiryForm from "./InquiryForm";
@@ -32,7 +32,9 @@ export async function generateMetadata({
   const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
   const description = [
     `${title} for sale at Kelley Autoplex.`,
-    `${downPaymentHeadline()} — no credit check.`,
+    vehicle.saleType === "cash"
+      ? `${formatCashPrice(vehicle.cashPrice)} cash — sold outright.`
+      : `${downPaymentHeadline()} — no credit check.`,
     vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} miles.` : null,
     "Contact us to confirm availability.",
   ]
@@ -71,10 +73,12 @@ export default async function CarDetailPage({
   const title = `${displayYear(vehicle)} ${vehicle.make} ${vehicle.model}`;
   const sold = isSold(vehicle);
   const color = displayColor(vehicle);
+  const isCash = vehicle.saleType === "cash";
   const description = lexicalToText(vehicle.description);
 
   // Collect all photo URLs for the gallery
   const photos = (vehicle.photos ?? []).map((p) => p.url);
+  const photoAlts = (vehicle.photos ?? []).map((p) => p.alt ?? null);
 
   return (
     <div className="min-h-screen">
@@ -108,7 +112,7 @@ export default async function CarDetailPage({
       <section className="px-5 md:px-10 lg:px-20 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left — image gallery */}
-          <ImageGallery images={photos} title={title} />
+          <ImageGallery images={photos} alts={photoAlts} title={title} />
 
           {/* Right — details */}
           <div className="flex flex-col gap-6">
@@ -132,16 +136,20 @@ export default async function CarDetailPage({
               {title}
             </h1>
 
-            {/* Down payment */}
+            {/* Headline price. A cash car is sold outright, so quoting a
+                down payment on one would be plainly false — it shows its
+                asking price instead. */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                Down Payment
+                {isCash ? "Price" : "Down Payment"}
               </p>
               <p className="mt-1 text-4xl font-bold text-primary">
-                {formatDownPayment()}
+                {isCash ? formatCashPrice(vehicle.cashPrice) : formatDownPayment()}
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-500">
-                Buy here, pay here · no credit check
+                {isCash
+                  ? "Cash car · sold outright, no financing"
+                  : "Buy here, pay here · no credit check"}
               </p>
             </div>
 

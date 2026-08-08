@@ -55,13 +55,24 @@ class WalkInLeadEventPayload(BaseModel):
     event_name: str | None = Field(default=None, max_length=200)
     event_date: date | None = None
     owner_user_id: int | None = None
+    # Migration 104. Optional on the wire: the picker is strongly
+    # encouraged in the UI but does not block filing a lead, because a rep
+    # who does not yet know should not be forced to guess. The service
+    # validates the value against WALK_IN_SOURCE_VALUES.
+    walk_in_source: str | None = Field(default=None, max_length=32)
+    walk_in_source_detail: str | None = Field(default=None, max_length=200)
 
 
 class WalkInLeadEnrichmentPayload(BaseModel):
     # Wire name "enrichment" kept for SPA compatibility; the Bella's-era
     # dress-survey fields were removed with the dealership conversion
     # (unknown extras from older SPA builds are ignored by pydantic).
-    party_size_bucket: Literal["pair", "3_4", "5_plus"]
+    #
+    # party_size_bucket is now optional and defaulted server-side — a
+    # dress-fitting question the dealership UI no longer asks. 'solo' and
+    # the legacy Bella's buckets stay accepted so older SPA builds and the
+    # storefront lead path keep working.
+    party_size_bucket: Literal["solo", "pair", "3_4", "5_plus"] | None = None
     budget_range: str | None = Field(default=None, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
 
@@ -70,6 +81,11 @@ class WalkInLeadCreate(BaseModel):
     contact: WalkInLeadContactPayload
     event: WalkInLeadEventPayload
     enrichment: WalkInLeadEnrichmentPayload
+    # 'walk_in' (somebody arrived) or 'phone_call' (they called). Drives
+    # whether an attended placeholder appointment is written at all —
+    # see walk_in_service. Defaults to walk_in, preserving the prior
+    # behavior for any client that does not send it.
+    booking_context: Literal["walk_in", "phone_call"] = "walk_in"
 
 
 class WalkInLeadContactResponse(BaseModel):
@@ -89,7 +105,8 @@ class WalkInLeadEventResponse(BaseModel):
 class WalkInLeadResponse(BaseModel):
     contact: WalkInLeadContactResponse
     event: WalkInLeadEventResponse
-    appointment_id: int
+    # None for a phone lead — no arrival, so no arrival receipt.
+    appointment_id: int | None
     was_new_contact: bool
 
 
@@ -104,6 +121,9 @@ _ERROR_STATUS = {
     "contact_name_required": 422,
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
+    "invalid_walk_in_source": 422,
+    "walk_in_source_detail_too_long": 422,
+    "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
     "appointment_not_found": 404,
@@ -132,6 +152,8 @@ def create_walk_in_lead(
         event_name=payload.event.event_name,
         event_date=payload.event.event_date,
         owner_user_id=payload.event.owner_user_id,
+        walk_in_source=payload.event.walk_in_source,
+        walk_in_source_detail=payload.event.walk_in_source_detail,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
@@ -146,6 +168,7 @@ def create_walk_in_lead(
             contact_in=contact_in,
             event_in=event_in,
             enrichment_in=enrichment_in,
+            booking_context=payload.booking_context,
         )
     except WalkInLeadError as exc:
         # Route owns the rollback so the service can stay flush-only.
@@ -156,7 +179,8 @@ def create_walk_in_lead(
 
     db.commit()
     db.refresh(result.contact)
-    db.refresh(result.appointment)
+    if result.appointment is not None:
+        db.refresh(result.appointment)
     db.refresh(result.event)
 
     return WalkInLeadResponse(
@@ -172,6 +196,8 @@ def create_walk_in_lead(
             status=result.event.status,
             event_date=result.event.event_date,
         ),
-        appointment_id=result.appointment.id,
+        appointment_id=(
+            result.appointment.id if result.appointment is not None else None
+        ),
         was_new_contact=result.was_new_contact,
     )

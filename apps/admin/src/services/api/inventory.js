@@ -114,6 +114,15 @@ export async function uploadVehiclePhoto(catalogItemId, file) {
   return data
 }
 
+// Set or clear alt text for photos already on a vehicle. `alts` is keyed
+// by the photo's URL exactly as it appears in `image_urls` — never by
+// position, because the photo grid reorders and a positional write would
+// land on the wrong picture. A null/blank value clears that description.
+export async function updateVehiclePhotoAlts(catalogItemId, alts) {
+  const { data } = await api.patch(`/catalog/${catalogItemId}/photo-alts`, { alts })
+  return data
+}
+
 // Decode a VIN via NHTSA vPIC. Returns { vin (normalized), check_digit_ok,
 // decoded: {year, make, model, trim, body_type, fuel_type, transmission,
 // drivetrain}, error, existing_vehicle_id }. A 422 means the VIN is

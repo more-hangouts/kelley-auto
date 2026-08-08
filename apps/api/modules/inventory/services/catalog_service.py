@@ -92,6 +92,7 @@ class CatalogItemInput:
     product_title: str | None = None
     description_text: str | None = None
     image_urls: list[str] = field(default_factory=list)
+    sale_type: str | None = None
     source_platform: str | None = None
     source_product_id: str | None = None
     source_product_handle: str | None = None
@@ -386,6 +387,12 @@ def public_vehicle_dto(item: CatalogItem) -> dict[str, Any]:
         "drivetrain": item.drivetrain,
         "vin": item.vin,
         "photos": [_resolve_photo_url(u) for u in (item.image_urls or [])],
+        # Aligned index-for-index with `photos`; None where a photo has no
+        # description yet, so the client can fall back per photo rather
+        # than all-or-nothing. Stored keyed by URL — see migration 102.
+        "photoAlts": photo_alts_in_order(item),
+        # 'bhph' | 'cash' — drives the storefront's Cash Cars tab.
+        "saleType": item.sale_type or DEFAULT_SALE_TYPE,
         "features": list(item.features_json or []),
         "carfaxUrl": item.carfax_url,
         "videoUrl": item.video_url,
@@ -607,6 +614,15 @@ def validate_vehicle_fields(values: dict[str, Any]) -> None:
                 field="year",
             )
 
+    sale_type = values.get("sale_type")
+    if sale_type not in (None, ""):
+        if sale_type not in SALE_TYPE_VALUES:
+            raise CatalogServiceError(
+                "sale_type must be one of: " + ", ".join(sorted(SALE_TYPE_VALUES)),
+                code="vehicle_sale_type_invalid",
+                field="sale_type",
+            )
+
     if values.get("mileage") is not None:
         mileage = values["mileage"]
         if (
@@ -659,7 +675,16 @@ _PHOTO_CT_TO_EXT = {
 }
 _VEHICLE_MEDIA_PREFIX = "vehicles"
 _VEHICLE_PHOTO_MAX_BYTES = VEHICLE_PHOTO_MAX_MB * 1024 * 1024
+# How a car is sold (migration 103). 'bhph' = dealer carries the note,
+# 'cash' = sold outright. Default matches the column default.
+SALE_TYPE_VALUES: frozenset[str] = frozenset({"bhph", "cash"})
+DEFAULT_SALE_TYPE = "bhph"
+
 _VEHICLE_PHOTO_MAX_DIMENSION = 2400
+# Alt text cap (migration 102). Screen readers read alt as one
+# uninterrupted run, so a description longer than a sentence or two is
+# already failing its job; this is a bound on abuse, not a target.
+_PHOTO_ALT_MAX_CHARS = 300
 _VEHICLE_PHOTO_MIN_LONG_EDGE = 320
 _VEHICLE_PHOTO_MIN_SHORT_EDGE = 200
 
@@ -807,6 +832,85 @@ def delete_vehicle_media_keys(keys: list[str]) -> None:
             document_storage.delete_object(key)
 
 
+def normalize_photo_alt(value: str | None) -> str | None:
+    """Collapse an alt-text input to a stored value, or ``None``.
+
+    Empty/whitespace means "no alt text" and is stored as absence (no key)
+    rather than as an empty string: an ``alt=""`` on a content image tells
+    a screen reader the image is decorative and to skip it entirely, which
+    is the opposite of what a missing description means. Length is capped
+    so a pasted paragraph can't bloat the row — long alt text is an
+    anti-pattern anyway, screen readers don't chunk it.
+    """
+    if value is None:
+        return None
+    text_value = " ".join(str(value).split())
+    if not text_value:
+        return None
+    return text_value[:_PHOTO_ALT_MAX_CHARS]
+
+
+def _prune_photo_alts(item: CatalogItem) -> None:
+    """Drop alt entries whose photo is no longer on the row."""
+    alts = dict(item.image_alts or {})
+    if not alts:
+        return
+    live = set(item.image_urls or [])
+    pruned = {url: alt for url, alt in alts.items() if url in live}
+    if pruned != alts:
+        item.image_alts = pruned
+
+
+def photo_alts_in_order(item: CatalogItem) -> list[str | None]:
+    """Alt text aligned index-for-index with ``image_urls``.
+
+    The column is keyed by URL so that reordering photos can't desync it;
+    every reader that wants positional data goes through here instead of
+    touching the map.
+    """
+    alts = item.image_alts or {}
+    return [alts.get(url) or None for url in (item.image_urls or [])]
+
+
+def set_vehicle_photo_alts(
+    db: Session,
+    *,
+    catalog_item_id: int,
+    alts: dict[str, str | None],
+) -> CatalogItem:
+    """Set/clear alt text for photos on a vehicle, keyed by photo URL.
+
+    Unknown URLs are rejected rather than silently stored — a key that
+    matches no photo would be invisible in the UI and would never be
+    pruned. Caller owns the transaction.
+    """
+    item = db.get(CatalogItem, catalog_item_id)
+    if item is None or not item.is_vehicle:
+        raise CatalogServiceError(
+            "vehicle not found", code="catalog_item_not_found"
+        )
+    live = set(item.image_urls or [])
+    unknown = sorted(set(alts) - live)
+    if unknown:
+        raise CatalogServiceError(
+            "alt text refers to photos not on this vehicle",
+            code="image_alts_unknown_photo",
+            field="image_alts",
+            photos=unknown,
+        )
+    merged = dict(item.image_alts or {})
+    for url, raw in alts.items():
+        normalized = normalize_photo_alt(raw)
+        if normalized is None:
+            merged.pop(url, None)
+        else:
+            merged[url] = normalized
+    item.image_alts = merged
+    item.updated_at = datetime.now(timezone.utc)
+    db.flush()
+    return item
+
+
 def add_vehicle_photo(
     db: Session,
     *,
@@ -814,11 +918,13 @@ def add_vehicle_photo(
     filename: str,
     content_type: str,
     body: bytes,
+    alt_text: str | None = None,
 ) -> CatalogItem:
     """Store one uploaded vehicle photo and append its public URL to the
     row's ``image_urls`` (ordered; first is the thumbnail). Validates the
     content type by extension AND magic bytes, caps the size, and guards
-    disk space. Caller owns the transaction (we ``flush`` only)."""
+    disk space. ``alt_text``, when given, is recorded against the freshly
+    minted URL. Caller owns the transaction (we ``flush`` only)."""
     item = db.get(CatalogItem, catalog_item_id)
     if item is None or not item.is_vehicle:
         raise CatalogServiceError(
@@ -856,6 +962,9 @@ def add_vehicle_photo(
     document_storage.put_object(storage_key, BytesIO(processed))
     public_path = f"/api/public/media/{storage_key}"
     item.image_urls = list(item.image_urls or []) + [public_path]
+    normalized_alt = normalize_photo_alt(alt_text)
+    if normalized_alt is not None:
+        item.image_alts = {**(item.image_alts or {}), public_path: normalized_alt}
     item.updated_at = datetime.now(timezone.utc)
     db.flush()
     return item
@@ -966,6 +1075,9 @@ def create_catalog_item(db: Session, data: CatalogItemInput) -> CatalogItem:
         carfax_url=data.carfax_url,
         video_url=data.video_url,
         features_json=list(data.features_json),
+        # Omitted -> let the column default ('bhph') apply rather than
+        # writing an explicit None, which would violate NOT NULL.
+        **({"sale_type": data.sale_type} if data.sale_type else {}),
     )
     db.add(item)
     db.flush()
@@ -1267,6 +1379,7 @@ _ADMIN_PATCHABLE_FIELDS = {
     "carfax_url",
     "video_url",
     "features_json",
+    "sale_type",
 }
 _CATALOG_CATEGORIES = set(_CATEGORY_LABELS)
 _ADMIN_PATCH_REQUIRED_FIELDS = {
@@ -1362,6 +1475,16 @@ def update_catalog_item(
                     code="image_urls_invalid",
                 )
             _validate_image_urls(value)
+        if field_name == "sale_type":
+            # Mirror migration 103's CHECK so a bad value is a friendly
+            # 422 instead of an IntegrityError at flush.
+            if value not in SALE_TYPE_VALUES:
+                raise CatalogServiceError(
+                    "sale_type must be one of: "
+                    + ", ".join(sorted(SALE_TYPE_VALUES)),
+                    code="vehicle_sale_type_invalid",
+                    field=field_name,
+                )
         if field_name == "unit_price_cents" and value is not None:
             # Mirror migration 067's CHECK so the rejection surfaces
             # as a friendly domain error instead of a raw IntegrityError.
@@ -1384,6 +1507,10 @@ def update_catalog_item(
         row._removed_vehicle_media_keys = _removed_vehicle_media_keys(
             old_image_urls, list(row.image_urls or [])
         )
+        # Reordering leaves every URL present, so alt text follows its
+        # photo untouched; only a genuine removal drops keys here.
+        _prune_photo_alts(row)
+        db.flush()
     return row
 
 

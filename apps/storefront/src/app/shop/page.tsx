@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default async function ShopPage() {
-  return <InventoryPage heading="Browse Inventory" />;
+  return <InventoryPage heading="Browse Inventory" saleTypeTabs="all" />;
 }

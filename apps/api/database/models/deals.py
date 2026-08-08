@@ -54,6 +54,15 @@ class Event(Base):
     vehicle_catalog_item_id = Column(
         Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
     )
+    # Migration 104: staff-entered origin for leads that never touch the
+    # storefront (walk-ins, phone-ins). Deliberately separate from the
+    # derived source/medium attribution on storefront_events — a person who
+    # walked through the door has no click data, and merging the two would
+    # make the analytics lie. `walk_in_source` is the reportable bucket;
+    # `walk_in_source_detail` is free text ("Facebook video") that is never
+    # grouped on.
+    walk_in_source = Column(String(32))
+    walk_in_source_detail = Column(String(200))
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))

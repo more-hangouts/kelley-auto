@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { PayloadVehicle } from "@/types/vehicle";
-import { primaryPhoto, displayYear, displayColor, isSold, lexicalToText, allPhotos } from "@/lib/vehicle-utils";
-import { downPaymentHeadline } from "@/lib/pricing";
+import { primaryPhoto, primaryPhotoAlt, displayYear, displayColor, isSold, lexicalToText, allPhotos } from "@/lib/vehicle-utils";
+import { downPaymentHeadline, formatCashPrice } from "@/lib/pricing";
 
 export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
   const imageUrl = primaryPhoto(vehicle);
+  const imageAlt = primaryPhotoAlt(vehicle);
+  const isCash = vehicle.saleType === "cash";
   const photoCount = allPhotos(vehicle).length;
   const year = displayYear(vehicle);
   const color = displayColor(vehicle);
@@ -23,7 +25,7 @@ export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={vehicle.title}
+            alt={imageAlt || vehicle.title}
             fill
             className="object-contain p-4 md:p-6"
           />
@@ -76,7 +78,9 @@ export default function VehicleCard({ vehicle }: { vehicle: PayloadVehicle }) {
         </h3>
 
         <p className="mt-1 text-lg md:text-xl font-semibold text-primary">
-          {downPaymentHeadline()}
+          {/* Cash cars aren't financed, so a down payment line would be
+              meaningless on one — show what it actually sells for. */}
+          {isCash ? formatCashPrice(vehicle.cashPrice) : downPaymentHeadline()}
         </p>
 
         {description && (

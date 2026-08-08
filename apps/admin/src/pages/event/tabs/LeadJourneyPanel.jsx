@@ -7,6 +7,7 @@ import { useState } from 'react'
 import dayjs from 'dayjs'
 
 import { getEventJourney } from '../../../services/api'
+import { walkInSourceLabel } from '../../../utils/leadOrigin'
 
 // Human labels for the raw storefront event names.
 const EVENT_LABELS = {
@@ -57,6 +58,38 @@ function SourceChips({ source }) {
   )
 }
 
+// Staff-entered origin, shown when the deal has one. Deliberately its own
+// block with its own wording: this is what a person said at the counter, not
+// something the site measured. Merging it into the chips below would let a
+// walk-in read as though it carried click data.
+function StaffEnteredOrigin({ event }) {
+  if (!event?.walk_in_source) return null
+  return (
+    <Box
+      sx={{
+        mt: 1.5,
+        pt: 1.5,
+        borderTop: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
+      <Typography variant="caption" color="text.secondary" display="block">
+        Told us they came from
+      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={walkInSourceLabel(event.walk_in_source)}
+        />
+        {event.walk_in_source_detail && (
+          <Typography variant="body2">{event.walk_in_source_detail}</Typography>
+        )}
+      </Stack>
+    </Box>
+  )
+}
+
 /**
  * Read-only first-party browsing journey for a deal: where the shopper came
  * from, which vehicles they viewed, and their path to conversion. Sourced from
@@ -64,8 +97,14 @@ function SourceChips({ source }) {
  *
  * Only meaningful for storefront (vehicle_sale) leads — the parent gates on
  * event_type, and the API returns has_attribution=false for anything else.
+ *
+ * `event` is optional and carries the staff-entered walk-in origin, which is
+ * rendered alongside but never merged with the measured attribution. A
+ * walk-in with no storefront session shows its staff-entered origin under an
+ * explicit "no browsing journey" line rather than borrowing digital
+ * attribution it never had.
  */
-export default function LeadJourneyPanel({ eventId }) {
+export default function LeadJourneyPanel({ eventId, event }) {
   const [showPath, setShowPath] = useState(false)
   const { data, isLoading, isError } = useQuery({
     queryKey: ['event', eventId, 'journey'],
@@ -101,6 +140,7 @@ export default function LeadJourneyPanel({ eventId }) {
         <Typography variant="body2" color="text.secondary" mt={1}>
           No storefront browsing journey recorded for this lead.
         </Typography>
+        <StaffEnteredOrigin event={event} />
       </Paper>
     )
   }
@@ -144,8 +184,10 @@ export default function LeadJourneyPanel({ eventId }) {
         {vehicles_viewed?.length > 0 && (
           <Fact label="Vehicles viewed" value={vehicles_viewed.length} />
         )}
-        <Fact label="Source" value={<SourceChips source={source} />} />
+        <Fact label="Measured source" value={<SourceChips source={source} />} />
       </Stack>
+
+      <StaffEnteredOrigin event={event} />
 
       {top_interests.length > 0 && (
         <Box mt={2}>

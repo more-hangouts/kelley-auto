@@ -137,6 +137,11 @@ APPLICATION_PII_UPDATED = "application.pii_updated"
 # `cancelled_at`, `internal_notes`) to record what happened.
 APPOINTMENT_ARRIVED = "appointment.arrived"
 APPOINTMENT_NO_SHOW = "appointment.no_show"
+# Staff put a future visit on the calendar from the CRM (migration 104's
+# `staff_created` source). Payload carries the slot, the booking context,
+# the assignee, and any advisory warnings the slot was booked despite —
+# "booked outside published hours" is exactly what gets asked about later.
+APPOINTMENT_SCHEDULED = "appointment.scheduled"
 APPOINTMENT_CANCELLED = "appointment.cancelled"
 APPOINTMENT_NOTES_EDITED = "appointment.notes_edited"
 # Tried-on log (Phase 4 of the sales portal). Payload references
@@ -242,6 +247,7 @@ _KNOWN_TYPES = frozenset(
         APPLICATION_PII_UPDATED,
         APPOINTMENT_ARRIVED,
         APPOINTMENT_NO_SHOW,
+        APPOINTMENT_SCHEDULED,
         APPOINTMENT_CANCELLED,
         APPOINTMENT_NOTES_EDITED,
         APPOINTMENT_TRIED_ON_ADDED,

@@ -36,6 +36,7 @@ from modules.booking.services import booking_service
 from modules.core.services import business_profile_service
 from modules.core.services import document_storage
 from modules.analytics.services import meta_capi_service
+from modules.inventory.services import catalog_service as catalog
 from modules.inventory.services import public_inventory_service as inventory
 from modules.contacts.services import public_lead_service
 from modules.analytics.services import storefront_analytics_service
@@ -133,6 +134,12 @@ def list_inventory(
     make: str | None = None,
     model: str | None = None,
     body_type: str | None = None,
+    sale_type: str | None = Query(
+        default=None,
+        description="How the car is sold: 'cash' (sold outright) or 'bhph' "
+        "(dealer-financed). Omit for both — the default listing shows "
+        "every car regardless of sale type. Unknown values are ignored.",
+    ),
     fuel_type: str | None = None,
     transmission: str | None = None,
     drivetrain: str | None = None,
@@ -161,6 +168,7 @@ def list_inventory(
         make=make,
         model=model,
         body_type=body_type,
+        sale_type=sale_type if sale_type in catalog.SALE_TYPE_VALUES else None,
         fuel_type=fuel_type,
         transmission=transmission,
         drivetrain=drivetrain,

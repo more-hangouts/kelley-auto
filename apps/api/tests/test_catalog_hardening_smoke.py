@@ -352,8 +352,7 @@ def check_template_lint() -> None:
     paths = [
         *(_REPO_ROOT / "templates" / "pdf").glob("*.html"),
         *(_REPO_ROOT / "templates" / "portal").glob("*.html"),
-        _REPO_ROOT / "services" / "portal_email.py",
-        _REPO_ROOT / "services" / "notification_templates.py",
+        _REPO_ROOT / "modules" / "deals" / "services" / "portal_email.py",
     ]
     forbidden = sorted(FORBIDDEN_PUBLIC_RENDER_KEYS)
     hits: list[str] = []

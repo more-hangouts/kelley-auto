@@ -82,13 +82,16 @@ function mapCondition(c: string | null): PayloadVehicle["condition"] {
   return "USED"; // used / certified / etc.
 }
 
-function toMedia(urls: string[]): MediaDoc[] {
+function toMedia(urls: string[], alts: (string | null)[] = []): MediaDoc[] {
   return urls.map((url, i) => ({
     id: String(i),
     url,
     filename: url.split("/").pop() || `photo-${i}`,
     mimeType: "image/*",
-    alt: null,
+    // Server sends these aligned to `photos`; older payloads omit the
+    // field entirely, which lands here as undefined -> null, i.e. the
+    // previous behaviour.
+    alt: alts[i] ?? null,
   }));
 }
 
@@ -117,7 +120,8 @@ function adaptVehicle(v: PublicVehicle): PayloadVehicle {
     trim: v.trim,
     description: toLexical(descParts.join(" · ")),
     status: mapStatus(v.status),
-    photos: toMedia(v.photos ?? []),
+    saleType: v.saleType ?? "bhph",
+    photos: toMedia(v.photos ?? [], v.photoAlts ?? []),
     createdAt: v.createdAt,
     updatedAt: v.updatedAt,
   };
@@ -126,7 +130,7 @@ function adaptVehicle(v: PublicVehicle): PayloadVehicle {
 const _API_PAGE = 60; // FastAPI public list caps at 60/page
 
 export const getVehicles = cache(
-  async (opts: { limit?: number; bodyType?: string; bodyTypes?: string[]; make?: string } = {}): Promise<PayloadListResponse<PayloadVehicle>> => {
+  async (opts: { limit?: number; bodyType?: string; bodyTypes?: string[]; make?: string; saleType?: "bhph" | "cash" } = {}): Promise<PayloadListResponse<PayloadVehicle>> => {
     const target = opts.limit ?? 100;
     const bodyTypes = opts.bodyTypes ?? (opts.bodyType ? [opts.bodyType] : [undefined]);
     const docs: PayloadVehicle[] = [];
@@ -140,6 +144,7 @@ export const getVehicles = cache(
         const res = await apiGetInventory({
           make: opts.make,
           bodyType,
+          saleType: opts.saleType,
           limit: _API_PAGE,
           page,
           sort: "newest",

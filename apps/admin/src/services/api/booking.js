@@ -29,6 +29,15 @@ export async function listBlackouts() {
   return data
 }
 
+// Staff-created appointment (migration 104). Books a real future slot from
+// the CRM — a deal, or a contact with no deal yet. 409s carry
+// {code:'slot_conflict', conflicts:[...]}; a 201 may still carry advisory
+// `warnings` (outside published hours, shared capacity in use).
+export async function createStaffAppointment(body) {
+  const { data } = await api.post('/admin/booking/appointments', body)
+  return data
+}
+
 export async function createBlackout(body) {
   const { data } = await api.post('/admin/booking/blackouts', body)
   return data

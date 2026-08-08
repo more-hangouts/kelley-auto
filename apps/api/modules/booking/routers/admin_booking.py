@@ -27,9 +27,15 @@ from database.models import (
 )
 from modules.core.services import notification_service
 from modules.contacts.services import buyer_journey
-from modules.booking.services import appointment_audit, booking_service, event_service
+from modules.booking.services import (
+    appointment_audit,
+    booking_service,
+    event_service,
+    staff_appointments,
+)
 from modules.contacts.services.buyer_journey import BuyerJourneyError
 from modules.booking.services.event_service import EventServiceError
+from modules.booking.services.staff_appointments import StaffAppointmentError
 
 log = logging.getLogger(__name__)
 
@@ -530,4 +536,101 @@ def tag_appointment_participant(
     return ParticipantTagResponse(
         appointment_id=appt.id,
         event_participant_id=appt.event_participant_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Staff-created appointments
+# ---------------------------------------------------------------------------
+#
+# Booking a customer in from the CRM — the path that did not exist before
+# migration 104. Thin as the rest of this module: validation, auth, and the
+# transaction boundary here; the rules live in
+# services/staff_appointments.py, including why the published availability
+# rules are advisory for staff and blackouts / rep double-booking are not.
+
+
+class StaffAppointmentCreate(BaseModel):
+    # Anchor: at least one is required. An event resolves its own contact,
+    # so a deal-level booking only needs event_id.
+    event_id: int | None = None
+    contact_id: int | None = None
+    # Naive datetimes are read as shop-local wall time, matching the
+    # customer reschedule route.
+    slot_start: datetime
+    duration_minutes: int | None = None
+    booking_context: Literal[
+        "walk_in", "phone_call", "existing_customer", "admin", "other"
+    ] = "phone_call"
+    assigned_user_id: int | None = None
+    internal_notes: str | None = Field(default=None, max_length=4000)
+
+
+class StaffAppointmentResponse(BaseModel):
+    appointment_id: int
+    event_id: int | None
+    contact_id: int
+    slot_start_at: datetime
+    slot_end_at: datetime
+    assigned_user_id: int | None
+    # Advisory reasons the slot is unusual but was still booked (outside
+    # published hours, shared capacity already used). The UI shows these;
+    # they are not errors.
+    warnings: list[str]
+
+
+_STAFF_APPOINTMENT_ERROR_STATUS = {
+    "invalid_booking_context": 422,
+    "invalid_duration": 422,
+    "missing_anchor": 422,
+    "contact_event_mismatch": 422,
+    "invalid_assigned_user_id": 422,
+    "event_not_found": 404,
+    "contact_not_found": 404,
+    "slot_conflict": 409,
+}
+
+
+@router.post(
+    "/appointments", response_model=StaffAppointmentResponse, status_code=201
+)
+def create_staff_appointment(
+    payload: StaffAppointmentCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin_scope),
+) -> StaffAppointmentResponse:
+    try:
+        result = staff_appointments.create_staff_appointment(
+            db,
+            actor_user_id=user.id,
+            slot_start=payload.slot_start,
+            duration_minutes=payload.duration_minutes,
+            booking_context=payload.booking_context,
+            event_id=payload.event_id,
+            contact_id=payload.contact_id,
+            assigned_user_id=payload.assigned_user_id,
+            internal_notes=payload.internal_notes,
+        )
+    except StaffAppointmentError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=_STAFF_APPOINTMENT_ERROR_STATUS.get(exc.code, 400),
+            # Conflicts carry which conflicts, so the dialog can say what is
+            # wrong instead of "could not book".
+            detail={"code": exc.code, "conflicts": str(exc).split("; ")}
+            if exc.code == "slot_conflict"
+            else exc.code,
+        ) from exc
+
+    db.commit()
+    db.refresh(result.appointment)
+    appt = result.appointment
+    return StaffAppointmentResponse(
+        appointment_id=appt.id,
+        event_id=appt.crm_event_id,
+        contact_id=appt.contact_id,
+        slot_start_at=appt.slot_start_at,
+        slot_end_at=appt.slot_end_at,
+        assigned_user_id=appt.assigned_user_id,
+        warnings=result.warnings,
     )

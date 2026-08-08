@@ -34,6 +34,7 @@ export type PayloadVehicle = {
   description?: unknown;
   status?: "AVAILABLE" | "PENDING" | "SOLD" | null;
   /** Populated at depth=1 */
+  saleType?: "bhph" | "cash";
   photos?: MediaDoc[];
   createdAt: string;
   updatedAt: string;

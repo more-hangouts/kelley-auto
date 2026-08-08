@@ -5,9 +5,15 @@ import Image from "next/image";
 
 export default function ImageGallery({
   images,
+  alts = [],
   title,
 }: {
   images: string[];
+  // Aligned index-for-index with `images`. A photo with no description
+  // falls back to the listing title, which is what the whole gallery
+  // used to say — never an empty alt, which would tell a screen reader
+  // the photo is decorative and skip it.
+  alts?: (string | null)[];
   title: string;
 }) {
   const [active, setActive] = useState(0);
@@ -21,7 +27,7 @@ export default function ImageGallery({
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-neutral-25">
         <Image
           src={images[active]}
-          alt={title}
+          alt={alts[active] || title}
           fill
           priority
           className="object-contain p-6"
@@ -76,7 +82,7 @@ export default function ImageGallery({
             >
               <Image
                 src={img}
-                alt={`View ${i + 1}`}
+                alt={alts[i] || `${title} — view ${i + 1}`}
                 fill
                 className="object-contain p-2"
               />

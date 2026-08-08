@@ -37,6 +37,13 @@ export function primaryPhoto(vehicle: PayloadVehicle): string | null {
   return vehicle.photos?.[0]?.url ?? null;
 }
 
+// Alt text for the card/hero thumbnail. Null when the cover photo has no
+// description, so callers keep their own fallback rather than rendering
+// an empty alt.
+export function primaryPhotoAlt(vehicle: PayloadVehicle): string | null {
+  return vehicle.photos?.[0]?.alt ?? null;
+}
+
 export function allPhotos(vehicle: PayloadVehicle): string[] {
   return (vehicle.photos ?? []).map((p) => p.url).filter(Boolean);
 }

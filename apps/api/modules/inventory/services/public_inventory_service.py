@@ -65,6 +65,10 @@ class InventoryFilters:
     make: str | None = None
     model: str | None = None
     body_type: str | None = None
+    # 'bhph' | 'cash' (migration 103). None = both, which is what the
+    # storefront's default "All" tab wants — flagging a car as cash must
+    # not remove it from the main listing.
+    sale_type: str | None = None
     fuel_type: str | None = None
     transmission: str | None = None
     drivetrain: str | None = None
@@ -105,6 +109,10 @@ def _apply_filters(stmt, f: InventoryFilters):
         stmt = stmt.where(_ci_equals(CatalogItem.model, f.model))
     if f.body_type:
         stmt = stmt.where(_ci_equals(CatalogItem.body_type, f.body_type))
+    if f.sale_type:
+        # Exact, not case-insensitive: this is a constrained enum written
+        # by us, never free text a shopper types.
+        stmt = stmt.where(CatalogItem.sale_type == f.sale_type)
     if f.fuel_type:
         stmt = stmt.where(_ci_equals(CatalogItem.fuel_type, f.fuel_type))
     if f.transmission:

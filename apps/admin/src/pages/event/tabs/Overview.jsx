@@ -28,6 +28,7 @@ import CreditApplicationPanel from './CreditApplicationPanel'
 import LeadJourneyPanel from './LeadJourneyPanel'
 import AddParticipantDialog from '../../../components/AddParticipantDialog'
 import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
+import BookAppointmentDialog from '../../../components/BookAppointmentDialog'
 import ContactActions from '../../../components/ContactActions'
 import ContactEditDialog from '../../../components/ContactEditDialog'
 import ParticipantTagDialog from '../../../components/ParticipantTagDialog'
@@ -37,6 +38,7 @@ import {
   adminTagAppointmentParticipant,
   archiveEventParticipant,
 } from '../../../services/api'
+import { walkInSourceLabel } from '../../../utils/leadOrigin'
 import { formatUSD } from '../../../utils/money'
 
 dayjs.extend(relativeTime)
@@ -69,6 +71,28 @@ function KV({ label, value }) {
       </Typography>
       <Typography variant="body2" component="div" sx={{ flex: 1 }}>
         {value || '—'}
+      </Typography>
+    </Stack>
+  )
+}
+
+// Staff-entered origin (migration 104): what the rep was told at the counter.
+// Rendered as a chip plus its free-text detail, and labeled "staff-entered" so
+// it can never be mistaken for the click-derived attribution in the Website
+// activity panel — one is a person's answer, the other is a measurement.
+function WalkInOrigin({ event }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+      <Chip
+        size="small"
+        variant="outlined"
+        label={walkInSourceLabel(event.walk_in_source)}
+      />
+      {event.walk_in_source_detail && (
+        <Typography variant="body2">{event.walk_in_source_detail}</Typography>
+      )}
+      <Typography variant="caption" color="text.secondary">
+        staff-entered
       </Typography>
     </Stack>
   )
@@ -570,6 +594,7 @@ export default function Overview() {
   const [editContactOpen, setEditContactOpen] = useState(false)
   const [addParticipantOpen, setAddParticipantOpen] = useState(false)
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false)
+  const [bookAppointmentOpen, setBookAppointmentOpen] = useState(false)
   const [archiveParticipantId, setArchiveParticipantId] = useState(null)
   const [toast, setToast] = useState(null)
   const queryClient = useQueryClient()
@@ -615,6 +640,12 @@ export default function Overview() {
         )}
         {event.event_type === 'vehicle_sale' && event.event_date && (
           <KV label="Event date" value={formatDateTime(event.event_date)} />
+        )}
+        {event.walk_in_source && (
+          <KV
+            label="How they found us"
+            value={<WalkInOrigin event={event} />}
+          />
         )}
         <Stack direction="row" spacing={2} sx={{ py: 0.5, alignItems: 'center' }}>
           <Typography
@@ -680,7 +711,7 @@ export default function Overview() {
         <>
           {/* Renders itself away for users without the PII permission. */}
           <CreditApplicationPanel eventId={event.id} />
-          <LeadJourneyPanel eventId={event.id} />
+          <LeadJourneyPanel eventId={event.id} event={event} />
         </>
       )}
 
@@ -752,9 +783,31 @@ export default function Overview() {
         onClose={() => setAddParticipantOpen(false)}
       />
 
+      <BookAppointmentDialog
+        open={bookAppointmentOpen}
+        onClose={() => setBookAppointmentOpen(false)}
+        eventId={event.id}
+        contactName={event.primary_contact?.display_name}
+        onBooked={() => {
+          // Same key the layout's detail query uses, so the new row shows
+          // up in Booking without a reload.
+          queryClient.invalidateQueries({ queryKey: ['event', event.id] })
+          setToast({ severity: 'success', message: 'Appointment booked.' })
+        }}
+      />
+
       <BuyerJourneys event={event} />
 
       <Section title="Booking">
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+          <Button
+            size="small"
+            startIcon={<EventNoteIcon fontSize="inherit" />}
+            onClick={() => setBookAppointmentOpen(true)}
+          >
+            Book appointment
+          </Button>
+        </Stack>
         {(event.appointments || []).length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             No linked appointments.

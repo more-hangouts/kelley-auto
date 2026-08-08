@@ -15,7 +15,7 @@ per Phase 3; mutations like this one do.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -50,14 +50,20 @@ class SalesWalkInCreate(BaseModel):
     # are rejected with 400. Reuses the same assignable-staff filter
     # the Phase 6 picker exposes via GET /api/sales/staff/assignable.
     assigned_user_id: int | None = None
+    # 'walk_in' (somebody arrived) or 'phone_call' (they called). Only
+    # the walk-in shape writes an attended placeholder appointment.
+    booking_context: Literal["walk_in", "phone_call"] = "walk_in"
 
 
 class SalesWalkInResponse(BaseModel):
-    appointment_id: int
+    # Both None for a phone lead: no appointment exists, and the sales
+    # portal has no deal route to land on, so the dialog stays put and
+    # reports success instead of navigating.
+    appointment_id: int | None
     event_id: int
     contact_id: int
     assigned_user_id: int
-    route: str
+    route: str | None
 
 
 _ERROR_STATUS = {
@@ -66,6 +72,9 @@ _ERROR_STATUS = {
     "contact_name_required": 422,
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
+    "invalid_walk_in_source": 422,
+    "walk_in_source_detail_too_long": 422,
+    "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
     "appointment_not_found": 404,
@@ -109,6 +118,8 @@ def create_sales_walk_in(
         event_name=payload.event.event_name,
         event_date=payload.event.event_date,
         owner_user_id=payload.event.owner_user_id,
+        walk_in_source=payload.event.walk_in_source,
+        walk_in_source_detail=payload.event.walk_in_source_detail,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
@@ -124,6 +135,7 @@ def create_sales_walk_in(
             event_in=event_in,
             enrichment_in=enrichment_in,
             assigned_user_id=assigned_user_id,
+            booking_context=payload.booking_context,
         )
     except WalkInLeadError as exc:
         db.rollback()
@@ -132,14 +144,21 @@ def create_sales_walk_in(
         ) from exc
 
     db.commit()
-    db.refresh(result.appointment)
+    if result.appointment is not None:
+        db.refresh(result.appointment)
     db.refresh(result.event)
     db.refresh(result.contact)
 
     return SalesWalkInResponse(
-        appointment_id=result.appointment.id,
+        appointment_id=(
+            result.appointment.id if result.appointment is not None else None
+        ),
         event_id=result.event.id,
         contact_id=result.contact.id,
         assigned_user_id=assigned_user_id,
-        route=f"/appointments/{result.appointment.id}",
+        route=(
+            f"/appointments/{result.appointment.id}"
+            if result.appointment is not None
+            else None
+        ),
     )

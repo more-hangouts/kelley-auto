@@ -20,5 +20,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CarsForSalePage() {
-  return <InventoryPage heading="Cars For Sale in San Antonio, TX" seoKind="all" />;
+  return (
+    <InventoryPage
+      heading="Cars For Sale in San Antonio, TX"
+      seoKind="all"
+      saleTypeTabs="all"
+    />
+  );
 }

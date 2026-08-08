@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -16,24 +15,18 @@ import {
   StepLabel,
   Stepper,
   TextField,
-  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
+import LeadOriginFields from '../components/LeadOriginFields'
 import { useSalesAuth } from '../contexts/SalesAuthContext'
 import {
   salesCreateWalkIn,
   salesListAssignableStaff,
 } from '../services/api'
 import { attendanceGateMessage, isAttendanceGateError } from './attendanceGate'
-
-const PARTY_OPTIONS = [
-  { value: 'pair', label: 'Pair (2)' },
-  { value: '3_4', label: '3-4 guests' },
-  { value: '5_plus', label: '5+ guests' },
-]
 
 const BUDGET_OPTIONS = [
   'Under $1k',
@@ -60,9 +53,11 @@ function emptyDetails() {
     celebrant_last_name: '',
     event_name: '',
     event_date: '',
-    party_size_bucket: '3_4',
     budget_range: '',
     notes: '',
+    booking_context: 'walk_in',
+    walk_in_source: '',
+    walk_in_source_detail: '',
   }
 }
 
@@ -95,8 +90,11 @@ function describeError(err) {
   if (status === 422 && detail === 'celebrant_first_name_required') {
     return 'Buyer first name is required.'
   }
-  if (status === 422 && detail === 'invalid_party_size_bucket') {
-    return 'Pick a party size.'
+  if (status === 422 && detail === 'invalid_walk_in_source') {
+    return 'That is not one of the origin options. Pick one from the list.'
+  }
+  if (status === 422 && detail === 'walk_in_source_detail_too_long') {
+    return 'Shorten the platform/post detail to 200 characters or less.'
   }
   if (status === 400 && detail === 'invalid_assigned_user_id') {
     return 'Pick an active sales stylist for assignment.'
@@ -155,6 +153,9 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
     onSuccess: (resp) => {
       onCreated?.(resp)
       onClose?.()
+      // A phone lead has no appointment, so the server sends no route —
+      // the rep portal has no deal screen to land on. Close and let the
+      // dashboard refresh instead of navigating nowhere.
       if (resp?.route) {
         navigate(resp.route)
       }
@@ -195,12 +196,14 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
         event_name: eventName,
         event_date: trimOrNull(details.event_date),
         owner_user_id: null,
+        walk_in_source: trimOrNull(details.walk_in_source),
+        walk_in_source_detail: trimOrNull(details.walk_in_source_detail),
       },
       enrichment: {
-        party_size_bucket: details.party_size_bucket,
         budget_range: trimOrNull(details.budget_range),
         notes: trimOrNull(details.notes),
       },
+      booking_context: details.booking_context,
       assigned_user_id:
         selectedAssignee && String(selectedAssignee) !== currentUserId
           ? selectedAssignee
@@ -241,7 +244,9 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
       fullWidth
       maxWidth="sm"
     >
-      <DialogTitle>Add walk-in</DialogTitle>
+      <DialogTitle>
+        {details.booking_context === 'phone_call' ? 'Add phone lead' : 'Add walk-in'}
+      </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2.5} component="form" onSubmit={handleSubmit}>
           <Stepper activeStep={step}>
@@ -249,7 +254,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
               <StepLabel>Contact</StepLabel>
             </Step>
             <Step>
-              <StepLabel>Walk-in</StepLabel>
+              <StepLabel>Lead</StepLabel>
             </Step>
           </Stepper>
 
@@ -337,38 +342,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                 InputLabelProps={{ shrink: true }}
               />
 
-              <Box>
-                <Typography variant="overline" color="text.secondary">
-                  Party size
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ mt: 0.5 }}
-                  flexWrap="wrap"
-                  useFlexGap
-                >
-                  {PARTY_OPTIONS.map((opt) => (
-                    <Chip
-                      key={opt.value}
-                      label={opt.label}
-                      color={
-                        details.party_size_bucket === opt.value
-                          ? 'primary'
-                          : 'default'
-                      }
-                      variant={
-                        details.party_size_bucket === opt.value
-                          ? 'filled'
-                          : 'outlined'
-                      }
-                      onClick={() =>
-                        patchDetails({ party_size_bucket: opt.value })
-                      }
-                    />
-                  ))}
-                </Stack>
-              </Box>
+              <LeadOriginFields value={details} onPatch={patchDetails} />
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField
@@ -432,7 +406,9 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
               submit.isPending ? <CircularProgress size={16} /> : null
             }
           >
-            Create walk-in
+            {details.booking_context === 'phone_call'
+              ? 'Create phone lead'
+              : 'Create walk-in'}
           </Button>
         )}
       </DialogActions>

@@ -53,6 +53,13 @@ class Appointment(Base):
     customer_note = Column(Text)
 
     status = Column(String(20), nullable=False, server_default=text("'confirmed'"))
+    # Migration 104: origin, out of raw_payload and into columns you can
+    # GROUP BY. Two axes on purpose — `source` is which code path wrote the
+    # row, `booking_context` is what the staff member was doing. A phone-in
+    # and a walk-in follow-up are both 'staff_created'; only the context
+    # tells them apart. NULL means unattributed, never assumed.
+    source = Column(String(32))
+    booking_context = Column(String(32))
     assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     internal_notes = Column(Text)
     cancelled_at = Column(DateTime(timezone=True))

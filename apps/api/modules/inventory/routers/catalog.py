@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -24,9 +24,11 @@ from modules.inventory.services.catalog_service import (
     CatalogItemInput,
     CatalogServiceError,
     MIN_VEHICLE_YEAR,
+    SALE_TYPE_VALUES,
     VEHICLE_STATUS_VALUES,
     VIN_LENGTH,
     add_vehicle_photo,
+    set_vehicle_photo_alts,
     create_catalog_item,
     delete_vehicle_media_keys,
     find_catalog_items,
@@ -84,6 +86,8 @@ class CatalogItemCreate(BaseModel):
     drivetrain: str | None = Field(default=None, max_length=20)
     condition: str | None = Field(default=None, max_length=20)
     vehicle_status: str | None = Field(default=None, max_length=20)
+    # 'bhph' (default) or 'cash' — see migration 103.
+    sale_type: str | None = Field(default=None, max_length=16)
     carfax_url: str | None = None
     video_url: str | None = None
     features_json: list[str] = Field(default_factory=list)
@@ -102,6 +106,8 @@ class CatalogItemCreate(BaseModel):
             and self.vehicle_status not in VEHICLE_STATUS_VALUES
         ):
             raise ValueError("vehicle_status is not allowed")
+        if self.sale_type is not None and self.sale_type not in SALE_TYPE_VALUES:
+            raise ValueError("sale_type is not allowed")
 
         if self.is_vehicle:
             # stock_number is optional: staff shouldn't have to invent one.
@@ -147,6 +153,10 @@ class CatalogItemResponse(BaseModel):
     category: str
     description_text: str | None
     image_urls: list[str]
+    # Keyed by URL, not position — see migration 102. The admin editor
+    # looks each photo's description up by its own URL, so drag-reorder
+    # needs no re-keying.
+    image_alts: dict[str, str] = Field(default_factory=dict)
     source_platform: str | None
     source_product_id: str | None
     source_product_handle: str | None
@@ -172,6 +182,7 @@ class CatalogItemResponse(BaseModel):
     drivetrain: str | None
     condition: str | None
     vehicle_status: str | None
+    sale_type: str
     carfax_url: str | None
     video_url: str | None
     features_json: list[str]
@@ -237,11 +248,14 @@ async def upload_vehicle_photo_route(
     db: Annotated[Session, Depends(get_db)],
     _user: Annotated[User, Depends(require_admin_scope)],
     file: Annotated[UploadFile, File(...)],
+    alt_text: Annotated[str | None, Form()] = None,
 ) -> CatalogItem:
     """Upload one vehicle photo (admin-only, like every catalog write).
     Stores it under the document root and appends an origin-relative public
     URL to the row's ``image_urls`` (ordered; first = thumbnail). Reorder or
-    remove via PATCH ``image_urls``."""
+    remove via PATCH ``image_urls``; edit descriptions via PATCH
+    ``photo-alts``. Optional ``alt_text`` describes this photo for screen
+    readers and is recorded against the URL this upload mints."""
     body = await file.read()
     try:
         item = add_vehicle_photo(
@@ -250,6 +264,47 @@ async def upload_vehicle_photo_route(
             filename=file.filename or "photo",
             content_type=file.content_type or "",
             body=body,
+            alt_text=alt_text,
+        )
+        db.commit()
+        db.refresh(item)
+        return item
+    except CatalogServiceError as exc:
+        db.rollback()
+        status = _CATALOG_ERROR_STATUS.get(exc.code, 400)
+        detail: dict[str, object] = {"code": exc.code}
+        if exc.extra:
+            detail.update(exc.extra)
+        raise HTTPException(status_code=status, detail=detail) from exc
+
+
+class VehiclePhotoAltsUpdate(BaseModel):
+    """Alt text keyed by the photo's URL as it appears in ``image_urls``.
+
+    Keyed rather than positional so a concurrent reorder in another tab
+    can't make this write land on the wrong photo. A null/blank value
+    clears that photo's description.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    alts: dict[str, str | None] = Field(default_factory=dict)
+
+
+@router.patch(
+    "/{catalog_item_id}/photo-alts",
+    response_model=CatalogItemResponse,
+)
+def update_vehicle_photo_alts_route(
+    catalog_item_id: int,
+    payload: VehiclePhotoAltsUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(require_admin_scope)],
+) -> CatalogItem:
+    """Set or clear alt text for photos already on this vehicle."""
+    try:
+        item = set_vehicle_photo_alts(
+            db, catalog_item_id=catalog_item_id, alts=payload.alts
         )
         db.commit()
         db.refresh(item)
@@ -387,6 +442,9 @@ class CatalogItemPatch(BaseModel):
     category: str | None = Field(default=None, max_length=40)
     description_text: str | None = None
     image_urls: list[str] | None = None
+    # 'bhph' | 'cash' (migration 103). Alt text is NOT patchable here —
+    # it has its own URL-keyed endpoint so it can't race a reorder.
+    sale_type: str | None = Field(default=None, max_length=16)
     source_platform: str | None = Field(default=None, max_length=40)
     source_product_id: str | None = Field(default=None, max_length=80)
     source_product_handle: str | None = Field(default=None, max_length=160)
@@ -440,6 +498,8 @@ _CATALOG_ERROR_STATUS: dict[str, int] = {
     "catalog_field_required": 422,
     "catalog_category_invalid": 422,
     "image_urls_invalid": 422,
+    "image_alts_unknown_photo": 422,
+    "vehicle_sale_type_invalid": 422,
     "unit_price_cents_invalid": 422,
     "unit_price_cents_negative": 422,
     "vehicle_vin_invalid": 422,

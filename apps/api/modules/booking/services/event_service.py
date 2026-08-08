@@ -70,6 +70,11 @@ class EventOverrides:
     notes: str | None = None
     owner_user_id: int | None = None
     vehicle_catalog_item_id: int | None = None
+    # Migration 104: staff-entered origin. Set by the walk-in / phone-in
+    # capture paths; left None by storefront and widget origins, whose
+    # attribution is derived from storefront_events instead.
+    walk_in_source: str | None = None
+    walk_in_source_detail: str | None = None
 
 
 def promote_appointment_to_event(
@@ -125,6 +130,8 @@ def promote_appointment_to_event(
         notes=o.notes,
         owner_user_id=o.owner_user_id or actor_user_id,
         vehicle_catalog_item_id=o.vehicle_catalog_item_id,
+        walk_in_source=o.walk_in_source,
+        walk_in_source_detail=o.walk_in_source_detail,
         status=initial_status(event_type),
     )
     db.add(event)
@@ -174,6 +181,8 @@ def create_walk_in_event(
         notes=o.notes,
         owner_user_id=o.owner_user_id or actor_user_id,
         vehicle_catalog_item_id=o.vehicle_catalog_item_id,
+        walk_in_source=o.walk_in_source,
+        walk_in_source_detail=o.walk_in_source_detail,
         status=initial_status(event_type),
     )
     db.add(event)

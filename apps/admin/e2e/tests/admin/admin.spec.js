@@ -35,7 +35,11 @@ const ROUTES = ['/sales', '/contacts/1', '/inbox', '/analytics', '/settings/staf
 // so we wait for the fallback to clear by asserting a non-progressbar element.
 async function assertRouteMounted(page, route) {
   await page.goto(route, { waitUntil: 'networkidle' })
-  expect(new URL(page.url()).pathname).toBe(route.replace(/\?.*$/, ''))
+  const expectedPath = route
+    .replace(/\?.*$/, '')
+    .replace(/^\/events\/(\d+)\/(documents|quotes|invoices)$/, '/deals/$1/overview')
+    .replace(/^\/events\//, '/deals/')
+  expect(new URL(page.url()).pathname).toBe(expectedPath)
   await expect(page.locator('#root')).not.toBeEmpty()
   // The DashboardLayout main content region always renders once the lazy page
   // chunk resolves; assert it exists (viewport-independent, unlike the drawer

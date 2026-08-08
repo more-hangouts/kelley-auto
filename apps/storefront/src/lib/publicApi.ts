@@ -45,7 +45,12 @@ export interface PublicVehicle {
   bodyType: string | null;
   drivetrain: string | null;
   vin: string | null;
+  // 'bhph' (dealer-financed) or 'cash' (sold outright) — migration 103.
+  saleType?: "bhph" | "cash";
   photos: string[];
+  // Aligned index-for-index with `photos`; null where a photo has no
+  // description yet. Stored keyed by URL server-side (migration 102).
+  photoAlts?: (string | null)[];
   features: string[];
   carfaxUrl: string | null;
   videoUrl: string | null;
@@ -64,6 +69,8 @@ export interface InventoryQuery {
   make?: string;
   model?: string;
   bodyType?: string;
+  // Omit for both — the default listing is not narrowed by sale type.
+  saleType?: "bhph" | "cash";
   fuelType?: string;
   transmission?: string;
   drivetrain?: string;
@@ -177,6 +184,7 @@ const QUERY_KEYS: Record<keyof InventoryQuery, string> = {
   make: "make",
   model: "model",
   bodyType: "body_type",
+  saleType: "sale_type",
   fuelType: "fuel_type",
   transmission: "transmission",
   drivetrain: "drivetrain",

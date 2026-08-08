@@ -126,6 +126,11 @@ class EventResponse(BaseModel):
     owner: OwnerSummary | None
     notes: str | None
     vehicle_catalog_item_id: int | None
+    # Migration 104: staff-entered origin for walk-in / phone leads. Kept
+    # separate from the storefront attribution served by /journey — this is
+    # what a rep was told, not what a click stream showed.
+    walk_in_source: str | None
+    walk_in_source_detail: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -915,6 +920,8 @@ def _to_event_response(db: Session, event: Event) -> EventResponse:
         owner=OwnerSummary(id=owner.id, full_name=owner.full_name) if owner else None,
         notes=event.notes,
         vehicle_catalog_item_id=event.vehicle_catalog_item_id,
+        walk_in_source=event.walk_in_source,
+        walk_in_source_detail=event.walk_in_source_detail,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )

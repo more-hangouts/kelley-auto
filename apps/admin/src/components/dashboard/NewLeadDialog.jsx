@@ -3,7 +3,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -21,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
+import LeadOriginFields from '../LeadOriginFields'
 import { createWalkInLead } from '../../services/api'
 import { useSearch } from '../../hooks/useSearch'
 
@@ -28,12 +28,6 @@ import { useSearch } from '../../hooks/useSearch'
 // component on purpose. The palette context only owns open/close — see
 // CommandPaletteContext. Burying form state in the context would couple
 // every consumer to its lifecycle and re-render shape.
-
-const PARTY_OPTIONS = [
-  { value: 'pair', label: 'Pair (2)' },
-  { value: '3_4', label: '3–4 guests' },
-  { value: '5_plus', label: '5+ guests' },
-]
 
 // Mirrors the buckets the public widget renders. Plain strings rather
 // than a strict enum because the widget itself lets staff customize
@@ -65,9 +59,11 @@ function emptyDetailsStep() {
     celebrant_last_name: '',
     event_name: '',
     event_date: '',
-    party_size_bucket: '3_4',
     budget_range: '',
     notes: '',
+    booking_context: 'walk_in',
+    walk_in_source: '',
+    walk_in_source_detail: '',
   }
 }
 
@@ -94,8 +90,11 @@ function describeError(err) {
   if (status === 422 && detail === 'celebrant_first_name_required') {
     return 'Buyer first name is required.'
   }
-  if (status === 422 && detail === 'invalid_party_size_bucket') {
-    return 'Pick a party size.'
+  if (status === 422 && detail === 'invalid_walk_in_source') {
+    return 'That isn’t one of the origin options. Pick one from the list.'
+  }
+  if (status === 422 && detail === 'walk_in_source_detail_too_long') {
+    return 'Shorten the platform/post detail to 200 characters or less.'
   }
   if (status === 401 || status === 403) {
     return 'You don’t have permission to create leads.'
@@ -166,12 +165,14 @@ export default function NewLeadDialog({ open, onClose }) {
         event_name: trimOrNull(detailsStep.event_name),
         event_date: trimOrNull(detailsStep.event_date),
         owner_user_id: null,
+        walk_in_source: trimOrNull(detailsStep.walk_in_source),
+        walk_in_source_detail: trimOrNull(detailsStep.walk_in_source_detail),
       },
       enrichment: {
-        party_size_bucket: detailsStep.party_size_bucket,
         budget_range: trimOrNull(detailsStep.budget_range),
         notes: trimOrNull(detailsStep.notes),
       },
+      booking_context: detailsStep.booking_context,
     }
   }
 
@@ -189,7 +190,11 @@ export default function NewLeadDialog({ open, onClose }) {
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>New walk-in lead</DialogTitle>
+      <DialogTitle>
+        {detailsStep.booking_context === 'phone_call'
+          ? 'New phone lead'
+          : 'New walk-in lead'}
+      </DialogTitle>
       <DialogContent dividers>
         <Stepper activeStep={step} sx={{ mb: 3 }}>
           <Step><StepLabel>Contact</StepLabel></Step>
@@ -448,22 +453,7 @@ function DetailsStep({ value, onChange, contactDisplayName }) {
         InputLabelProps={{ shrink: true }}
       />
 
-      <Box>
-        <Typography variant="overline" color="text.secondary">
-          Party size
-        </Typography>
-        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-          {PARTY_OPTIONS.map((opt) => (
-            <Chip
-              key={opt.value}
-              label={opt.label}
-              color={value.party_size_bucket === opt.value ? 'primary' : 'default'}
-              variant={value.party_size_bucket === opt.value ? 'filled' : 'outlined'}
-              onClick={() => patch({ party_size_bucket: opt.value })}
-            />
-          ))}
-        </Stack>
-      </Box>
+      <LeadOriginFields value={value} onPatch={patch} />
 
       <TextField
         fullWidth

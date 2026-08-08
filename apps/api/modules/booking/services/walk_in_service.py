@@ -1,4 +1,4 @@
-"""Walk-in lead capture: in-store / phone leads that mirror widget shape.
+"""In-store and phone lead capture.
 
 Today the only path that creates leads is the public booking widget at
 ``api/routers/booking.py``. When a customer walks in or calls in, staff
@@ -28,12 +28,25 @@ Design notes:
     existing person they recognize and type a new celebrant nickname
     in Step 2; the contact's display_name should not change because
     of that. Only fresh contacts derive their name from the form.
+  - **A phone lead is not an arrival.** This endpoint has always been
+    described to staff as "walk-in or phone lead", but it stamped every
+    lead with an ``attended`` placeholder appointment, so callers were
+    recorded as having physically shown up — quietly inflating
+    attendance and the appointment table alike. ``booking_context``
+    now decides: 'walk_in' keeps the arrival receipt, 'phone_call'
+    creates the deal directly through ``create_walk_in_event`` (the
+    same appointment-free path the storefront lead form and web chat
+    already use). No new lead shape, one fewer fiction.
+  - **Origin is asked, not inferred.** ``walk_in_source`` records what
+    the rep was told at the counter. It is stored on the deal, not
+    folded into the storefront's derived attribution — see migration
+    104.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -80,6 +93,12 @@ class WalkInEventInput:
     event_name: str | None
     event_date: Any  # datetime.date | None — kept loose so router models stay thin
     owner_user_id: int | None
+    # Migration 104. Both optional: the picker is strongly encouraged in
+    # the UI but non-blocking, because a rep who is mid-conversation and
+    # does not yet know should be able to file the lead anyway. A wrong
+    # bucket is worse than an empty one.
+    walk_in_source: str | None = None
+    walk_in_source_detail: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,7 +106,14 @@ class WalkInEnrichmentInput:
     # Wire name "enrichment" kept for SPA compatibility; the Bella's-era
     # dress-survey fields (court_size, theme, dress_styles, colors) were
     # removed with the dealership conversion.
-    party_size_bucket: str  # 'pair' | '3_4' | '5_plus'
+    #
+    # party_size_bucket is the last of those survey fields still standing.
+    # "How many in your party?" is a dress-fitting question, not a car
+    # question, so the dealership UI no longer asks it and None resolves
+    # to the neutral 'solo' the CHECK already allows — the same value
+    # the storefront lead path uses. An explicit value is still honored
+    # so historical clients keep working.
+    party_size_bucket: str | None
     budget_range: str | None
     notes: str | None
 
@@ -95,13 +121,39 @@ class WalkInEnrichmentInput:
 @dataclass(frozen=True)
 class WalkInLeadResult:
     contact: Contact
-    appointment: Appointment
+    # None for phone leads: nobody arrived, so there is no arrival receipt.
+    appointment: Appointment | None
     event: Event
     was_new_contact: bool
 
 
 _WALK_IN_DURATION_MINUTES = 45
-_VALID_PARTY_BUCKETS = ("pair", "3_4", "5_plus")
+_VALID_PARTY_BUCKETS = ("solo", "pair", "3_4", "5_plus")
+_DEFAULT_PARTY_BUCKET = "solo"
+
+# Staff-entered lead origin (migration 104). Keep in sync with the CHECK in
+# 104_lead_origin_and_appointment_source.py. The bucket is stable and
+# reportable; which platform or post lives in walk_in_source_detail.
+WALK_IN_SOURCE_VALUES: frozenset[str] = frozenset(
+    {
+        "social_media",
+        "drive_by",
+        "referral",
+        "repeat_customer",
+        "google_search",
+        "website",
+        "other",
+    }
+)
+
+_WALK_IN_SOURCE_DETAIL_MAX = 200
+
+# The two ways a lead reaches this service. The wider
+# booking_service.BOOKING_CONTEXT_VALUES set also covers contexts that only
+# apply to staff-created appointments ('existing_customer', 'admin'); lead
+# capture is only ever one of these two.
+LEAD_CONTEXT_VALUES: frozenset[str] = frozenset({"walk_in", "phone_call"})
+_DEFAULT_LEAD_CONTEXT = "walk_in"
 
 
 def create_walk_in_lead(
@@ -112,8 +164,9 @@ def create_walk_in_lead(
     event_in: WalkInEventInput,
     enrichment_in: WalkInEnrichmentInput,
     assigned_user_id: int | None = None,
+    booking_context: str = _DEFAULT_LEAD_CONTEXT,
 ) -> WalkInLeadResult:
-    """Create Contact + placeholder Appointment + Event in one tx.
+    """Create Contact + Event (+ arrival receipt for walk-ins) in one tx.
 
     The caller owns the commit boundary. Every write below flushes;
     the route handler calls ``db.commit()`` on the way out and rolls
@@ -130,12 +183,52 @@ def create_walk_in_lead(
 
     ``actor_user_id`` stays the caller's id regardless — "created by"
     and "assigned to" are distinct concepts in the audit log.
+
+    ``booking_context`` selects the shape:
+
+      - ``'walk_in'`` — somebody physically arrived. Writes the
+        placeholder Appointment (status='attended', attended_at=NOW)
+        and promotes it, so the deal is appointment-backed exactly as
+        before.
+      - ``'phone_call'`` — nobody arrived. Creates the deal directly
+        with no appointment at all. ``result.appointment`` is None.
+
+    Both shapes are already load-bearing elsewhere: the storefront lead
+    form and web chat create appointment-free deals through the same
+    ``create_walk_in_event``, and the board left-joins appointments.
     """
-    if enrichment_in.party_size_bucket not in _VALID_PARTY_BUCKETS:
+    if booking_context not in LEAD_CONTEXT_VALUES:
+        raise WalkInLeadError(
+            f"invalid booking_context {booking_context!r}",
+            code="invalid_booking_context",
+        )
+
+    party_size_bucket = enrichment_in.party_size_bucket or _DEFAULT_PARTY_BUCKET
+    if party_size_bucket not in _VALID_PARTY_BUCKETS:
         raise WalkInLeadError(
             f"invalid party_size_bucket {enrichment_in.party_size_bucket!r}",
             code="invalid_party_size_bucket",
         )
+
+    walk_in_source = _clean(event_in.walk_in_source)
+    if walk_in_source is not None and walk_in_source not in WALK_IN_SOURCE_VALUES:
+        raise WalkInLeadError(
+            "walk_in_source must be one of: "
+            + ", ".join(sorted(WALK_IN_SOURCE_VALUES)),
+            code="invalid_walk_in_source",
+        )
+    walk_in_source_detail = _clean(event_in.walk_in_source_detail)
+    if walk_in_source_detail is not None:
+        if len(walk_in_source_detail) > _WALK_IN_SOURCE_DETAIL_MAX:
+            raise WalkInLeadError(
+                f"walk_in_source_detail exceeds {_WALK_IN_SOURCE_DETAIL_MAX} characters",
+                code="walk_in_source_detail_too_long",
+            )
+        if walk_in_source is None:
+            # Detail without a bucket is unreportable ("Facebook video"
+            # attached to nothing). Drop it rather than storing a value no
+            # query will ever reach.
+            walk_in_source_detail = None
 
     raw_phone = (contact_in.phone or "").strip()
     if not raw_phone:
@@ -186,46 +279,6 @@ def create_walk_in_lead(
             contact.display_name = explicit
             db.flush()
 
-    # ---- Appointment placeholder: status='attended', attended_at=NOW -----
-    now_utc = datetime.now(timezone.utc)
-    code = booking_service.generate_unique_confirmation_code(db)
-    placeholder_email = (
-        contact.email or normalized_email or f"walkin+{contact.id}@walkin.local"
-    )
-    appt = Appointment(
-        confirmation_code=code,
-        slot_start_at=now_utc,
-        slot_end_at=now_utc + timedelta(minutes=_WALK_IN_DURATION_MINUTES),
-        slot_duration_minutes=_WALK_IN_DURATION_MINUTES,
-        timezone=APP_TIMEZONE,
-        celebrant_first_name=event_in.celebrant_first_name.strip(),
-        celebrant_last_name=(event_in.celebrant_last_name or None),
-        parent_first_name=contact.first_name,
-        parent_last_name=contact.last_name,
-        event_date=event_in.event_date,
-        party_size_bucket=enrichment_in.party_size_bucket,
-        phone=contact.phone or raw_phone,
-        phone_e164=phone_e164,
-        email=placeholder_email,
-        customer_note=None,
-        internal_notes=(enrichment_in.notes or None),
-        contact_id=contact.id,
-        assigned_user_id=assigned_user_id,
-        # 'attended' is already in the appointments.status CHECK; combined
-        # with attended_at=NOW this keeps the placeholder out of "today's
-        # appointments needing action" surfaces.
-        status="attended",
-        attended_at=now_utc,
-        user_journey=[],
-        bot_suspected=False,
-        # `source: walk_in` lets future audits / attribution reports tell
-        # walk-in rows apart from widget rows without a schema change.
-        raw_payload={"source": "walk_in"},
-    )
-    db.add(appt)
-    db.flush()
-
-    # ---- Promote: Appointment → Event (first pipeline lane) -------------
     # When a sales caller passes `assigned_user_id`, it wins over any
     # `event_in.owner_user_id` so both fields agree on the rep.
     resolved_event_owner = (
@@ -233,26 +286,100 @@ def create_walk_in_lead(
         if assigned_user_id is not None
         else event_in.owner_user_id
     )
-    try:
-        event = event_service.promote_appointment_to_event(
-            db,
-            appointment_id=appt.id,
-            event_type="vehicle_sale",
-            overrides=EventOverrides(
-                event_name=(event_in.event_name or None),
-                event_date=event_in.event_date,
-                budget_range=(enrichment_in.budget_range or None),
-                owner_user_id=resolved_event_owner,
-            ),
-            actor_user_id=actor_user_id,
+    overrides = EventOverrides(
+        event_name=(event_in.event_name or None),
+        event_date=event_in.event_date,
+        budget_range=(enrichment_in.budget_range or None),
+        owner_user_id=resolved_event_owner,
+        walk_in_source=walk_in_source,
+        walk_in_source_detail=walk_in_source_detail,
+    )
+
+    appt: Appointment | None = None
+    if booking_context == "walk_in":
+        # ---- Appointment placeholder: status='attended', attended_at=NOW -
+        now_utc = datetime.now(timezone.utc)
+        code = booking_service.generate_unique_confirmation_code(db)
+        placeholder_email = (
+            contact.email or normalized_email or f"walkin+{contact.id}@walkin.local"
         )
-    except EventServiceError as exc:
-        # Translate to the walk-in error vocabulary so the router maps
-        # everything through one error table.
-        raise WalkInLeadError(
-            str(exc) or "promotion_failed",
-            code=exc.code or "promotion_failed",
-        ) from exc
+        appt = Appointment(
+            confirmation_code=code,
+            slot_start_at=now_utc,
+            slot_end_at=now_utc + timedelta(minutes=_WALK_IN_DURATION_MINUTES),
+            slot_duration_minutes=_WALK_IN_DURATION_MINUTES,
+            timezone=APP_TIMEZONE,
+            celebrant_first_name=event_in.celebrant_first_name.strip(),
+            celebrant_last_name=(event_in.celebrant_last_name or None),
+            parent_first_name=contact.first_name,
+            parent_last_name=contact.last_name,
+            event_date=event_in.event_date,
+            party_size_bucket=party_size_bucket,
+            phone=contact.phone or raw_phone,
+            phone_e164=phone_e164,
+            email=placeholder_email,
+            customer_note=None,
+            internal_notes=(enrichment_in.notes or None),
+            contact_id=contact.id,
+            assigned_user_id=assigned_user_id,
+            # 'attended' is already in the appointments.status CHECK; combined
+            # with attended_at=NOW this keeps the placeholder out of "today's
+            # appointments needing action" surfaces.
+            status="attended",
+            attended_at=now_utc,
+            # Migration 104 columns. raw_payload keeps its legacy key so the
+            # historical rows and the new ones read the same way in an audit.
+            source="walk_in_placeholder",
+            booking_context="walk_in",
+            user_journey=[],
+            bot_suspected=False,
+            raw_payload={"source": "walk_in"},
+        )
+        db.add(appt)
+        db.flush()
+
+        # ---- Promote: Appointment → Event (first pipeline lane) ---------
+        try:
+            event = event_service.promote_appointment_to_event(
+                db,
+                appointment_id=appt.id,
+                event_type="vehicle_sale",
+                overrides=overrides,
+                actor_user_id=actor_user_id,
+            )
+        except EventServiceError as exc:
+            # Translate to the walk-in error vocabulary so the router maps
+            # everything through one error table.
+            raise WalkInLeadError(
+                str(exc) or "promotion_failed",
+                code=exc.code or "promotion_failed",
+            ) from exc
+    else:
+        # ---- Phone lead: the deal, with no arrival to record -------------
+        # promote_appointment_to_event derives the deal name from the
+        # appointment's celebrant fields; with no appointment, resolve the
+        # same name here so a phone lead and a walk-in for the same person
+        # land on identical deal names.
+        try:
+            event = event_service.create_walk_in_event(
+                db,
+                contact_id=contact.id,
+                event_type="vehicle_sale",
+                overrides=replace(
+                    overrides,
+                    event_name=(
+                        overrides.event_name
+                        or _buyer_deal_name(event_in)
+                    ),
+                    notes=(enrichment_in.notes or None),
+                ),
+                actor_user_id=actor_user_id,
+            )
+        except EventServiceError as exc:
+            raise WalkInLeadError(
+                str(exc) or "promotion_failed",
+                code=exc.code or "promotion_failed",
+            ) from exc
 
     # ---- Audit: event.walk_in_created -----------------------------------
     activity_log.log_activity(
@@ -264,9 +391,14 @@ def create_walk_in_lead(
         subject_kind="event",
         subject_id=event.id,
         payload={
-            "appointment_id": appt.id,
+            "appointment_id": appt.id if appt is not None else None,
             "contact_id": contact.id,
             "was_new_contact": was_new_contact,
+            # Origin rides in the timeline payload so the deal's first row
+            # answers "where did this person come from?" without a join.
+            "booking_context": booking_context,
+            "walk_in_source": walk_in_source,
+            "walk_in_source_detail": walk_in_source_detail,
         },
     )
 
@@ -277,6 +409,8 @@ def create_walk_in_lead(
         appointment=appt,
         event=event,
         notes=enrichment_in.notes,
+        buyer_name=_buyer_name(event_in),
+        booking_context=booking_context,
     )
 
     # Write the event-log row that the admin daily digest summarises
@@ -293,21 +427,28 @@ def create_walk_in_lead(
         subject_id=event.id,
         actor_user_id=actor_user_id,
         payload={
-            "appointment_id": appt.id,
+            "appointment_id": appt.id if appt is not None else None,
             "contact_id": contact.id,
             "contact_display_name": contact.display_name,
-            "celebrant_first_name": appt.celebrant_first_name,
-            "celebrant_last_name": appt.celebrant_last_name,
+            "celebrant_first_name": (event_in.celebrant_first_name or "").strip()
+            or None,
+            "celebrant_last_name": (event_in.celebrant_last_name or None),
+            "booking_context": booking_context,
+            "walk_in_source": walk_in_source,
         },
     )
 
     # Sales-side walk-in with an assignee fires staff.booking_assigned
     # so the picked stylist gets a "new booking on your calendar" email.
     # Admin walk-ins (no assignee) skip this — admin gets the walk-in
-    # capture summary above instead.
-    from modules.booking.services.staff_booking_notifications import notify_booking_assigned
+    # capture summary above instead. A phone lead has no booking to
+    # announce; the assignee learns about it from the deal itself.
+    if appt is not None:
+        from modules.booking.services.staff_booking_notifications import (
+            notify_booking_assigned,
+        )
 
-    notify_booking_assigned(db, appt, actor_user_id=actor_user_id)
+        notify_booking_assigned(db, appt, actor_user_id=actor_user_id)
 
     return WalkInLeadResult(
         contact=contact,
@@ -322,9 +463,11 @@ def _send_walk_in_lead_admin_emails(
     *,
     actor_user_id: int,
     contact: Contact,
-    appointment: Appointment,
+    appointment: Appointment | None,
     event: Event,
     notes: str | None,
+    buyer_name: str | None = None,
+    booking_context: str = _DEFAULT_LEAD_CONTEXT,
 ) -> None:
     """Notify admins that a staff member just logged a walk-in. Best-
     effort; SMTP failures don't poison the lead-creation transaction.
@@ -359,6 +502,8 @@ def _send_walk_in_lead_admin_emails(
         contact=contact,
         notes=notes,
         admin_url=f"{ADMIN_BASE_URL}/contacts/{contact.id}",
+        customer_name=buyer_name,
+        lead_kind="phone" if booking_context == "phone_call" else "walk-in",
     )
     for to in admin_emails:
         send_rendered_safely(
@@ -366,6 +511,36 @@ def _send_walk_in_lead_admin_emails(
             rendered=rendered,
             scope="walk_in.lead_created",
         )
+
+
+def _clean(value: str | None) -> str | None:
+    """Trim to None. Empty-string form fields are absent fields."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _buyer_name(event_in: WalkInEventInput) -> str | None:
+    parts = [
+        p.strip()
+        for p in (event_in.celebrant_first_name, event_in.celebrant_last_name)
+        if p and p.strip()
+    ]
+    return " ".join(parts) if parts else None
+
+
+def _buyer_deal_name(event_in: WalkInEventInput) -> str | None:
+    """The deal name a walk-in would have gotten, for the phone path.
+
+    ``promote_appointment_to_event`` derives it from the appointment's
+    celebrant columns; with no appointment there is nothing to derive from,
+    so the same "<buyer>'s Deal" shape is built here. Returns None when the
+    buyer has no name, letting ``create_walk_in_event`` fall back to its
+    own contact-based default.
+    """
+    name = _buyer_name(event_in)
+    return f"{name}'s Deal" if name else None
 
 
 def _has_usable_name(c: WalkInContactInput) -> bool:

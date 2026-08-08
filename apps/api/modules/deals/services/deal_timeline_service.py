@@ -340,8 +340,15 @@ def _creation_facts(db: Session, event: Event) -> tuple[str | None, str | None, 
     ).scalars().first()
     if row is None:
         return None, None, _aware(event.created_at)
+    origin = _ORIGIN_ACTIVITY.get(row.activity_type)
+    # Both shapes are logged as event.walk_in_created — the payload's
+    # booking_context is what separates someone who arrived from someone
+    # who called. Rows written before migration 104 carry no context and
+    # keep the plain "Walk-in" phrasing, which was accurate for them.
+    if (row.payload or {}).get("booking_context") == "phone_call":
+        origin = "Phone lead"
     return (
-        _ORIGIN_ACTIVITY.get(row.activity_type),
+        origin,
         row.actor_display_name,
         _aware(row.created_at),
     )

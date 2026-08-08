@@ -307,6 +307,11 @@ def _create_requested_appointment(
         contact_id=contact.id,
         crm_event_id=event.id,
         internal_notes="Requested via storefront — call to confirm.",
+        # Migration 104: public self-service in origin, so 'public_booking';
+        # booking_context stays NULL because no staff member created it. The
+        # finer distinction (a requested slot, not a confirmed booking)
+        # stays in raw_payload where it has always lived.
+        source="public_booking",
         raw_payload={"source": "public_lead"},
     )
     db.add(appt)

@@ -11,6 +11,7 @@ import {
 } from "@/lib/inventory-seo";
 import { isMediaDoc } from "@/types/cms";
 import type { PayloadVehicle } from "@/types/vehicle";
+import SaleTypeTabs, { type SaleTypeTab } from "./SaleTypeTabs";
 
 export type InventoryPageConfig = {
   heading: string;
@@ -22,6 +23,14 @@ export type InventoryPageConfig = {
   seoFallback?: string;
   seoKind?: "all" | "filtered";
   vehiclesOverride?: PayloadVehicle[];
+  // Narrow the listing to one way of selling. Omitted = both, which is
+  // what every existing page wants — adding sale types must not change
+  // what /shop, /suv-for-sale, etc. already show.
+  saleType?: "bhph" | "cash";
+  // Show the All / Buy Here Pay Here / Cash Cars tab bar. Off by default:
+  // on a body-type or make landing page the tabs would navigate away from
+  // the filter the shopper came for.
+  saleTypeTabs?: SaleTypeTab;
 };
 
 export default async function InventoryPage({
@@ -34,6 +43,8 @@ export default async function InventoryPage({
   seoFallback = "Browse current Kelley Autoplex inventory in San Antonio, TX. Contact us to confirm availability.",
   seoKind = "filtered",
   vehiclesOverride,
+  saleType,
+  saleTypeTabs,
 }: InventoryPageConfig) {
   const hero = await getHeroContent();
   const inventory = vehiclesOverride
@@ -43,6 +54,7 @@ export default async function InventoryPage({
         bodyType,
         bodyTypes,
         make,
+        saleType,
       });
   const { docs: vehicles, totalDocs } = inventory;
 
@@ -51,6 +63,14 @@ export default async function InventoryPage({
     isMediaDoc(hero.bgImage) && hero.bgImage.url
       ? hero.bgImage.url
       : "/images/hero-bg.webp";
+  // Don't promise financing on a cash-car listing, and don't claim
+  // "cash only" on a mixed one.
+  const saleTypeNote =
+    saleType === "cash"
+      ? " · Cash cars, sold outright"
+      : saleType === "bhph"
+        ? " · Buy here, pay here"
+        : "";
   const seoText =
     seoKind === "all"
       ? allInventoryMetaDescription(vehicles, seoFallback)
@@ -78,9 +98,10 @@ export default async function InventoryPage({
           </h1>
           <p className="mt-2 md:mt-3 text-base md:text-lg text-neutral-100">
             {available.length > 0
-              ? `${available.length} vehicle${available.length === 1 ? "" : "s"} available · Buy here, pay here`
+              ? `${available.length} vehicle${available.length === 1 ? "" : "s"} available${saleTypeNote}`
               : emptyText}
           </p>
+          {saleTypeTabs && <SaleTypeTabs active={saleTypeTabs} />}
         </div>
       </section>
 
