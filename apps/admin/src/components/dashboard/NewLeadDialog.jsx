@@ -58,7 +58,6 @@ function emptyDetailsStep() {
     celebrant_first_name: '',
     celebrant_last_name: '',
     event_name: '',
-    event_date: '',
     budget_range: '',
     notes: '',
     booking_context: 'walk_in',
@@ -163,7 +162,11 @@ export default function NewLeadDialog({ open, onClose }) {
         celebrant_first_name: (detailsStep.celebrant_first_name || '').trim(),
         celebrant_last_name: trimOrNull(detailsStep.celebrant_last_name),
         event_name: trimOrNull(detailsStep.event_name),
-        event_date: trimOrNull(detailsStep.event_date),
+        // events.event_date is the Bella's-era party date — the day the
+        // dress had to be ready. A vehicle deal has no such date, so lead
+        // capture no longer asks. The column and its API field stay for
+        // the legacy quinceañera rows that still carry one.
+        event_date: null,
         owner_user_id: null,
         walk_in_source: trimOrNull(detailsStep.walk_in_source),
         walk_in_source_detail: trimOrNull(detailsStep.walk_in_source_detail),
@@ -441,16 +444,6 @@ function DetailsStep({ value, onChange, contactDisplayName }) {
             ? null
             : `Will default to "${autoEventName || '…'}" when blank.`
         }
-      />
-
-      <TextField
-        fullWidth
-        label="Event date"
-        type="date"
-        value={value.event_date}
-        onChange={(e) => patch({ event_date: e.target.value })}
-        size="small"
-        InputLabelProps={{ shrink: true }}
       />
 
       <LeadOriginFields value={value} onPatch={patch} />

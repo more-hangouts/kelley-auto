@@ -52,7 +52,6 @@ function emptyDetails() {
     celebrant_first_name: '',
     celebrant_last_name: '',
     event_name: '',
-    event_date: '',
     budget_range: '',
     notes: '',
     booking_context: 'walk_in',
@@ -194,7 +193,11 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
         celebrant_first_name: (details.celebrant_first_name || '').trim(),
         celebrant_last_name: trimOrNull(details.celebrant_last_name),
         event_name: eventName,
-        event_date: trimOrNull(details.event_date),
+        // events.event_date is the Bella's-era party date — the day the
+        // dress had to be ready. A vehicle deal has no such date, so lead
+        // capture no longer asks. The column and its API field stay for
+        // the legacy quinceañera rows that still carry one.
+        event_date: null,
         owner_user_id: null,
         walk_in_source: trimOrNull(details.walk_in_source),
         walk_in_source_detail: trimOrNull(details.walk_in_source_detail),
@@ -330,16 +333,6 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
                     ? null
                     : `Will default to "${autoEventName || 'buyer'}" when blank.`
                 }
-              />
-
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="Event date"
-                value={details.event_date}
-                onChange={(e) => patchDetails({ event_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
               />
 
               <LeadOriginFields value={details} onPatch={patchDetails} />
