@@ -168,6 +168,74 @@ TWILIO_VOICE_REP_FALLBACK_NUMBER = (
     os.getenv("TWILIO_VOICE_REP_FALLBACK_NUMBER") or None
 )
 
+# Browser softphone (Twilio Voice JS SDK) — call straight from the dashboard,
+# audio in the tab, no phone involved. Beside the bridge, not replacing it.
+#
+# Voice AccessTokens CANNOT be signed with the account auth token; Twilio
+# requires an API Key SID/Secret pair (the SK.../secret created for this
+# purpose). TWILIO_TWIML_APP_SID is the TwiML Application a browser client
+# dials through — its VoiceUrl points at /api/webhooks/twilio/voice/outbound,
+# which returns the <Dial> that reaches the contact.
+#
+# Outbound only: the business number's voice_url is deliberately still unset,
+# so inbound calls are unchanged by this feature.
+TWILIO_SOFTPHONE_ENABLED = (
+    os.getenv("TWILIO_SOFTPHONE_ENABLED", "false").lower() == "true"
+)
+TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID") or None
+TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET") or None
+TWILIO_TWIML_APP_SID = os.getenv("TWILIO_TWIML_APP_SID") or None
+
+# Lifetime of a browser AccessToken. The SDK re-registers on expiry; keep it
+# short enough that a leaked token dies quickly, long enough to cover a call.
+TWILIO_SOFTPHONE_TOKEN_TTL_SECONDS = int(
+    os.getenv("TWILIO_SOFTPHONE_TOKEN_TTL_SECONDS", "3600")
+)
+
+# --- Inbound voice (phase 1: forward to the published office line) ---------
+# Calls arriving at the business Twilio number are forwarded to the shop's
+# real phone. Every call is LOGGED regardless of the flag; the flag only
+# controls whether we route or politely decline.
+#
+# OFF by default and deliberately independent of the number's voice_url in the
+# Twilio console — code deploys first, the webhook is verified, and only then
+# is the number pointed at it. Turning the flag on without repointing the
+# number does nothing; repointing the number with the flag off yields a spoken
+# "can't take your call" rather than a Twilio error tone.
+TWILIO_INBOUND_VOICE_ENABLED = (
+    os.getenv("TWILIO_INBOUND_VOICE_ENABLED", "false").lower() == "true"
+)
+# The number inbound calls are forwarded to — the office line published on the
+# website. Explicit env rather than reading business_profile.phone so editing
+# the public profile can never silently reroute the phone system.
+TWILIO_INBOUND_FORWARD_NUMBER = (
+    os.getenv("TWILIO_INBOUND_FORWARD_NUMBER") or None
+)
+# Seconds to ring the office before giving up. Twilio's own default is 30;
+# 25 keeps the caller from sitting through a near-minute of ringing when the
+# shop is closed.
+TWILIO_INBOUND_FORWARD_TIMEOUT_SECONDS = int(
+    os.getenv("TWILIO_INBOUND_FORWARD_TIMEOUT_SECONDS", "25")
+)
+# Spoken when the office doesn't pick up, and when the flag is off. Kept in
+# config so the wording can change without a deploy.
+# Phase 2: let inbound calls ring the dashboard softphone. Separate from
+# TWILIO_INBOUND_VOICE_ENABLED so browser ringing can be turned off — falling
+# back to plain forwarding — without taking inbound voice down entirely.
+#
+# This is what adds the INCOMING grant to browser AccessTokens. With it false,
+# tokens stay outbound-only and no browser can receive a call even if routing
+# settings say otherwise.
+TWILIO_INBOUND_TO_BROWSER_ENABLED = (
+    os.getenv("TWILIO_INBOUND_TO_BROWSER_ENABLED", "false").lower() == "true"
+)
+TWILIO_INBOUND_UNAVAILABLE_MESSAGE = os.getenv(
+    "TWILIO_INBOUND_UNAVAILABLE_MESSAGE",
+    "Thanks for calling Kelley Autoplex. We're sorry we missed you. "
+    "Please leave us a text message, or call again during business hours "
+    "and we'll be happy to help.",
+)
+
 # Omnichannel inbox (Phase 2+). Outbound SMS stays hard-disabled until the
 # A2P 10DLC campaign is approved — inbound lands regardless. Inbound webhook
 # signature verification is REQUIRED by default (needs TWILIO_AUTH_TOKEN);

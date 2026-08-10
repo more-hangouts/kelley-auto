@@ -34,6 +34,7 @@ const AdminTimeOff = lazy(() => import('./pages/AdminTimeOff'))
 const AppointmentsCalendar = lazy(() => import('./pages/AppointmentsCalendar'))
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'))
 const BookingWidgetSettings = lazy(() => import('./pages/BookingWidgetSettings'))
+const PhoneSettings = lazy(() => import('./pages/PhoneSettings'))
 const BusinessProfile = lazy(() => import('./pages/BusinessProfile'))
 const ContactDetail = lazy(() => import('./pages/ContactDetail'))
 const Contacts = lazy(() => import('./pages/Contacts'))
@@ -173,6 +174,7 @@ export default function App() {
                 <Route path="settings/recycle-bin" element={<Suspense fallback={<RouteFallback />}><RecycleBin /></Suspense>} />
                 <Route path="settings/business-profile" element={<Suspense fallback={<RouteFallback />}><BusinessProfile /></Suspense>} />
                 <Route path="settings/notifications" element={<Suspense fallback={<RouteFallback />}><NotificationSubscribers /></Suspense>} />
+                <Route path="settings/phone" element={<Suspense fallback={<RouteFallback />}><PhoneSettings /></Suspense>} />
                 {/* Legacy URLs — Products moved to top-level nav, Widget settings
                     moved under Settings. Keep old bookmarks/links working. */}
                 <Route

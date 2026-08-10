@@ -21,8 +21,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import SearchIcon from '@mui/icons-material/Search'
 import SendIcon from '@mui/icons-material/Send'
-import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined'
-import LanguageIcon from '@mui/icons-material/Language'
 import { Link as RouterLink } from 'react-router-dom'
 
 import {
@@ -31,6 +29,8 @@ import {
   patchInboxConversation,
   sendInboxMessage,
 } from '../services/api'
+import { useInboxNotifications } from '../components/notifications/InboxNotificationsProvider'
+import { CHANNEL_META } from '../utils/channels'
 
 // Omnichannel CRM Inbox. Inbound SMS/Meta land here with the composer
 // disabled until carrier approval; web-chat threads reply LIVE (no transport
@@ -41,12 +41,6 @@ const POLL_MS = 20000
 // Open threads refresh faster so a web-chat visitor's reply appears quickly.
 const THREAD_POLL_MS = 5000
 
-const CHANNEL_META = {
-  sms: { label: 'SMS', icon: SmsOutlinedIcon, color: '#2563eb' },
-  facebook: { label: 'Facebook', icon: SmsOutlinedIcon, color: '#1877f2' },
-  instagram: { label: 'Instagram', icon: SmsOutlinedIcon, color: '#c13584' },
-  web_chat: { label: 'Web', icon: LanguageIcon, color: '#157A33' },
-}
 
 function timeAgo(iso) {
   if (!iso) return ''
@@ -100,6 +94,7 @@ export default function Inbox() {
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [error, setError] = useState(null)
+  const { refresh: refreshUnread, setActiveConversationId } = useInboxNotifications()
   const searchRef = useRef(search)
   searchRef.current = search
 
@@ -151,12 +146,23 @@ export default function Inbox() {
       setConversations((prev) =>
         prev ? prev.map((c) => (c.id === id ? { ...c, unread: false } : c)) : prev,
       )
+      // GET marks it read server-side, so the sidebar badge is now stale by
+      // one — pull it forward rather than leaving it wrong for up to 20s.
+      refreshUnread()
     } catch {
       setError("Couldn't open that conversation.")
     } finally {
       setDetailLoading(false)
     }
-  }, [])
+  }, [refreshUnread])
+
+  // Tell the app-wide notifier which thread is on screen, so a reply landing
+  // in the conversation you are currently reading does not also toast. Cleared
+  // on unmount — leaving the Inbox means nothing is "already visible".
+  useEffect(() => {
+    setActiveConversationId(selectedId)
+    return () => setActiveConversationId(null)
+  }, [selectedId, setActiveConversationId])
 
   async function changeStatus(nextStatus) {
     if (!detail) return
@@ -456,8 +462,12 @@ function ThreadView({ detail, loading, onBack, onStatus, onSend }) {
             <Chip
               size="small"
               variant="outlined"
-              label={`Viewing: ${detail.visitor_page_url.replace(/^https?:\/\/[^/]+/, '') || '/'}`}
-              sx={{ maxWidth: 260 }}
+              label={`Viewing: ${
+                detail.visitor_page_label ||
+                detail.visitor_page_url.replace(/^https?:\/\/[^/]+/, '') ||
+                '/'
+              }`}
+              sx={{ maxWidth: 320 }}
             />
           )}
         </Stack>

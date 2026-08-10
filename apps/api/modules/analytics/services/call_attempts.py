@@ -248,6 +248,63 @@ def start_bridge_call(
     return attempt, result
 
 
+def start_browser_call(
+    db: Session,
+    *,
+    contact: Contact,
+    user: User,
+    event_id: int | None = None,
+    idempotency_key: str | None = None,
+) -> tuple[ContactCallAttempt, str]:
+    """Browser softphone (call placed from the dashboard, audio in the tab).
+
+    Logs a call attempt for the CONTACT's number exactly like the native-dialer
+    and bridge paths — same tracking, idempotency, and manager reporting — then
+    mints the signed dial token the browser hands to Twilio. ``source`` is
+    stamped ``twilio_softphone`` so the three call paths stay distinguishable.
+
+    Unlike the bridge, NO call is placed server-side: the browser's Voice SDK
+    initiates it, Twilio calls our TwiML route, and the token is what authorizes
+    the number that route will dial. So there is no provider result to check and
+    no phantom-call rollback to do — the attempt row is the record of intent,
+    just as it is for a ``tel:`` tap.
+
+    Returns ``(attempt, dial_token)``. Raises ``CallAttemptError`` for input or
+    configuration problems.
+    """
+    from modules.messaging.services import voice_transport
+
+    contact_number = normalize_phone_e164(contact.phone_e164 or contact.phone or "")
+    if not contact_number:
+        raise CallAttemptError("contact_phone_missing", http_status=422)
+
+    if not voice_transport.softphone_configured():
+        raise CallAttemptError("softphone_not_configured", http_status=503)
+
+    attempt, _created = log_call_attempt(
+        db,
+        contact=contact,
+        user=user,
+        raw_phone=contact_number,
+        event_id=event_id,
+        source="twilio_softphone",
+        idempotency_key=idempotency_key,
+    )
+
+    # Persist so the attempt id is available to bind into the signed token. An
+    # idempotent replay reuses the same attempt and simply gets a fresh token —
+    # unlike the bridge there's no dial to suppress, because the browser hasn't
+    # placed the call yet.
+    db.flush()
+    token = voice_transport.mint_dial_token(
+        call_attempt_id=attempt.id,
+        contact_id=contact.id,
+        user_id=user.id,
+        dial_number=contact_number,
+    )
+    return attempt, token
+
+
 def record_outcome(
     db: Session,
     *,

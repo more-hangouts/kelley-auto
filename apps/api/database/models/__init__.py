@@ -112,6 +112,9 @@ from .analytics import (
     ActivityLog,
     SalesActivityEvent,
     ContactCallAttempt,
+    InboundCall,
+    VoicePresence,
+    VoiceSettings,
 )
 
 __all__ = [
@@ -205,4 +208,7 @@ __all__ = [
     "ActivityLog",
     "SalesActivityEvent",
     "ContactCallAttempt",
+    "InboundCall",
+    "VoicePresence",
+    "VoiceSettings",
 ]

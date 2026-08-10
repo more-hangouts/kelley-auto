@@ -91,7 +91,17 @@ def unread_count(
     db: Annotated[Session, Depends(get_db)],
     admin: Annotated[User, Depends(require_admin_scope)],
 ) -> dict:
-    return {"unread": inbox_service.unread_count_for_user(db, admin.id)}
+    """Badge count plus the newest unread thread, for the dashboard poll.
+
+    ``latest`` is additive — it was added for the arrival toast and existing
+    callers that only read ``unread`` are unaffected. Both come from one
+    predicate (``_unread_filter``) so the toast can never fire for something
+    the badge does not also count.
+    """
+    return {
+        "unread": inbox_service.unread_count_for_user(db, admin.id),
+        "latest": inbox_service.latest_unread_for_user(db, admin.id),
+    }
 
 
 @router.get("/conversations")

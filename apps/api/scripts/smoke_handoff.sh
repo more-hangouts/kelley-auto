@@ -186,6 +186,12 @@ SUITE=(
   tests/test_business_profile_smoke.py
   tests/test_delete_policy_guardrail_smoke.py
 
+  # voice / telephony (Twilio REST + Voice SDK are mocked; no real calls)
+  tests/test_voice_bridge_smoke.py
+  tests/test_softphone_smoke.py
+  tests/test_inbound_voice_smoke.py
+  tests/test_voice_routing_smoke.py
+
   # dashboards / notifications
   tests/test_dashboard_smoke.py
   tests/test_notifications_smoke.py

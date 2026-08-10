@@ -289,19 +289,33 @@ def test_staff_reply_and_poll() -> None:
             result["conversation"]["status"] == "pending", "answered → pending", result
         )
 
-        # SMS threads must still be gated.
-        sms_conv = db.execute(
-            sql_text("SELECT id FROM conversations WHERE channel = 'sms' LIMIT 1")
-        ).scalar()
-        if sms_conv:
-            try:
-                inbox_service.send_reply(
-                    db, int(sms_conv), body="x", user_id=int(admin_id)
-                )
-                raise AssertionError("SMS reply should have raised")
-            except inbox_service.InboxError as exc:
-                _assert(exc.code == "sms_sending_disabled", "sms still gated", exc.code)
-            db.rollback()
+        # The SMS branch must stay guarded — and the probe must never reach
+        # Twilio. This builds a throwaway sms thread whose recipient is
+        # deliberately not E.164, so send_reply raises at the first guard.
+        # NEVER point this at a real thread: until 2026-08-10 it picked
+        # `channel='sms' LIMIT 1` and asserted sms_sending_disabled, which
+        # went stale when outbound SMS shipped — every suite run texted "x"
+        # to a live customer.
+        sms_conv, _ = inbox_service.upsert_conversation(
+            db,
+            provider="twilio",
+            channel="sms",
+            external_id=f"sms-smoke-{_TAG}",
+            business_ref="smoke",
+        )
+        db.flush()
+        try:
+            inbox_service.send_reply(
+                db, int(sms_conv.id), body="x", user_id=int(admin_id)
+            )
+            raise AssertionError("SMS reply to a bogus recipient should have raised")
+        except inbox_service.InboxError as exc:
+            _assert(
+                exc.code in ("recipient_has_no_valid_phone", "sms_sending_disabled"),
+                "sms gated before transport",
+                exc.code,
+            )
+        db.rollback()
     finally:
         db.close()
 

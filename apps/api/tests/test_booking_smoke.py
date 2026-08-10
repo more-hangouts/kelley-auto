@@ -147,7 +147,10 @@ resp = client.get("/api/booking/theme")
 assert resp.status_code == 200, resp.text
 theme = resp.json()
 assert "theme" in theme and "copy_text" in theme and "flow" in theme
-assert theme["copy_text"]["header_title"] == "Initial consultation"
+# Assert the contract (key present and non-empty), not the branding — the
+# copy is admin-editable data, so pinning a literal here makes the smoke
+# fail on every rebrand (it did, on migration 108).
+assert theme["copy_text"].get("header_title"), "header_title missing/empty"
 print("theme endpoint ok")
 
 

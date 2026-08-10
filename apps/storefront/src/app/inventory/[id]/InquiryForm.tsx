@@ -5,65 +5,12 @@ import { submitLead } from "@/lib/publicApi";
 import { getTrackingContext, track } from "@/lib/analytics";
 import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
 import { isValidDateOfBirth, maskDateOfBirth } from "@/lib/dob";
+import { US_STATES } from "@/lib/us-states";
 
 const FORM_TYPE = "vehicle_inquiry";
 
 // — time slot helpers —
 const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
-const US_STATES = [
-  "Alabama",
-  "Alaska",
-  "Arizona",
-  "Arkansas",
-  "California",
-  "Colorado",
-  "Connecticut",
-  "Delaware",
-  "District of Columbia",
-  "Florida",
-  "Georgia",
-  "Hawaii",
-  "Idaho",
-  "Illinois",
-  "Indiana",
-  "Iowa",
-  "Kansas",
-  "Kentucky",
-  "Louisiana",
-  "Maine",
-  "Maryland",
-  "Massachusetts",
-  "Michigan",
-  "Minnesota",
-  "Mississippi",
-  "Missouri",
-  "Montana",
-  "Nebraska",
-  "Nevada",
-  "New Hampshire",
-  "New Jersey",
-  "New Mexico",
-  "New York",
-  "North Carolina",
-  "North Dakota",
-  "Ohio",
-  "Oklahoma",
-  "Oregon",
-  "Pennsylvania",
-  "Rhode Island",
-  "South Carolina",
-  "South Dakota",
-  "Tennessee",
-  "Texas",
-  "Utah",
-  "Vermont",
-  "Virginia",
-  "Washington",
-  "West Virginia",
-  "Wisconsin",
-  "Wyoming",
-];
-
 function getSlots(): number[] {
   const h = new Date().getHours();
   return h >= 17 ? ALL_SLOTS.filter((s) => s >= 13) : ALL_SLOTS;

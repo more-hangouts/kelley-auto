@@ -48,6 +48,8 @@ EXPECTED_ORM_DELETES: set[tuple[str, str]] = {
     ("modules/booking/routers/admin_booking_settings.py", "AppointmentAvailabilityRule"),
     ("modules/booking/routers/admin_booking_settings.py", "AppointmentBlackout"),
     ("modules/core/services/notification_subscriber_service.py", "NotificationSubscriber"),
+    # Ephemeral softphone online-state; recreated by the next heartbeat.
+    ("modules/messaging/services/voice_routing.py", "VoicePresence"),
     # Special case — activity_log breadcrumb substitutes for soft-delete:
 }
 

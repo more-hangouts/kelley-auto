@@ -91,6 +91,7 @@ from modules.core.routers import search as search_router
 from modules.deals.routers import special_orders as special_orders_routers
 from modules.inventory.routers import vin_decode as vin_decode_router
 from modules.booking.routers import walk_in_leads as walk_in_leads_router
+from modules.messaging.routers import voice as voice_router
 from modules.messaging.routers import web_chat as web_chat_router
 from modules.messaging.routers import webhooks_meta as webhooks_meta_router
 from modules.messaging.routers import webhooks_twilio as webhooks_twilio_router
@@ -173,6 +174,7 @@ MOUNTS: tuple[RouterMount, ...] = (
     RouterMount(admin_notification_subscribers_router.router, {"prefix": "/api/admin/notification-subscribers", "tags": ["admin-notification-subscribers"]}, "core"),
     RouterMount(inbox_router.router, {"prefix": "/api/inbox", "tags": ["inbox"]}, "messaging"),
     RouterMount(web_chat_router.router, {"prefix": "/api/web-chat", "tags": ["web-chat"]}, "messaging"),
+    RouterMount(voice_router.router, {"prefix": "/api/voice", "tags": ["voice-softphone"]}, "messaging"),
     RouterMount(webhooks_twilio_router.router, {"prefix": "/api/webhooks/twilio", "tags": ["webhooks-twilio"]}, "messaging"),
     RouterMount(webhooks_meta_router.router, {"prefix": "/api/webhooks/meta", "tags": ["webhooks-meta"]}, "messaging"),
     RouterMount(booking_router.router, {"prefix": "/api/booking", "tags": ["booking"]}, "booking"),

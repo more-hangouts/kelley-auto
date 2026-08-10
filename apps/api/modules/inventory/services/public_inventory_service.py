@@ -21,8 +21,10 @@ failing the first two gates) 404.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -229,3 +231,57 @@ def resolve_linkable_vehicle(db: Session, id_or_listing_code: str | None):
     else:
         stmt = stmt.where(func.upper(CatalogItem.public_code) == token.upper())
     return db.execute(stmt).scalars().first()
+
+
+# A public listing code as it appears in a storefront path, e.g. the
+# "KAP-00017" in "https://www.kelleyautoplex.com/inventory/KAP-00017".
+_LISTING_CODE_RE = re.compile(r"[A-Z]{2,5}-\d{3,6}")
+
+
+def vehicle_headline(item: CatalogItem) -> str | None:
+    """"2015 Chevrolet Silverado 1500 LT · $17,995 · 98,412 mi" — how a car
+    names itself on a staff surface. ``None`` when the row has no
+    year/make/model, since a bare price is not a car."""
+    name = " ".join(
+        str(x) for x in (item.year, item.make, item.model, item.trim) if x
+    ).strip()
+    if not name:
+        return None
+    bits = [name]
+    if item.unit_price_cents:
+        bits.append(f"${item.unit_price_cents // 100:,}")
+    if item.mileage:
+        bits.append(f"{item.mileage:,} mi")
+    return " · ".join(bits)
+
+
+def describe_viewed_page(db: Session, url: str | None) -> str | None:
+    """Name the car behind a storefront URL, or ``None`` for any page that
+    isn't one vehicle's detail page.
+
+    Staff surfaces (the web-chat inbox) show the page a visitor is sitting
+    on; a bare ``/inventory/KAP-00017`` makes whoever is answering go look
+    the code up before they can say a word about the car. Resolution is
+    best-effort and read-only — an unknown/deleted code, a listing page, or
+    a row with no year/make/model returns ``None`` and the caller falls
+    back to showing the path.
+
+    Gated on ``PUBLIC_DETAIL_STATUSES``, not the list statuses: a visitor
+    can be parked on the page of a car that just sold, and naming it is
+    precisely what the rep needs to hear.
+    """
+    path = urlparse(url or "").path
+    match = _LISTING_CODE_RE.search(path.upper())
+    if not match:
+        return None
+    item = (
+        db.execute(
+            _public_base().where(
+                CatalogItem.vehicle_status.in_(PUBLIC_DETAIL_STATUSES),
+                func.upper(CatalogItem.public_code) == match.group(0),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return vehicle_headline(item) if item is not None else None

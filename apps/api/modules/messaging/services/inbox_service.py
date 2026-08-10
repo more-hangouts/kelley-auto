@@ -50,6 +50,7 @@ from database.models import (
 )
 from modules.core.services import business_time, notification_routing
 from modules.core.services.phone import normalize_phone_e164
+from modules.inventory.services import public_inventory_service
 
 log = logging.getLogger(__name__)
 
@@ -587,6 +588,12 @@ def _serialize_conversation(
         # = the widget's presence heartbeat landed within the last 90s, i.e.
         # the visitor is still on the page and will see a reply live.
         "visitor_page_url": conv.visitor_page_url,
+        # The car that page is showing, when it is a listing detail page —
+        # the header chip names the vehicle instead of a KAP code the rep
+        # would have to go look up. None on every other page.
+        "visitor_page_label": public_inventory_service.describe_viewed_page(
+            db, conv.visitor_page_url
+        ),
         "visitor_last_seen_at": _iso(conv.visitor_last_seen_at),
         "visitor_active": bool(
             conv.visitor_last_seen_at is not None
@@ -1050,24 +1057,65 @@ def start_sms_conversation(
     }
 
 
-def unread_count_for_user(db: Session, user_id: int) -> int:
-    """Conversations with an inbound message newer than this user's read
-    watermark (or never read)."""
+def _unread_filter(user_id: int):
+    """Join + predicate shared by the unread count and the latest-unread
+    lookup, so a badge and the toast that accompanies it can never disagree
+    about what counts as unread."""
     return (
-        db.query(func.count(Conversation.id))
-        .outerjoin(
-            ConversationRead,
-            and_(
-                ConversationRead.conversation_id == Conversation.id,
-                ConversationRead.user_id == user_id,
-            ),
-        )
-        .filter(
+        and_(
+            ConversationRead.conversation_id == Conversation.id,
+            ConversationRead.user_id == user_id,
+        ),
+        and_(
             Conversation.last_inbound_at.isnot(None),
             or_(
                 ConversationRead.last_read_at.is_(None),
                 Conversation.last_inbound_at > ConversationRead.last_read_at,
             ),
-        )
+        ),
+    )
+
+
+def unread_count_for_user(db: Session, user_id: int) -> int:
+    """Conversations with an inbound message newer than this user's read
+    watermark (or never read)."""
+    join_on, where = _unread_filter(user_id)
+    return (
+        db.query(func.count(Conversation.id))
+        .outerjoin(ConversationRead, join_on)
+        .filter(where)
         .scalar()
     ) or 0
+
+
+def latest_unread_for_user(db: Session, user_id: int) -> dict | None:
+    """The single most recently arrived unread thread, or None.
+
+    Feeds the dashboard's arrival toast. Deliberately *not* the whole unread
+    list: the caller only ever renders one, and this runs on a 20s poll for
+    every logged-in rep, so it stays one indexed row rather than a list
+    serialization (each of which fans out into contact/event/vehicle
+    lookups in ``_serialize_conversation``).
+    """
+    join_on, where = _unread_filter(user_id)
+    conv = (
+        db.query(Conversation)
+        .outerjoin(ConversationRead, join_on)
+        .filter(where)
+        .order_by(Conversation.last_inbound_at.desc())
+        .first()
+    )
+    if conv is None:
+        return None
+    meta = conv.conversation_metadata or {}
+    contact = _contact_summary(db, conv)
+    return {
+        "conversation_id": conv.id,
+        "channel": conv.channel,
+        # Same name ladder the Inbox header uses: CRM contact, then a fetched
+        # Meta profile name, else None — the client supplies the channel's
+        # own fallback ("Website visitor") rather than us baking copy in here.
+        "display_name": (contact or {}).get("display_name") or meta.get("display_name"),
+        "preview": conv.last_inbound_preview,
+        "last_inbound_at": _iso(conv.last_inbound_at),
+    }

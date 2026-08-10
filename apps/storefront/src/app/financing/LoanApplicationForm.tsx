@@ -5,6 +5,7 @@ import { submitLead } from "@/lib/publicApi";
 import { getTrackingContext, track } from "@/lib/analytics";
 import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
 import { isValidDateOfBirth, maskDateOfBirth } from "@/lib/dob";
+import { US_STATES } from "@/lib/us-states";
 
 const FORM_TYPE = "loan_application";
 
@@ -128,8 +129,9 @@ export default function LoanApplicationForm({
       addressStreet: form.address.trim() || undefined,
       dateOfBirth: form.dateOfBirth.trim() || undefined,
       hasDriverLicense: form.hasDriversLicense,
-      driverLicenseState:
-        form.driversLicenseState.trim().toUpperCase() || undefined,
+      // Sent verbatim: the value comes from the US_STATES dropdown, so it is
+      // already an exact state name the API maps to a 2-letter code.
+      driverLicenseState: form.driversLicenseState.trim() || undefined,
       smsConsent,
       // Attribution: ties this lead to the visitor's browsing journey. The
       // server records the authoritative `lead_submitted` event using
@@ -262,12 +264,31 @@ export default function LoanApplicationForm({
               </p>
             )}
         </div>
-        <input
-          placeholder="Driver's license state"
+        {/* A dropdown, not free text: this field maps to a 2-character
+            column, so anything the customer invents ("Tx.", "TX DL", "N/A")
+            used to fail the whole application. Optional — the blank option
+            is a real choice, not a placeholder to be validated away. */}
+        <select
+          aria-label="Driver's license state"
           value={form.driversLicenseState}
-          onChange={update("driversLicenseState")}
-          className={inputClass}
-        />
+          onChange={(e) => {
+            markStarted();
+            setForm((current) => ({
+              ...current,
+              driversLicenseState: e.target.value,
+            }));
+          }}
+          className={`${inputClass} ${
+            form.driversLicenseState ? "" : "text-neutral-400"
+          }`}
+        >
+          <option value="">Driver&apos;s license state</option>
+          {US_STATES.map((state) => (
+            <option key={state} value={state} className="text-neutral-700">
+              {state}
+            </option>
+          ))}
+        </select>
       </div>
 
       <label className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-25 px-4 py-3 text-sm text-neutral-600">

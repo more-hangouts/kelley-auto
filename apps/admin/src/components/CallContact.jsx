@@ -26,9 +26,16 @@ import {
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
+import HeadsetMicOutlinedIcon from '@mui/icons-material/HeadsetMicOutlined'
 import SmartphoneOutlinedIcon from '@mui/icons-material/SmartphoneOutlined'
 
-import { logCallAttempt, startBridgeCall, updateCallAttempt } from '../services/api'
+import {
+  logCallAttempt,
+  startBridgeCall,
+  startBrowserCall,
+  updateCallAttempt,
+} from '../services/api'
+import { useSoftphone } from './softphone/SoftphoneProvider'
 
 // Per-device storage of the rep's callback number for the business-number
 // bridge (Twilio rings THIS number first, then bridges to the contact). Kept
@@ -113,6 +120,12 @@ export default function CallContact({
   const [outcome, setOutcome] = useState(null)
   const [notes, setNotes] = useState('')
   const [outcomeError, setOutcomeError] = useState(null)
+
+  // Browser softphone. Null when rendered outside the dashboard shell, which
+  // reads the same as "unavailable" — no call-in-browser option is offered.
+  const softphone = useSoftphone()
+  const [browserPending, setBrowserPending] = useState(false)
+  const browserInFlightRef = useRef(false)
 
   // Business-number bridge (Twilio Voice) UI state.
   const [menuAnchor, setMenuAnchor] = useState(null)
@@ -220,6 +233,70 @@ export default function CallContact({
     setError(null)
     openDialer()
   }
+
+  // --- Browser softphone (call from the dashboard, audio in the tab) --------
+
+  // The outcome sheet normally waits for the app to return from the native
+  // dialer. A browser call never backgrounds the app, so the end of the call
+  // IS the trigger — same sheet, different signal.
+  const openOutcomeSheetNow = useCallback((attempt) => {
+    if (!attempt || !attempt.id) return
+    pendingAttemptRef.current = attempt
+    wentHiddenRef.current = false
+    setOutcome(null)
+    setNotes('')
+    setOutcomeError(null)
+    setSheetOpen(true)
+  }, [])
+
+  const placeBrowserCall = useCallback(async () => {
+    if (browserInFlightRef.current) return
+    browserInFlightRef.current = true
+    setBrowserPending(true)
+    setError(null)
+    try {
+      // Log + authorize first; the response carries the signed dial token that
+      // tells Twilio which number this call is allowed to reach.
+      const attempt = await startBrowserCall(contactId, { event_id: eventId })
+      await softphone.placeCall({
+        dialToken: attempt.dial_token,
+        label: children || phone || dialNumber,
+        phone: dialNumber,
+        onEnded: () => openOutcomeSheetNow(attempt),
+      })
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      const code = detail?.code || detail
+      const status = err?.response?.status
+      if (status === 503 || code === 'softphone_not_configured') {
+        setToast({
+          severity: 'info',
+          message:
+            'In-browser calling isn’t set up yet — using this device’s dialer instead.',
+        })
+      } else {
+        // Mic-permission and SDK errors arrive as plain Errors with a message
+        // already written for a salesperson, not an API response.
+        setToast({
+          severity: 'error',
+          message:
+            err?.message ||
+            (typeof code === 'string' ? code : 'Could not start the call.'),
+        })
+      }
+    } finally {
+      browserInFlightRef.current = false
+      setBrowserPending(false)
+    }
+  }, [
+    contactId,
+    eventId,
+    softphone,
+    children,
+    phone,
+    dialNumber,
+    openOutcomeSheetNow,
+  ])
 
   // --- Business-number bridge (Twilio Voice) --------------------------------
 
@@ -422,6 +499,29 @@ export default function CallContact({
             secondary="Uses this device’s dialer"
           />
         </MenuItem>
+        {softphone?.available && (
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null)
+              placeBrowserCall()
+            }}
+            // One call at a time: the Device rejects a second connect, so the
+            // option is disabled rather than failing after the click.
+            disabled={browserPending || softphone.inCall}
+          >
+            <ListItemIcon>
+              <HeadsetMicOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Call in browser"
+              secondary={
+                softphone.inCall
+                  ? 'Already on a call'
+                  : 'Talk here — customer sees the business number'
+              }
+            />
+          </MenuItem>
+        )}
         <MenuItem onClick={onBusinessCallClick}>
           <ListItemIcon>
             <BusinessOutlinedIcon fontSize="small" />

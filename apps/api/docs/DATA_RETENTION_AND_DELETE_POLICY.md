@@ -107,6 +107,7 @@ represent customer-facing state.
 | `staff_locations` | (column reset, not row delete — owner deactivates) |
 | `recurring_unavailability` | `services.recurring_availability.delete_block` (stylist deletes their own row; ownership check enforced in the service) |
 | `notification_subscribers` | `services.notification_subscriber_service.delete_subscriber` (admin removes a digest/alert recipient; `notification_subscriptions` children go via ON DELETE CASCADE) |
+| `voice_presence` | `services.voice_routing.clear_presence` (a rep signs off the softphone, or the dashboard unmounts. The row is pure ephemeral online-state — it says only "this browser is reachable right now" and is recreated by the next heartbeat, so there is nothing to preserve. Staleness already expires it; the explicit delete just makes a clean sign-off immediate instead of making the next caller wait out the window.) |
 
 **Rules:**
 - Hard-delete via `db.delete(row)` is fine; the row has no financial meaning.

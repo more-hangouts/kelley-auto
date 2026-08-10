@@ -251,6 +251,87 @@ export async function getBusinessProfile(): Promise<PublicBusinessProfile | null
 // Writes
 // ---------------------------------------------------------------------------
 
+const LEAD_FALLBACK_ERROR = "We couldn't submit your request.";
+
+// Field names as the API knows them -> what the customer sees on the form.
+// Only fields these forms actually send are listed; anything else falls back
+// to a generic "please check your details", never a raw API field name.
+const LEAD_FIELD_LABELS: Record<string, string> = {
+  name: "name",
+  phone: "phone number",
+  email: "email address",
+  message: "message",
+  date_of_birth: "date of birth",
+  driver_license_number: "driver's license number",
+  driver_license_state: "driver's license state",
+  address_street: "address",
+  address_city: "city",
+  address_state: "state",
+  address_zip: "ZIP code",
+};
+
+// Server-side domain rejections (PublicLeadError codes), which arrive as a
+// plain string `detail` rather than a validation array.
+const LEAD_ERROR_CODES: Record<string, string> = {
+  missing_contact_info:
+    "Please enter a phone number or an email address so we can reach you.",
+  public_lead_error: LEAD_FALLBACK_ERROR,
+};
+
+function fieldLabelFromLoc(loc: unknown): string | null {
+  if (!Array.isArray(loc)) return null;
+  // FastAPI reports ["body", "<field>"] — the last string wins.
+  for (let i = loc.length - 1; i >= 0; i -= 1) {
+    const part = loc[i];
+    if (typeof part === "string" && part !== "body")
+      return LEAD_FIELD_LABELS[part] ?? null;
+  }
+  return null;
+}
+
+/**
+ * Turn a failed lead POST into something a customer can act on.
+ *
+ * The previous behavior returned one fixed sentence for every non-OK
+ * response, which is how a batch of rejected credit applications stayed
+ * invisible: the form said "something went wrong", people retried the same
+ * input, and nobody could tell a validation problem from an outage.
+ */
+export function leadErrorMessage(status: number, payload: unknown): string {
+  if (status === 429) {
+    return "Too many attempts just now. Please wait a few minutes or call us.";
+  }
+  const detail =
+    payload && typeof payload === "object"
+      ? (payload as { detail?: unknown }).detail
+      : undefined;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return LEAD_ERROR_CODES[detail] ?? LEAD_FALLBACK_ERROR;
+  }
+
+  if (Array.isArray(detail)) {
+    const labels: string[] = [];
+    for (const item of detail) {
+      const label =
+        item && typeof item === "object"
+          ? fieldLabelFromLoc((item as { loc?: unknown }).loc)
+          : null;
+      if (label && !labels.includes(label)) labels.push(label);
+    }
+    if (labels.length === 1) return `Please check your ${labels[0]}.`;
+    if (labels.length > 1) {
+      const last = labels[labels.length - 1];
+      return `Please check your ${labels.slice(0, -1).join(", ")} and ${last}.`;
+    }
+    // Validation failed on a field we don't surface (tracking/attribution
+    // values the customer never typed). Don't name it — just don't lie.
+    return "Please check your details and try again.";
+  }
+
+  return LEAD_FALLBACK_ERROR;
+}
+
 export async function submitLead(input: LeadInput): Promise<LeadResult> {
   const body: Record<string, unknown> = {};
   if (input.name) body.name = input.name;
@@ -322,7 +403,13 @@ export async function submitLead(input: LeadInput): Promise<LeadResult> {
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      return { ok: false, message: "We couldn't submit your request." };
+      let payload: unknown = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // Non-JSON error body (proxy/gateway page) — the fallback covers it.
+      }
+      return { ok: false, message: leadErrorMessage(res.status, payload) };
     }
     return (await res.json()) as LeadResult;
   } catch {

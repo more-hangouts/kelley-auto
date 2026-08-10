@@ -30,6 +30,12 @@ import SearchIcon from '@mui/icons-material/Search'
 
 import CommandPalette from './CommandPalette'
 import NewLeadDialog from './dashboard/NewLeadDialog'
+import InboxNotificationsProvider, {
+  useInboxNotifications,
+} from './notifications/InboxNotificationsProvider'
+import IncomingCallCard from './softphone/IncomingCallCard'
+import SoftphoneBar from './softphone/SoftphoneBar'
+import SoftphoneProvider from './softphone/SoftphoneProvider'
 import { useAuth } from '../contexts/AuthContext'
 import { CommandPaletteProvider } from '../contexts/CommandPaletteContext'
 
@@ -67,6 +73,7 @@ function initials(fullName, username) {
 }
 
 function SidebarContent({ onNavigate }) {
+  const { unread } = useInboxNotifications()
   return (
     <>
       <Box
@@ -126,6 +133,26 @@ function SidebarContent({ onNavigate }) {
                 primary={label}
                 primaryTypographyProps={{ fontSize: 14, fontWeight: 'inherit' }}
               />
+              {to === '/inbox' && unread > 0 && (
+                <Box
+                  aria-label={`${unread} unread ${unread === 1 ? 'message' : 'messages'}`}
+                  sx={{
+                    minWidth: 20,
+                    height: 20,
+                    px: 0.75,
+                    borderRadius: 10,
+                    bgcolor: 'success.main',
+                    color: 'success.contrastText',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    lineHeight: '20px',
+                    textAlign: 'center',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {unread > 9 ? '9+' : unread}
+                </Box>
+              )}
             </ListItemButton>
           </ListItem>
         ))}
@@ -185,6 +212,8 @@ export default function DashboardLayout() {
 
   return (
     <CommandPaletteProvider value={paletteContextValue}>
+    <SoftphoneProvider>
+    <InboxNotificationsProvider>
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Drawer
         variant="permanent"
@@ -341,7 +370,13 @@ export default function DashboardLayout() {
         onNewLead={openNewLead}
       />
       <NewLeadDialog open={newLeadOpen} onClose={closeNewLead} />
+      {/* Fixed-position; rendered last so it floats above page content and
+          persists across route changes while a call is up. */}
+      <SoftphoneBar />
+      <IncomingCallCard />
     </Box>
+    </InboxNotificationsProvider>
+    </SoftphoneProvider>
     </CommandPaletteProvider>
   )
 }

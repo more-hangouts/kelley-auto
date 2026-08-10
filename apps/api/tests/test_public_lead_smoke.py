@@ -184,6 +184,24 @@ def _application_state_for(event_id: int) -> str | None:
         db.close()
 
 
+def _application_has_dob(event_id: int) -> bool:
+    """True when the application row exists AND actually holds an encrypted
+    DOB. Guards the degrade path: dropping an unreadable state code must not
+    take the rest of the credit application down with it."""
+    db = SessionLocal()
+    try:
+        row = db.execute(
+            sql_text(
+                "SELECT date_of_birth_ciphertext IS NOT NULL "
+                "FROM lead_applications WHERE event_id = :eid"
+            ),
+            {"eid": event_id},
+        ).first()
+        return bool(row and row[0])
+    finally:
+        db.close()
+
+
 def _appointment_for_event(event_id: int) -> tuple[str, int, str] | None:
     db = SessionLocal()
     try:
@@ -442,6 +460,71 @@ def main() -> int:  # noqa: C901 - linear smoke script
             _application_state_for(state_deals[0][0]),
         )
         print("full state names normalize for BHPH application fields ok")
+
+        # --- an unreadable state degrades, it never costs the lead --------
+        # Regression: the loan form took the driver's-license state as free
+        # text, so real submissions arrived as "TX DL" / "N/A" / "Tx." — all
+        # longer than the 2-char column. Every one of them 422'd BEFORE any
+        # row was written: no contact, no deal, no staff email, and a generic
+        # "something went wrong" for the customer. 98 submissions were lost
+        # this way between 2026-06-30 and 2026-08-10. A state code we cannot
+        # read is worth less than the application it rides on, so it is
+        # dropped and the lead still lands.
+        junk_states = {
+            "dlx1": ("TX DL", None),
+            "dlx2": ("N/A", None),
+            "dlx3": ("San Antonio, TX", None),
+            "dlx4": ("12345678", None),
+            # Recovered rather than dropped: punctuation/casing/spacing only.
+            "dlx5": ("Tx.", "TX"),
+            "dlx6": ("  texas  ", "TX"),
+            "dlx7": ("tx", "TX"),
+            "dlx8": ("new  york", "NY"),
+        }
+        for who, (typed, expected) in junk_states.items():
+            em = _email(who)
+            r = client.post(
+                "/api/public/leads",
+                json={
+                    "name": "Free Text State",
+                    "email": em,
+                    "listing_code": codes["avail"],
+                    "date_of_birth": "09/29/1985",
+                    "driver_license_state": typed,
+                    "has_driver_license": True,
+                    "address_street": "123 Main St",
+                    "address_state": typed,
+                },
+            )
+            _assert(
+                r.status_code == 200,
+                f"state {typed!r} must not reject the application",
+                r.text,
+            )
+            _assert(r.json() == _ACK, f"state {typed!r} generic ack", r.json())
+            d = _deals_for(_contact_id_by_email(em))
+            _assert(len(d) == 1, f"state {typed!r} created one deal", d)
+            _assert(
+                _application_state_for(d[0][0]) == expected,
+                f"state {typed!r} -> {expected!r}",
+                _application_state_for(d[0][0]),
+            )
+            # The application still has to be a real, readable row: dropping
+            # an unusable state must not quietly drop the PII with it.
+            _assert(
+                _application_has_dob(d[0][0]),
+                f"state {typed!r} still stored the encrypted DOB",
+                typed,
+            )
+            # ...and none of it may leak into the deal's free-text notes.
+            notes = _event_notes(d[0][0]) or ""
+            for secret in ("09/29/1985", "1985", "123 Main St", typed):
+                _assert(
+                    secret not in notes,
+                    f"state {typed!r}: {secret!r} must not reach event notes",
+                    notes,
+                )
+        print("unreadable state degrades to null without losing the lead ok")
 
         # --- duplicate submit appends, no second deal --------------------
         r = client.post(

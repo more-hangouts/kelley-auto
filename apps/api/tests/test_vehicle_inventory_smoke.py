@@ -44,6 +44,9 @@ from PIL import Image  # noqa: E402
 
 from modules.core.services import document_storage  # noqa: E402
 from modules.inventory.services.catalog_service import public_vehicle_dto  # noqa: E402
+from modules.inventory.services.public_inventory_service import (  # noqa: E402
+    describe_viewed_page,
+)
 
 client = TestClient(app)
 
@@ -233,6 +236,36 @@ def main() -> int:  # noqa: C901 - linear smoke script
             client.get("/api/public/media/business/logo.png").status_code == 404,
             "public media is scoped to vehicles/ (logo not exposed)",
         )
+
+        # A storefront listing URL resolves back to the car itself, so staff
+        # surfaces (the web-chat "Viewing:" line/chip) name the vehicle
+        # instead of a KAP code someone has to go look up. Case and query
+        # string are noise; a listing index or a stranger URL is not a car.
+        _db = SessionLocal()
+        try:
+            _label = describe_viewed_page(
+                _db,
+                "https://www.kelleyautoplex.com/inventory/"
+                f"{veh['public_code'].lower()}?utm_source=fb",
+            )
+            _assert(
+                _label == "2019 Toyota Camry LE · $14,995 · 82,214 mi",
+                "listing url resolves to car details",
+                _label,
+            )
+            for _url in (
+                "https://www.kelleyautoplex.com/cars-for-sale",
+                "https://www.kelleyautoplex.com/inventory/KAP-99999",
+                "/",
+                None,
+            ):
+                _assert(
+                    describe_viewed_page(_db, _url) is None,
+                    "non-listing page has no car label",
+                    _url,
+                )
+        finally:
+            _db.close()
         # non-image is rejected
         resp = client.post(
             f"/api/catalog/{veh_id}/photos",

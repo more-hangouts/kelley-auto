@@ -63,6 +63,13 @@ class BridgeCallCreate(BaseModel):
     idempotency_key: str | None = Field(default=None, max_length=64)
 
 
+class BrowserCallCreate(BaseModel):
+    # No phone and no rep number: the destination is the contact's own number
+    # (resolved server-side) and the "rep leg" is the browser itself.
+    event_id: int | None = None
+    idempotency_key: str | None = Field(default=None, max_length=64)
+
+
 def _load_contact(db: Session, contact_id: int) -> Contact:
     contact = db.get(Contact, contact_id)
     if contact is None or contact.deleted_at is not None:
@@ -150,6 +157,43 @@ def start_bridge_call(
     body["call_attempt_id"] = attempt.id
     body["provider_call_sid"] = result.provider_call_sid
     body["provider_status"] = result.status
+    return body
+
+
+@router.post("/{contact_id}/call-attempts/browser", status_code=201)
+def start_browser_call(
+    contact_id: int,
+    payload: BrowserCallCreate,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+) -> dict:
+    """Browser softphone: authorize + log one dashboard-placed call.
+
+    Logs the attempt (same tracking as the ``tel:`` and bridge paths) and
+    returns the signed ``dial_token`` the SPA passes to the Voice SDK. The token
+    is what the public TwiML route trusts for the destination number, so the
+    browser never gets to name the number it dials.
+
+    No call is placed here — the browser's ``Device.connect()`` does that.
+    """
+    contact = _load_contact(db, contact_id)
+
+    try:
+        attempt, dial_token = svc.start_browser_call(
+            db,
+            contact=contact,
+            user=user,
+            event_id=payload.event_id,
+            idempotency_key=payload.idempotency_key,
+        )
+    except svc.CallAttemptError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.http_status, detail=exc.code) from exc
+
+    db.commit()
+    body = svc.serialize(attempt)
+    body["call_attempt_id"] = attempt.id
+    body["dial_token"] = dial_token
     return body
 
 

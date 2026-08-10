@@ -40,6 +40,7 @@ from database.models import (
 )
 from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service
+from modules.inventory.services import public_inventory_service
 from modules.analytics.services import storefront_analytics_service
 from modules.messaging.services import inbox_service
 from modules.booking.services.event_service import EventOverrides
@@ -448,7 +449,11 @@ def start_chat(
     else:
         lines.append("Came back to the website chat.")
     if page_url:
-        lines.append(f"Viewing: {page_url}")
+        # Name the car when the visitor is on a listing — "Viewing:
+        # KAP-00017" is a lookup task for whoever answers, not information.
+        lines.append(
+            f"Viewing: {public_inventory_service.describe_viewed_page(db, page_url) or page_url}"
+        )
     for step in intake or []:
         q = str(step.get("question") or "").strip()[:300]
         a = str(step.get("answer") or "").strip()[:120]

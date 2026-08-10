@@ -108,13 +108,35 @@ _STATE_NAME_TO_CODE = {
 }
 
 
+_STATE_CODES = frozenset(_STATE_NAME_TO_CODE.values())
+
+
 def _normalize_state_code(raw: Any) -> Any:
+    """Coerce whatever a customer typed into a valid 2-letter state code, or
+    ``None``.
+
+    This is deliberately TOLERANT rather than strict. These fields sit on the
+    BHPH credit application, and the loan form historically rendered the
+    driver's-license state as free text: real submissions arrived as "Tx.",
+    "TX DL", "Texas DL", "N/A", "San Antonio, TX". Every one of those is
+    longer than the 2-char column, so the whole request 422'd and the lead was
+    never written — the customer saw a generic failure and we lost them
+    silently. A state code we can't read is worth far less than the
+    application it rides on, so an unrecognized value is dropped (None) and
+    the lead still lands.
+
+    Recognized: any exact full state name, or any real 2-letter code, after
+    trimming surrounding whitespace/punctuation and collapsing inner runs of
+    whitespace. Everything else becomes None.
+    """
     if not isinstance(raw, str):
         return raw
-    cleaned = raw.strip().upper()
+    cleaned = " ".join(raw.strip(" \t.,").split()).upper()
     if not cleaned:
-        return raw
-    return _STATE_NAME_TO_CODE.get(cleaned, cleaned)
+        return None
+    if cleaned in _STATE_CODES:
+        return cleaned
+    return _STATE_NAME_TO_CODE.get(cleaned)
 
 
 class InventoryListResponse(BaseModel):
@@ -235,6 +257,10 @@ class PublicLeadRequest(BaseModel):
     # record.
     date_of_birth: str | None = Field(default=None, max_length=40)
     driver_license_number: str | None = Field(default=None, max_length=40)
+    # State fields keep the 2-char bound because `lead_applications.
+    # driver_license_state` is varchar(2) — but the bound is never what a
+    # customer's typing has to satisfy: `_normalize_state_fields` below runs
+    # first and has already reduced the value to a real code or None.
     driver_license_state: str | None = Field(default=None, max_length=2)
     has_driver_license: bool | None = None
     address_street: str | None = Field(default=None, max_length=200)
@@ -270,6 +296,9 @@ class PublicLeadRequest(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _normalize_state_fields(cls, data: Any) -> Any:
+        # Runs BEFORE field validation, so the max_length=2 bound above only
+        # ever sees an already-normalized code or None. An unreadable state
+        # must degrade, never reject: see _normalize_state_code.
         if isinstance(data, dict):
             normalized = dict(data)
             for key in ("driver_license_state", "address_state"):

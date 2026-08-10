@@ -471,12 +471,12 @@
   font-family: ${t.font_body || 'Inter, system-ui, sans-serif'};
 }
 .${NS}-root {
-  --bxv-bg: ${t.color_bg || '#FBF5EF'};
+  --bxv-bg: ${t.color_bg || '#F8F9FB'};
   --bxv-surface: ${t.color_surface || '#FFFFFF'};
-  --bxv-accent: ${t.color_accent || '#A7616F'};
-  --bxv-accent-dark: ${t.color_accent_dark || '#7E4451'};
-  --bxv-text: ${t.color_text || '#2A1B1F'};
-  --bxv-text-muted: ${t.color_text_muted || '#7A6A6F'};
+  --bxv-accent: ${t.color_accent || '#157A33'};
+  --bxv-accent-dark: ${t.color_accent_dark || '#0F5E26'};
+  --bxv-text: ${t.color_text || '#15161E'};
+  --bxv-text-muted: ${t.color_text_muted || '#525766'};
   --bxv-radius: ${t.radius || '16px'};
   --bxv-radius-sm: 10px;
   --bxv-border: rgba(0,0,0,0.06);
@@ -510,7 +510,7 @@
   height: auto;
 }
 .${NS}-title {
-  font-family: ${t.font_heading || 'Playfair Display, serif'};
+  font-family: ${t.font_heading || 'Inter, system-ui, sans-serif'};
   font-size: 30px; font-weight: 600; margin: 4px 0 12px 0;
 }
 .${NS}-subtitle { color: var(--bxv-text-muted); font-size: 15px; margin: 0 0 18px 0; }
@@ -518,7 +518,7 @@
 .${NS}-meta-row { display: flex; align-items: center; gap: 8px; }
 .${NS}-meta-icon { width: 16px; height: 16px; opacity: 0.7; }
 .${NS}-duration {
-  background: rgba(167, 97, 111, 0.10);
+  background: rgba(21, 122, 51, 0.10);
   border-radius: 999px; padding: 4px;
   display: inline-flex; gap: 4px; margin: 14px 0 8px 0;
 }
@@ -537,7 +537,7 @@
 .${NS}-duration-btn[disabled]:hover { background: transparent; }
 .${NS}-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .${NS}-cal-title {
-  font-family: ${t.font_heading || 'Playfair Display, serif'};
+  font-family: ${t.font_heading || 'Inter, system-ui, sans-serif'};
   font-size: 22px; font-weight: 600;
 }
 .${NS}-cal-title-year { color: var(--bxv-text-muted); margin-left: 6px; font-weight: 400; }
@@ -561,8 +561,8 @@
 }
 .${NS}-cal-day[data-state="other"] { color: rgba(0,0,0,0.18); cursor: default; }
 .${NS}-cal-day[data-state="closed"] { color: rgba(0,0,0,0.22); cursor: not-allowed; }
-.${NS}-cal-day[data-state="open"] { background: rgba(167, 97, 111, 0.10); }
-.${NS}-cal-day[data-state="open"]:hover { background: rgba(167, 97, 111, 0.22); }
+.${NS}-cal-day[data-state="open"] { background: rgba(21, 122, 51, 0.10); }
+.${NS}-cal-day[data-state="open"]:hover { background: rgba(21, 122, 51, 0.22); }
 .${NS}-cal-day[data-state="selected"] {
   background: var(--bxv-accent); color: #fff; font-weight: 600;
 }
@@ -607,7 +607,7 @@
   padding: 12px; cursor: pointer; font-size: 14px; color: var(--bxv-text);
 }
 .${NS}-party-btn[aria-pressed="true"] {
-  border-color: var(--bxv-accent); background: rgba(167, 97, 111, 0.08);
+  border-color: var(--bxv-accent); background: rgba(21, 122, 51, 0.08);
   color: var(--bxv-accent-dark); font-weight: 600;
 }
 .${NS}-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 8px; }
@@ -639,11 +639,11 @@
   font-size: 26px;
 }
 .${NS}-success-code {
-  background: rgba(167, 97, 111, 0.10); padding: 8px 14px; border-radius: 999px;
+  background: rgba(21, 122, 51, 0.10); padding: 8px 14px; border-radius: 999px;
   font-family: ui-monospace, monospace; font-size: 13px; color: var(--bxv-accent-dark);
 }
 .${NS}-success-slot {
-  font-family: ${t.font_heading || 'Playfair Display, serif'};
+  font-family: ${t.font_heading || 'Inter, system-ui, sans-serif'};
   font-size: 22px; margin: 4px 0;
 }
 .${NS}-success-meta { color: var(--bxv-text-muted); font-size: 14px; }
@@ -923,8 +923,8 @@
     ));
 
     form.appendChild(fieldGroup(
-      state.copy.step2_celebrant_heading || "Quinceañera's first name",
-      state.copy.step2_celebrant_hint || "So we know who we're celebrating.",
+      state.copy.step2_celebrant_heading || "Who's the vehicle for?",
+      state.copy.step2_celebrant_hint || "First name of whoever will be driving it.",
       input('text', 'celebrant_first_name', { required: 'required', autocomplete: 'given-name' })
     ));
 
@@ -935,7 +935,7 @@
 
     var party = el('div', { className: NS + '-party-row', role: 'group' });
     var options = [
-      { value: 'pair', label: state.copy.step2_party_pair || 'Me and my quinceañera' },
+      { value: 'pair', label: state.copy.step2_party_pair || 'Two of us' },
       { value: '3_4', label: state.copy.step2_party_3_4 || '3-4 of us' },
       { value: '5_plus', label: state.copy.step2_party_5_plus || '5 or more' },
     ];
@@ -984,7 +984,7 @@
       return false;
     }
     if (!state.formData.celebrant_first_name.trim()) {
-      alert("Please enter the quinceañera's first name.");
+      alert("Please enter the first name of whoever the vehicle is for.");
       return false;
     }
     if (!state.formData.party_size) {

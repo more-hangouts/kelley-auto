@@ -74,6 +74,21 @@ export async function startBridgeCall(contactId, payload) {
   return data
 }
 
+// Browser softphone: authorize + log one dashboard-placed call. Returns
+// { call_attempt_id, dial_token, ... }. The dial_token is handed to the Twilio
+// Voice SDK as a custom parameter; the server's TwiML route trusts only that
+// token for the destination, so the browser never names the number it dials.
+// 503 when the softphone isn't configured; the UI falls back to tel:/bridge.
+export async function startBrowserCall(contactId, payload = {}) {
+  const { data } = await api.post(
+    `/contacts/${contactId}/call-attempts/browser`,
+    payload,
+  )
+  return data
+}
+
+// Voice/softphone endpoints now live in ./voice.js.
+
 // Manager/admin call-activity reporting (business-local day).
 export async function getCallActivitySummary(params = {}) {
   const { data } = await api.get('/admin/call-activity/summary', { params })

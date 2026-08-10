@@ -32,6 +32,7 @@ cancelInvoice
 cancelQuote
 changeOwnAdminPassword
 clearSalesPin
+clearVoicePresence
 clockEveryoneOut
 confirmAttendancePunch
 convertQuoteToInvoice
@@ -114,6 +115,10 @@ getSalesActivityRepRecent
 getSalesActivitySummary
 getSplhLeaderboard
 getStorefrontAnalyticsSummary
+getVoiceAccessToken
+getVoiceRingingCall
+getVoiceSettings
+getVoiceStatus
 getWidgetSettings
 isSalesSubdomain
 listAdminHolidays
@@ -228,9 +233,12 @@ sendInboxMessage
 sendInvoice
 sendQuote
 sendStaffPasswordReset
+sendVoicePresence
 setScheduleEntryNotes
 setSubscriberActive
+setVoiceCallHold
 startBridgeCall
+startBrowserCall
 startSmsConversation
 testStaffLocationGeofence
 unapplyAllocation
@@ -246,6 +254,7 @@ updateQuote
 updateSubscriberSubscriptions
 updateVehicle
 updateVehiclePhotoAlts
+updateVoiceSettings
 updateWidgetSettings
 uploadBusinessLogo
 uploadEventDocument

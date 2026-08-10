@@ -13,6 +13,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import GroupsIcon from '@mui/icons-material/Groups'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import PhoneForwardedOutlinedIcon from '@mui/icons-material/PhoneForwardedOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
 import { Link as RouterLink } from 'react-router-dom'
 
@@ -40,6 +41,12 @@ const SECTIONS = [
     icon: NotificationsActiveIcon,
     title: 'Notifications',
     description: 'Who gets which alerts — add people (including email-only recipients with no login) and choose what each one receives.',
+  },
+  {
+    to: '/settings/phone',
+    icon: PhoneForwardedOutlinedIcon,
+    title: 'Phone routing',
+    description: 'Where incoming calls ring — the dashboard, a fallback number, or both — and how long each rings.',
   },
   {
     to: '/settings/recycle-bin',

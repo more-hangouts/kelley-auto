@@ -33,6 +33,11 @@ function manualChunks(id) {
   ) {
     return 'react-vendor'
   }
+  // The Voice SDK is reached ONLY through the dynamic import in
+  // SoftphoneProvider. Without its own chunk the catch-all below would fold it
+  // into the eager `vendor` bundle, so every rep would download the phone
+  // stack on every page load whether or not they ever place a call.
+  if (pkg === '@twilio/voice-sdk') return 'twilio-voice'
   return 'vendor' // axios, dayjs, and everything else in node_modules
 }
 

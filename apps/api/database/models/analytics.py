@@ -252,3 +252,122 @@ class ContactCallAttempt(Base):
     )
 
 
+
+
+class InboundCall(Base):
+    """Inbound voice call record (migration 105).
+
+    Written the moment Twilio hits the inbound webhook, BEFORE the call is
+    routed anywhere, so a call that nobody answers is logged just as reliably as
+    one that connects — missed calls are the ones the shop most needs to see.
+
+    Distinct from ``ContactCallAttempt`` above, which is the OUTBOUND table: a
+    call attempt has a required contact and a rep who placed it, while an
+    inbound call usually has neither (a stranger dialed the lot). Status here is
+    PROVIDER-reported and arrives asynchronously on a status callback, rather
+    than being typed in by a salesperson.
+
+    ``provider_call_sid`` is UNIQUE — it dedups Twilio webhook retries and is
+    the key the status callback updates through.
+    """
+
+    __tablename__ = "inbound_calls"
+
+    id = Column(BigInteger, primary_key=True)
+    provider_call_sid = Column(String(64), nullable=False)
+    from_number = Column(String(20), nullable=False)
+    to_number = Column(String(20), nullable=False)
+    # Soft link, filled in when the caller's number matches a known contact.
+    contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="SET NULL"))
+    answered_by_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # CHECK (migration 105) constrains these to the provider-status and
+    # disposition allowlists mirrored in the inbound service.
+    status = Column(String(20), nullable=False, server_default=text("'received'"))
+    disposition = Column(String(20))
+    # Snapshotted at routing time so a later config change never rewrites where
+    # a past call was actually sent.
+    forwarded_to = Column(String(20))
+    duration_seconds = Column(Integer)
+    # Set when the call is answered through the browser softphone, which routes
+    # via a per-call conference so the rep can put the caller on hold.
+    conference_name = Column(String(80))
+    # Browser ring-stage tracking (migration 107). The PSTN fallback fires when
+    # rep_legs_done reaches rep_legs_total and nobody joined; fallback_started
+    # is the once-only guard, flipped by a conditional UPDATE so two concurrent
+    # status callbacks cannot both start a fallback leg.
+    rep_legs_total = Column(Integer, nullable=False, server_default=text("0"))
+    rep_legs_done = Column(Integer, nullable=False, server_default=text("0"))
+    fallback_started = Column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    caller_city = Column(String(100))
+    caller_state = Column(String(40))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class VoiceSettings(Base):
+    """Singleton inbound-routing config (migration 106).
+
+    Phase 1 pinned the destination to an env var, so changing where the shop's
+    phone rings meant a file edit and a restart. This makes it an admin setting
+    and lets the fallback be any number — a manager's cell, an answering
+    service — not just the office line published on the website.
+
+    ``id`` is CHECK-constrained to 1: one row, always, the same shape
+    ``BusinessProfile`` uses.
+    """
+
+    __tablename__ = "voice_settings"
+
+    id = Column(Integer, primary_key=True, server_default=text("1"))
+    # CHECK (migration 106): browser_then_fallback | fallback_only | browser_only
+    inbound_mode = Column(
+        String(32), nullable=False, server_default=text("'browser_then_fallback'")
+    )
+    # NULL is legal and means "no PSTN fallback" — callers hear the unavailable
+    # message rather than being routed to a number nobody configured.
+    fallback_number = Column(String(20))
+    ring_timeout_seconds = Column(Integer, nullable=False, server_default=text("20"))
+    fallback_timeout_seconds = Column(
+        Integer, nullable=False, server_default=text("25")
+    )
+    updated_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+
+
+class VoicePresence(Base):
+    """Which reps currently have the dashboard softphone registered (migration 106).
+
+    Twilio cannot tell us who is online, and blindly ringing every rep's client
+    would make every caller sit through a full timeout on an empty office. The
+    dashboard heartbeats this row while the softphone is registered; routing
+    treats a row as live only within a short staleness window, so a closed
+    laptop drops out of the rotation on its own without a clean logout.
+    """
+
+    __tablename__ = "voice_presence"
+
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    identity = Column(String(64), nullable=False)
+    last_seen_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    # Explicit "stop sending me calls" toggle, distinct from being stale.
+    available = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )

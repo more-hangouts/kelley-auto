@@ -45,6 +45,17 @@ _TOKEN_ALGORITHM = "HS256"
 _TOKEN_TTL_SECONDS = 300
 _TOKEN_PURPOSE = "voice_bridge"
 
+# --- Browser softphone -----------------------------------------------------
+_TWIML_OUTBOUND_PATH = "/api/webhooks/twilio/voice/outbound"
+# The dial token authorizes ONE number for ONE browser-placed call. It rides in
+# a Twilio custom parameter rather than the number itself, so the public TwiML
+# route never dials a number the request merely asserts.
+_DIAL_TOKEN_PURPOSE = "voice_softphone_dial"
+_DIAL_TOKEN_TTL_SECONDS = 300
+# Twilio's AccessToken format is a plain JWT with a provider-specific content
+# type header. Signed with the API Key SECRET, issued by the API Key SID.
+_ACCESS_TOKEN_HEADERS = {"cty": "twilio-fpa;v=1"}
+
 
 @dataclass
 class VoiceCallResult:
@@ -193,6 +204,138 @@ def _xml_escape(value: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")
+    )
+
+
+def softphone_configured() -> bool:
+    """True when the browser softphone can actually place a call: the master
+    switch, an API Key pair to sign AccessTokens, the TwiML App the client dials
+    through, and a business caller ID for the outbound leg.
+
+    Deliberately independent of ``TWILIO_VOICE_ENABLED`` — the bridge and the
+    softphone are separate paths and either can be turned off alone.
+    """
+    return bool(
+        settings.TWILIO_SOFTPHONE_ENABLED
+        and settings.TWILIO_ACCOUNT_SID
+        and settings.TWILIO_API_KEY_SID
+        and settings.TWILIO_API_KEY_SECRET
+        and settings.TWILIO_TWIML_APP_SID
+        and settings.TWILIO_VOICE_FROM_NUMBER
+    )
+
+
+def softphone_identity(user_id: int) -> str:
+    """Twilio client identity for a staff user. Restricted to characters Twilio
+    accepts in an identity (no spaces/@/:), and derived ONLY from the user id so
+    it can never be spoofed from request input."""
+    return f"user{int(user_id)}"
+
+
+def mint_access_token(*, user_id: int, ttl_seconds: int | None = None) -> str:
+    """Sign a Twilio Voice AccessToken authorizing this staff user's browser to
+    register as a client and place OUTGOING calls through our TwiML App.
+
+    Hand-rolled rather than pulled from the ``twilio`` SDK, matching how the
+    rest of this module talks to Twilio (thin httpx + stdlib/pyjwt, no SDK
+    dependency). The format is Twilio's documented AccessToken JWT.
+
+    The INCOMING grant is gated on ``TWILIO_INBOUND_TO_BROWSER_ENABLED``. With
+    it off, tokens are outbound-only and a leaked one cannot be used to receive
+    calls; with it on, the browser registers and inbound routing can ring it.
+    """
+    if not softphone_configured():
+        raise SoftphoneNotConfigured("softphone is not configured")
+
+    ttl = ttl_seconds or settings.TWILIO_SOFTPHONE_TOKEN_TTL_SECONDS
+    now = datetime.now(timezone.utc)
+    identity = softphone_identity(user_id)
+    issued = int(now.timestamp())
+    claims = {
+        # jti must be unique per token; Twilio's own SDKs use key-sid + epoch.
+        "jti": f"{settings.TWILIO_API_KEY_SID}-{issued}",
+        "iss": settings.TWILIO_API_KEY_SID,
+        "sub": settings.TWILIO_ACCOUNT_SID,
+        "iat": issued,
+        "exp": issued + ttl,
+        "grants": {
+            "identity": identity,
+            "voice": {
+                "outgoing": {"application_sid": settings.TWILIO_TWIML_APP_SID},
+                "incoming": {
+                    "allow": bool(settings.TWILIO_INBOUND_TO_BROWSER_ENABLED)
+                },
+            },
+        },
+    }
+    return jwt.encode(
+        claims,
+        settings.TWILIO_API_KEY_SECRET,
+        algorithm=_TOKEN_ALGORITHM,
+        headers=_ACCESS_TOKEN_HEADERS,
+    )
+
+
+class SoftphoneNotConfigured(Exception):
+    """Raised when an AccessToken is requested but the softphone is off or
+    missing credentials."""
+
+
+def mint_dial_token(
+    *, call_attempt_id: int, contact_id: int | None, user_id: int, dial_number: str
+) -> str:
+    """Sign a short-lived token authorizing ONE outbound number for a browser
+    call. Mirrors ``mint_bridge_token``: the number travels in signed claims, so
+    the public TwiML route dials only what the server already authorized and
+    logged — a browser cannot dial an arbitrary number by editing a parameter.
+    """
+    now = datetime.now(timezone.utc)
+    claims = {
+        "purpose": _DIAL_TOKEN_PURPOSE,
+        "cid": contact_id,
+        "aid": call_attempt_id,
+        "uid": user_id,
+        "dial": dial_number,
+        "iat": now,
+        "exp": now + timedelta(seconds=_DIAL_TOKEN_TTL_SECONDS),
+    }
+    return jwt.encode(claims, _token_secret(), algorithm=_TOKEN_ALGORITHM)
+
+
+def verify_dial_token(token: str) -> dict:
+    """Decode + validate a softphone dial token. Returns the claims (``dial`` is
+    the authorized number). Raises ``InvalidBridgeToken`` on ANY failure so the
+    route cannot leak which check failed — same contract as the bridge token."""
+    try:
+        claims = jwt.decode(token, _token_secret(), algorithms=[_TOKEN_ALGORITHM])
+    except InvalidTokenError as exc:  # expired, bad signature, malformed
+        raise InvalidBridgeToken("dial token decode failed") from exc
+    if claims.get("purpose") != _DIAL_TOKEN_PURPOSE:
+        raise InvalidBridgeToken("dial token purpose mismatch")
+    dial = claims.get("dial")
+    if not dial or not isinstance(dial, str):
+        raise InvalidBridgeToken("dial token missing dial number")
+    return claims
+
+
+def build_outbound_twiml(*, dial_number: str) -> str:
+    """TwiML for a browser-placed call: dial the contact from the business
+    number. ``answerOnBridge`` makes the rep hear real ringback and delays the
+    connect until the contact actually answers.
+
+    The number comes from the verified dial token, never from request input.
+    """
+    caller_id = settings.TWILIO_VOICE_FROM_NUMBER or ""
+    attrs = ' answerOnBridge="true"'
+    if caller_id:
+        attrs += f' callerId="{_xml_escape(caller_id)}"'
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<Response>"
+        f"<Dial{attrs}>"
+        f"<Number>{_xml_escape(dial_number)}</Number>"
+        "</Dial>"
+        "</Response>"
     )
 
 
