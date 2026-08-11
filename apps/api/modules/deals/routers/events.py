@@ -131,6 +131,16 @@ class EventResponse(BaseModel):
     # what a rep was told, not what a click stream showed.
     walk_in_source: str | None
     walk_in_source_detail: str | None
+    # Migration 109: what the customer told the rep at the counter. NULL
+    # on every storefront-originated deal — nobody was there to ask.
+    current_vehicle: str | None
+    desired_vehicle_type: str | None
+    financing_preference: str | None
+    # Migration 110: who is owed commission for bringing this customer in.
+    # A separate axis from `owner` above — the admin staff own the lead, the
+    # salesperson gets the credit — so it is served as its own object rather
+    # than folded into the owner summary.
+    sales_credit: OwnerSummary | None
     created_at: datetime
     updated_at: datetime
 
@@ -900,6 +910,11 @@ def _to_linked_appointment(
 def _to_event_response(db: Session, event: Event) -> EventResponse:
     contact = db.get(Contact, event.primary_contact_id)
     owner = db.get(User, event.owner_user_id) if event.owner_user_id else None
+    credited = (
+        db.get(User, event.sales_credit_user_id)
+        if event.sales_credit_user_id
+        else None
+    )
     return EventResponse(
         id=event.id,
         event_type=event.event_type,
@@ -922,6 +937,14 @@ def _to_event_response(db: Session, event: Event) -> EventResponse:
         vehicle_catalog_item_id=event.vehicle_catalog_item_id,
         walk_in_source=event.walk_in_source,
         walk_in_source_detail=event.walk_in_source_detail,
+        current_vehicle=event.current_vehicle,
+        desired_vehicle_type=event.desired_vehicle_type,
+        financing_preference=event.financing_preference,
+        sales_credit=(
+            OwnerSummary(id=credited.id, full_name=credited.full_name)
+            if credited
+            else None
+        ),
         created_at=event.created_at,
         updated_at=event.updated_at,
     )

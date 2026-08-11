@@ -61,6 +61,11 @@ class WalkInLeadEventPayload(BaseModel):
     # validates the value against WALK_IN_SOURCE_VALUES.
     walk_in_source: str | None = Field(default=None, max_length=32)
     walk_in_source_detail: str | None = Field(default=None, max_length=200)
+    # Migration 110. Commission credit — who brought the customer in. NOT
+    # the same axis as owner_user_id above: at Kelley the admin staff own
+    # every lead, while the rep who walked the customer through the door
+    # may never open the CRM. Optional; unset means nobody is owed credit.
+    sales_credit_user_id: int | None = None
 
 
 class WalkInLeadEnrichmentPayload(BaseModel):
@@ -75,6 +80,15 @@ class WalkInLeadEnrichmentPayload(BaseModel):
     party_size_bucket: Literal["solo", "pair", "3_4", "5_plus"] | None = None
     budget_range: str | None = Field(default=None, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
+    # Migration 109: the paper walk-in sheet's questions 2, 3 and 5. All
+    # optional — the questionnaire is a conversation aid, not a gate, and a
+    # rep who has not asked yet must still be able to file the lead. The
+    # enum values are validated in the service against the same sets the
+    # CHECK constraints use, so a stale SPA build gets a 422 it can
+    # explain rather than a 500 at flush time.
+    current_vehicle: str | None = Field(default=None, max_length=120)
+    desired_vehicle_type: str | None = Field(default=None, max_length=32)
+    financing_preference: str | None = Field(default=None, max_length=32)
 
 
 class WalkInLeadCreate(BaseModel):
@@ -122,7 +136,11 @@ _ERROR_STATUS = {
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
     "invalid_walk_in_source": 422,
+    "invalid_sales_credit_user_id": 422,
     "walk_in_source_detail_too_long": 422,
+    "invalid_desired_vehicle_type": 422,
+    "invalid_financing_preference": 422,
+    "current_vehicle_too_long": 422,
     "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
@@ -154,11 +172,15 @@ def create_walk_in_lead(
         owner_user_id=payload.event.owner_user_id,
         walk_in_source=payload.event.walk_in_source,
         walk_in_source_detail=payload.event.walk_in_source_detail,
+        sales_credit_user_id=payload.event.sales_credit_user_id,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
         budget_range=payload.enrichment.budget_range,
         notes=payload.enrichment.notes,
+        current_vehicle=payload.enrichment.current_vehicle,
+        desired_vehicle_type=payload.enrichment.desired_vehicle_type,
+        financing_preference=payload.enrichment.financing_preference,
     )
 
     try:

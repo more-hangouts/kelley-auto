@@ -39,6 +39,10 @@ import {
   archiveEventParticipant,
 } from '../../../services/api'
 import { walkInSourceLabel } from '../../../utils/leadOrigin'
+import {
+  financingLabel,
+  vehicleTypeLabel,
+} from '../../../utils/walkInLeadIntake'
 import { formatUSD } from '../../../utils/money'
 
 dayjs.extend(relativeTime)
@@ -646,6 +650,35 @@ export default function Overview() {
             label="How they found us"
             value={<WalkInOrigin event={event} />}
           />
+        )}
+        {/* Migration 109: the walk-in sheet's answers, as fields rather than
+            prose buried in the notes box. Each renders only when it was
+            actually asked — a deal that came in through the storefront has
+            none of them, and four "—" rows would just be noise. */}
+        {event.event_type === 'vehicle_sale' && event.budget_range && (
+          <KV label="Putting down" value={event.budget_range} />
+        )}
+        {event.current_vehicle && (
+          <KV label="Currently driving" value={event.current_vehicle} />
+        )}
+        {event.desired_vehicle_type && (
+          <KV
+            label="Looking for"
+            value={vehicleTypeLabel(event.desired_vehicle_type)}
+          />
+        )}
+        {event.financing_preference && (
+          <KV
+            label="Financing"
+            value={financingLabel(event.financing_preference)}
+          />
+        )}
+        {/* Migration 110. Sits right above Owner deliberately: they are two
+            different people on almost every Kelley deal, and showing them
+            adjacent is what makes the distinction legible. Commission
+            credit does not move when admin reassigns the lead. */}
+        {event.sales_credit?.full_name && (
+          <KV label="Brought in by" value={event.sales_credit.full_name} />
         )}
         <Stack direction="row" spacing={2} sx={{ py: 0.5, alignItems: 'center' }}>
           <Typography

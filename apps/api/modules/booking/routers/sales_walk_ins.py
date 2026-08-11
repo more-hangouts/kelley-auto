@@ -73,7 +73,11 @@ _ERROR_STATUS = {
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
     "invalid_walk_in_source": 422,
+    "invalid_sales_credit_user_id": 422,
     "walk_in_source_detail_too_long": 422,
+    "invalid_desired_vehicle_type": 422,
+    "invalid_financing_preference": 422,
+    "current_vehicle_too_long": 422,
     "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
@@ -120,11 +124,15 @@ def create_sales_walk_in(
         owner_user_id=payload.event.owner_user_id,
         walk_in_source=payload.event.walk_in_source,
         walk_in_source_detail=payload.event.walk_in_source_detail,
+        sales_credit_user_id=payload.event.sales_credit_user_id,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
         budget_range=payload.enrichment.budget_range,
         notes=payload.enrichment.notes,
+        current_vehicle=payload.enrichment.current_vehicle,
+        desired_vehicle_type=payload.enrichment.desired_vehicle_type,
+        financing_preference=payload.enrichment.financing_preference,
     )
 
     try:

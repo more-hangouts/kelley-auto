@@ -75,6 +75,17 @@ class EventOverrides:
     # attribution is derived from storefront_events instead.
     walk_in_source: str | None = None
     walk_in_source_detail: str | None = None
+    # Migration 109: paper-sheet intake answers. Set by the walk-in /
+    # phone-in capture paths only; every other origin leaves them None
+    # because nobody was at the counter to ask.
+    current_vehicle: str | None = None
+    desired_vehicle_type: str | None = None
+    financing_preference: str | None = None
+    # Migration 110: commission credit, independent of owner_user_id. No
+    # `or actor_user_id` fallback anywhere — an unset credit means nobody is
+    # owed one, and defaulting it to whoever happened to file the lead would
+    # invent commission out of nothing.
+    sales_credit_user_id: int | None = None
 
 
 def promote_appointment_to_event(
@@ -132,6 +143,10 @@ def promote_appointment_to_event(
         vehicle_catalog_item_id=o.vehicle_catalog_item_id,
         walk_in_source=o.walk_in_source,
         walk_in_source_detail=o.walk_in_source_detail,
+        current_vehicle=o.current_vehicle,
+        desired_vehicle_type=o.desired_vehicle_type,
+        financing_preference=o.financing_preference,
+        sales_credit_user_id=o.sales_credit_user_id,
         status=initial_status(event_type),
     )
     db.add(event)
@@ -183,6 +198,10 @@ def create_walk_in_event(
         vehicle_catalog_item_id=o.vehicle_catalog_item_id,
         walk_in_source=o.walk_in_source,
         walk_in_source_detail=o.walk_in_source_detail,
+        current_vehicle=o.current_vehicle,
+        desired_vehicle_type=o.desired_vehicle_type,
+        financing_preference=o.financing_preference,
+        sales_credit_user_id=o.sales_credit_user_id,
         status=initial_status(event_type),
     )
     db.add(event)

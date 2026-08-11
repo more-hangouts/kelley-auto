@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
@@ -10,99 +9,52 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper,
   TextField,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 
-import LeadOriginFields from '../components/LeadOriginFields'
+import WalkInLeadIntakeForm from '../components/WalkInLeadIntakeForm'
+import { salesCreateWalkIn, salesListAssignableStaff } from '../services/api'
 import { useSalesAuth } from '../contexts/SalesAuthContext'
 import {
-  salesCreateWalkIn,
-  salesListAssignableStaff,
-} from '../services/api'
+  buildWalkInLeadPayload,
+  canSaveWalkInLead,
+  describeWalkInLeadError,
+  emptyWalkInLeadForm,
+} from '../utils/walkInLeadIntake'
 import { attendanceGateMessage, isAttendanceGateError } from './attendanceGate'
 
-const BUDGET_OPTIONS = [
-  'Under $1k',
-  '$1k-$2k',
-  '$2k-$4k',
-  '$4k-$6k',
-  '$6k+',
-  'Not sure yet',
-]
-
-function emptyContact() {
-  return {
-    first_name: '',
-    last_name: '',
-    display_name: '',
-    phone: '',
-    email: '',
-  }
-}
-
-function emptyDetails() {
-  return {
-    celebrant_first_name: '',
-    celebrant_last_name: '',
-    event_name: '',
-    budget_range: '',
-    notes: '',
-    booking_context: 'walk_in',
-    walk_in_source: '',
-    walk_in_source_detail: '',
-  }
-}
-
-function trimOrNull(value) {
-  const t = (value || '').trim()
-  return t === '' ? null : t
-}
-
-function defaultEventName(first, last) {
-  const base = (first || '').trim()
-  if (!base) return ''
-  const surname = (last || '').trim()
-  return `${surname ? `${base} ${surname}` : base}'s Deal`
-}
+// Rep-portal lead capture. Same questions as the admin dialog — they share
+// WalkInLeadIntakeForm — with one difference: the rep filing it is the
+// default, since they are the one standing there.
+//
+// The picked rep goes out on two fields, which are not the same thing:
+//
+//   - `assigned_user_id` — the sales-portal assignment this route has
+//     always had. The server mirrors it onto the appointment and the deal
+//     owner so the walk-in shows under "Today, mine". Untouched.
+//   - `sales_credit_user_id` — commission credit (migration 110). Survives
+//     any later reassignment of the lead by admin, which the assignment
+//     does not.
+//
+// On this surface they name the same person; on the admin surface only the
+// credit field is set, because the office staff own the leads there.
 
 function describeError(err) {
+  // The attendance gate is checked first: it also arrives as a 403, and the
+  // generic "you don't have permission" text would send a rep hunting for a
+  // permissions problem when they simply have not clocked in.
   if (isAttendanceGateError(err)) return attendanceGateMessage()
-
-  const status = err?.response?.status
-  const detail = err?.response?.data?.detail
-  if (status === 422 && detail === 'invalid_phone') {
-    return 'That phone number is not in a format we can match. Use a 10-digit US number or full international format.'
+  if (
+    err?.response?.status === 400 &&
+    err?.response?.data?.detail === 'invalid_assigned_user_id'
+  ) {
+    return 'Pick an active salesperson.'
   }
-  if (status === 422 && detail === 'phone_required') {
-    return 'Phone is required.'
-  }
-  if (status === 422 && detail === 'contact_name_required') {
-    return 'Enter a first/last name or display name for the contact.'
-  }
-  if (status === 422 && detail === 'celebrant_first_name_required') {
-    return 'Buyer first name is required.'
-  }
-  if (status === 422 && detail === 'invalid_walk_in_source') {
-    return 'That is not one of the origin options. Pick one from the list.'
-  }
-  if (status === 422 && detail === 'walk_in_source_detail_too_long') {
-    return 'Shorten the platform/post detail to 200 characters or less.'
-  }
-  if (status === 400 && detail === 'invalid_assigned_user_id') {
-    return 'Pick an active sales stylist for assignment.'
-  }
-  if (status === 401 || status === 403) {
-    return 'You do not have permission to create this walk-in.'
-  }
-  if (typeof detail === 'string') return detail
-  return 'Could not create the walk-in. Try again.'
+  return describeWalkInLeadError(err)
 }
 
 export default function SalesWalkInDialog({ open, onClose, onCreated }) {
@@ -111,9 +63,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
   const { user } = useSalesAuth()
 
-  const [step, setStep] = useState(0)
-  const [contact, setContact] = useState(emptyContact)
-  const [details, setDetails] = useState(emptyDetails)
+  const [form, setForm] = useState(emptyWalkInLeadForm)
   const [assignedUserId, setAssignedUserId] = useState('')
   const [error, setError] = useState(null)
 
@@ -126,117 +76,66 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
 
   useEffect(() => {
     if (!open) return
-    setStep(0)
-    setContact(emptyContact())
-    setDetails(emptyDetails())
+    setForm(emptyWalkInLeadForm())
     setAssignedUserId(user?.id ? String(user.id) : '')
     setError(null)
   }, [open, user?.id])
-
-  const canAdvanceFromContact = useMemo(() => {
-    const hasName = Boolean(
-      trimOrNull(contact.first_name) ||
-        trimOrNull(contact.last_name) ||
-        trimOrNull(contact.display_name),
-    )
-    return hasName && Boolean(trimOrNull(contact.phone))
-  }, [contact])
-
-  const canSubmit = useMemo(
-    () => Boolean(trimOrNull(details.celebrant_first_name)),
-    [details.celebrant_first_name],
-  )
 
   const submit = useMutation({
     mutationFn: (payload) => salesCreateWalkIn(payload),
     onSuccess: (resp) => {
       onCreated?.(resp)
       onClose?.()
-      // A phone lead has no appointment, so the server sends no route —
-      // the rep portal has no deal screen to land on. Close and let the
+      // A phone lead has no appointment, so the server sends no route — the
+      // rep portal has no deal screen to land on. Close and let the
       // dashboard refresh instead of navigating nowhere.
-      if (resp?.route) {
-        navigate(resp.route)
-      }
+      if (resp?.route) navigate(resp.route)
     },
     onError: (err) => setError(describeError(err)),
   })
 
-  function patchContact(updates) {
-    setContact((prev) => ({ ...prev, ...updates }))
-  }
-
-  function patchDetails(updates) {
-    setDetails((prev) => ({ ...prev, ...updates }))
-  }
-
-  function buildPayload() {
-    const currentUserId = user?.id ? String(user.id) : ''
-    const selectedAssignee = assignedUserId ? Number(assignedUserId) : null
-    const eventName =
-      trimOrNull(details.event_name) ||
-      defaultEventName(
-        details.celebrant_first_name,
-        details.celebrant_last_name,
-      ) ||
-      null
-
-    return {
-      contact: {
-        first_name: trimOrNull(contact.first_name),
-        last_name: trimOrNull(contact.last_name),
-        display_name: trimOrNull(contact.display_name),
-        email: trimOrNull(contact.email),
-        phone: (contact.phone || '').trim(),
-      },
-      event: {
-        celebrant_first_name: (details.celebrant_first_name || '').trim(),
-        celebrant_last_name: trimOrNull(details.celebrant_last_name),
-        event_name: eventName,
-        // events.event_date is the Bella's-era party date — the day the
-        // dress had to be ready. A vehicle deal has no such date, so lead
-        // capture no longer asks. The column and its API field stay for
-        // the legacy quinceañera rows that still carry one.
-        event_date: null,
-        owner_user_id: null,
-        walk_in_source: trimOrNull(details.walk_in_source),
-        walk_in_source_detail: trimOrNull(details.walk_in_source_detail),
-      },
-      enrichment: {
-        budget_range: trimOrNull(details.budget_range),
-        notes: trimOrNull(details.notes),
-      },
-      booking_context: details.booking_context,
-      assigned_user_id:
-        selectedAssignee && String(selectedAssignee) !== currentUserId
-          ? selectedAssignee
-          : null,
-    }
-  }
-
-  function handleNext() {
+  function handleSubmit(e) {
+    e?.preventDefault?.()
+    if (!canSaveWalkInLead(form) || submit.isPending) return
     setError(null)
-    setDetails((prev) => ({
-      ...prev,
-      celebrant_first_name:
-        prev.celebrant_first_name || contact.first_name || '',
-      celebrant_last_name:
-        prev.celebrant_last_name || contact.last_name || '',
-    }))
-    setStep(1)
+    const repId = assignedUserId ? Number(assignedUserId) : null
+    submit.mutate({
+      ...buildWalkInLeadPayload(form, { salesCreditUserId: repId }),
+      assigned_user_id: repId,
+    })
   }
 
-  function handleSubmit(event) {
-    event?.preventDefault?.()
-    if (!canSubmit || submit.isPending) return
-    setError(null)
-    submit.mutate(buildPayload())
-  }
+  const staff = staffQuery.data || []
+  const isPhoneLead = form.booking_context === 'phone_call'
 
-  const assignees = staffQuery.data || []
-  const autoEventName = defaultEventName(
-    details.celebrant_first_name,
-    details.celebrant_last_name,
+  const assigneeControl = (
+    <TextField
+      select
+      fullWidth
+      size="small"
+      label="Who brought them in?"
+      value={assignedUserId}
+      onChange={(e) => setAssignedUserId(e.target.value)}
+      disabled={staffQuery.isLoading}
+      helperText={
+        staffQuery.isError
+          ? 'Could not load the staff list — this will default to you.'
+          : undefined
+      }
+    >
+      {user?.id && (
+        <MenuItem value={String(user.id)}>
+          {`${user.full_name || user.username || 'Me'} (me)`}
+        </MenuItem>
+      )}
+      {staff
+        .filter((row) => row.id !== user?.id)
+        .map((row) => (
+          <MenuItem key={row.id} value={String(row.id)}>
+            {row.full_name || row.username}
+          </MenuItem>
+        ))}
+    </TextField>
   )
 
   return (
@@ -247,215 +146,35 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
       fullWidth
       maxWidth="sm"
     >
-      <DialogTitle>
-        {details.booking_context === 'phone_call' ? 'Add phone lead' : 'Add walk-in'}
-      </DialogTitle>
+      <DialogTitle>{isPhoneLead ? 'New phone lead' : 'New walk-in'}</DialogTitle>
       <DialogContent dividers>
-        <Stack spacing={2.5} component="form" onSubmit={handleSubmit}>
-          <Stepper activeStep={step}>
-            <Step>
-              <StepLabel>Contact</StepLabel>
-            </Step>
-            <Step>
-              <StepLabel>Lead</StepLabel>
-            </Step>
-          </Stepper>
-
+        <Box component="form" onSubmit={handleSubmit}>
           {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
               {error}
             </Alert>
           )}
-
-          {step === 0 ? (
-            <ContactFields value={contact} onPatch={patchContact} />
-          ) : (
-            <Stack spacing={2}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Assigned stylist"
-                value={assignedUserId}
-                onChange={(e) => setAssignedUserId(e.target.value)}
-                disabled={staffQuery.isLoading}
-                helperText={
-                  staffQuery.isError
-                    ? 'Could not load staff. The walk-in can still default to you.'
-                    : 'Defaults to the signed-in stylist.'
-                }
-              >
-                {user?.id && (
-                  <MenuItem value={String(user.id)}>
-                    {(user.full_name || user.username || 'Me') + ' (me)'}
-                  </MenuItem>
-                )}
-                {assignees
-                  .filter((row) => row.id !== user?.id)
-                  .map((row) => (
-                    <MenuItem key={row.id} value={String(row.id)}>
-                      {row.full_name}
-                    </MenuItem>
-                  ))}
-              </TextField>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField
-                  fullWidth
-                  required
-                  size="small"
-                  label="Buyer first name"
-                  value={details.celebrant_first_name}
-                  onChange={(e) =>
-                    patchDetails({ celebrant_first_name: e.target.value })
-                  }
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Buyer last name"
-                  value={details.celebrant_last_name}
-                  onChange={(e) =>
-                    patchDetails({ celebrant_last_name: e.target.value })
-                  }
-                />
-              </Stack>
-
-              <TextField
-                fullWidth
-                size="small"
-                label="Event name"
-                value={details.event_name}
-                onChange={(e) => patchDetails({ event_name: e.target.value })}
-                placeholder={autoEventName}
-                helperText={
-                  details.event_name
-                    ? null
-                    : `Will default to "${autoEventName || 'buyer'}" when blank.`
-                }
-              />
-
-              <LeadOriginFields value={details} onPatch={patchDetails} />
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  label="Budget"
-                  value={details.budget_range}
-                  onChange={(e) =>
-                    patchDetails({ budget_range: e.target.value })
-                  }
-                >
-                  <MenuItem value="">
-                    <em>Unspecified</em>
-                  </MenuItem>
-                  {BUDGET_OPTIONS.map((opt) => (
-                    <MenuItem key={opt} value={opt}>
-                      {opt}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-
-              <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                size="small"
-                label="Internal notes"
-                value={details.notes}
-                onChange={(e) => patchDetails({ notes: e.target.value })}
-              />
-            </Stack>
-          )}
-        </Stack>
+          <WalkInLeadIntakeForm
+            value={form}
+            onChange={setForm}
+            searchScope="sales"
+            assigneeControl={assigneeControl}
+          />
+        </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
-        {step === 1 && (
-          <Button onClick={() => setStep(0)} disabled={submit.isPending}>
-            Back
-          </Button>
-        )}
-        <Box sx={{ flexGrow: 1 }} />
         <Button onClick={onClose} disabled={submit.isPending}>
           Cancel
         </Button>
-        {step === 0 ? (
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={!canAdvanceFromContact}
-          >
-            Next
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={!canSubmit || submit.isPending}
-            startIcon={
-              submit.isPending ? <CircularProgress size={16} /> : null
-            }
-          >
-            {details.booking_context === 'phone_call'
-              ? 'Create phone lead'
-              : 'Create walk-in'}
-          </Button>
-        )}
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!canSaveWalkInLead(form) || submit.isPending}
+          startIcon={submit.isPending ? <CircularProgress size={16} /> : null}
+        >
+          {isPhoneLead ? 'Save phone lead' : 'Save walk-in lead'}
+        </Button>
       </DialogActions>
     </Dialog>
-  )
-}
-
-function ContactFields({ value, onPatch }) {
-  return (
-    <Stack spacing={2}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <TextField
-          fullWidth
-          size="small"
-          label="First name"
-          value={value.first_name}
-          onChange={(e) => onPatch({ first_name: e.target.value })}
-        />
-        <TextField
-          fullWidth
-          size="small"
-          label="Last name"
-          value={value.last_name}
-          onChange={(e) => onPatch({ last_name: e.target.value })}
-        />
-      </Stack>
-
-      <TextField
-        fullWidth
-        size="small"
-        label="Display name"
-        value={value.display_name}
-        onChange={(e) => onPatch({ display_name: e.target.value })}
-        helperText="Use this only when first and last name are not the best label."
-      />
-
-      <TextField
-        fullWidth
-        required
-        size="small"
-        label="Phone"
-        value={value.phone}
-        onChange={(e) => onPatch({ phone: e.target.value })}
-        helperText="Used to match an existing contact when possible."
-      />
-
-      <TextField
-        fullWidth
-        size="small"
-        type="email"
-        label="Email"
-        value={value.email}
-        onChange={(e) => onPatch({ email: e.target.value })}
-      />
-    </Stack>
   )
 }

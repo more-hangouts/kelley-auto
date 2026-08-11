@@ -60,7 +60,7 @@ from database.models import (
     Event,
     User,
 )
-from modules.core.services import activity_log
+from modules.core.services import activity_log, sales_staff
 from modules.contacts.services import contact_service
 from modules.booking.services import booking_service, event_service
 from modules.core.services.email_transport import send_rendered_safely
@@ -99,6 +99,10 @@ class WalkInEventInput:
     # bucket is worse than an empty one.
     walk_in_source: str | None = None
     walk_in_source_detail: str | None = None
+    # Migration 110: the salesperson owed commission for bringing this
+    # customer in. Independent of owner_user_id — see the migration
+    # docstring. Optional: plenty of leads arrive with no rep involved.
+    sales_credit_user_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +120,16 @@ class WalkInEnrichmentInput:
     party_size_bucket: str | None
     budget_range: str | None
     notes: str | None
+    # Migration 109: the paper walk-in sheet's questions 2, 3 and 5. They
+    # ride on the enrichment input rather than the event input because
+    # they are the same kind of thing as budget_range — what the customer
+    # told the rep, not what the system knows about the deal.
+    #
+    # Defaulted so historical callers (and the storefront lead path, which
+    # never asks these) construct the dataclass unchanged.
+    current_vehicle: str | None = None
+    desired_vehicle_type: str | None = None
+    financing_preference: str | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +161,23 @@ WALK_IN_SOURCE_VALUES: frozenset[str] = frozenset(
 )
 
 _WALK_IN_SOURCE_DETAIL_MAX = 200
+
+# Paper-sheet intake answers (migration 109). Keep in sync with the CHECKs in
+# 109_walk_in_intake_answers.py and with the option lists the SPA renders in
+# apps/admin/src/utils/walkInLeadIntake.js.
+#
+# Neither set has an "undecided" member on purpose: a rep who does not know
+# leaves the control empty, which stores NULL and reads as "not answered".
+# See the migration docstring.
+DESIRED_VEHICLE_TYPE_VALUES: frozenset[str] = frozenset(
+    {"car", "suv", "minivan", "truck_work_van"}
+)
+
+FINANCING_PREFERENCE_VALUES: frozenset[str] = frozenset(
+    {"national_lender", "in_house", "cash"}
+)
+
+_CURRENT_VEHICLE_MAX = 120
 
 # The two ways a lead reaches this service. The wider
 # booking_service.BOOKING_CONTEXT_VALUES set also covers contexts that only
@@ -230,6 +261,53 @@ def create_walk_in_lead(
             # query will ever reach.
             walk_in_source_detail = None
 
+    # ---- Paper-sheet intake answers (migration 109) ----------------------
+    # Same non-blocking posture as walk_in_source: a rep mid-conversation
+    # who has not asked yet files the lead with these empty. What is NOT
+    # tolerated is a value outside the CHECK — that would 500 at flush,
+    # so it is caught here and returned as a 422 the SPA can explain.
+    current_vehicle = _clean(enrichment_in.current_vehicle)
+    if current_vehicle is not None and len(current_vehicle) > _CURRENT_VEHICLE_MAX:
+        raise WalkInLeadError(
+            f"current_vehicle exceeds {_CURRENT_VEHICLE_MAX} characters",
+            code="current_vehicle_too_long",
+        )
+
+    desired_vehicle_type = _clean(enrichment_in.desired_vehicle_type)
+    if (
+        desired_vehicle_type is not None
+        and desired_vehicle_type not in DESIRED_VEHICLE_TYPE_VALUES
+    ):
+        raise WalkInLeadError(
+            "desired_vehicle_type must be one of: "
+            + ", ".join(sorted(DESIRED_VEHICLE_TYPE_VALUES)),
+            code="invalid_desired_vehicle_type",
+        )
+
+    financing_preference = _clean(enrichment_in.financing_preference)
+    if (
+        financing_preference is not None
+        and financing_preference not in FINANCING_PREFERENCE_VALUES
+    ):
+        raise WalkInLeadError(
+            "financing_preference must be one of: "
+            + ", ".join(sorted(FINANCING_PREFERENCE_VALUES)),
+            code="invalid_financing_preference",
+        )
+
+    # ---- Sales credit (migration 110) ------------------------------------
+    # Validated against the same assignable-staff set the picker lists, so a
+    # client cannot credit commission to an inactive or non-staff id. Left
+    # None when unset — there is deliberately no fallback to the actor.
+    sales_credit_user_id = event_in.sales_credit_user_id
+    if sales_credit_user_id is not None and not sales_staff.is_assignable_sales_user(
+        db, sales_credit_user_id
+    ):
+        raise WalkInLeadError(
+            "sales_credit_user_id must be an active sales or admin user",
+            code="invalid_sales_credit_user_id",
+        )
+
     raw_phone = (contact_in.phone or "").strip()
     if not raw_phone:
         raise WalkInLeadError("phone is required", code="phone_required")
@@ -293,6 +371,10 @@ def create_walk_in_lead(
         owner_user_id=resolved_event_owner,
         walk_in_source=walk_in_source,
         walk_in_source_detail=walk_in_source_detail,
+        current_vehicle=current_vehicle,
+        desired_vehicle_type=desired_vehicle_type,
+        financing_preference=financing_preference,
+        sales_credit_user_id=sales_credit_user_id,
     )
 
     appt: Appointment | None = None
@@ -399,6 +481,13 @@ def create_walk_in_lead(
             "booking_context": booking_context,
             "walk_in_source": walk_in_source,
             "walk_in_source_detail": walk_in_source_detail,
+            # Migration 109 answers ride along too, so the deal's opening
+            # timeline row is a faithful snapshot of the intake sheet even
+            # if someone later edits the columns.
+            "current_vehicle": current_vehicle,
+            "desired_vehicle_type": desired_vehicle_type,
+            "financing_preference": financing_preference,
+            "sales_credit_user_id": sales_credit_user_id,
         },
     )
 
@@ -411,6 +500,11 @@ def create_walk_in_lead(
         notes=enrichment_in.notes,
         buyer_name=_buyer_name(event_in),
         booking_context=booking_context,
+        current_vehicle=current_vehicle,
+        desired_vehicle_type=desired_vehicle_type,
+        financing_preference=financing_preference,
+        budget_range=_clean(enrichment_in.budget_range),
+        sales_credit_user_id=sales_credit_user_id,
     )
 
     # Write the event-log row that the admin daily digest summarises
@@ -468,6 +562,11 @@ def _send_walk_in_lead_admin_emails(
     notes: str | None,
     buyer_name: str | None = None,
     booking_context: str = _DEFAULT_LEAD_CONTEXT,
+    current_vehicle: str | None = None,
+    desired_vehicle_type: str | None = None,
+    financing_preference: str | None = None,
+    budget_range: str | None = None,
+    sales_credit_user_id: int | None = None,
 ) -> None:
     """Notify admins that a staff member just logged a walk-in. Best-
     effort; SMTP failures don't poison the lead-creation transaction.
@@ -504,6 +603,16 @@ def _send_walk_in_lead_admin_emails(
         admin_url=f"{ADMIN_BASE_URL}/contacts/{contact.id}",
         customer_name=buyer_name,
         lead_kind="phone" if booking_context == "phone_call" else "walk-in",
+        intake_rows=_intake_email_rows(
+            budget_range=budget_range,
+            current_vehicle=current_vehicle,
+            desired_vehicle_type=desired_vehicle_type,
+            financing_preference=financing_preference,
+            # Commission credit belongs in this email specifically: it is
+            # the one read by whoever runs payroll, and "who brought them
+            # in" is the question they are reading it to answer.
+            credited_name=_credited_user_name(db, sales_credit_user_id),
+        ),
     )
     for to in admin_emails:
         send_rendered_safely(
@@ -511,6 +620,68 @@ def _send_walk_in_lead_admin_emails(
             rendered=rendered,
             scope="walk_in.lead_created",
         )
+
+
+# Display labels for the migration-109 slugs, used only when rendering the
+# admin alert email. The SPA has its own copy of these strings; that
+# duplication is deliberate — an email is read outside the app and should not
+# have to ask the SPA how to spell "Truck / work van". Unknown values fall
+# through to the raw slug rather than vanishing.
+_DESIRED_VEHICLE_TYPE_LABELS = {
+    "car": "Car",
+    "suv": "SUV",
+    "minivan": "Minivan",
+    "truck_work_van": "Truck / work van",
+}
+
+_FINANCING_PREFERENCE_LABELS = {
+    "national_lender": "National lender (bank)",
+    "in_house": "In-house financing",
+    "cash": "Cash",
+}
+
+
+def _credited_user_name(db: Session, user_id: int | None) -> str | None:
+    if user_id is None:
+        return None
+    row = db.get(User, user_id)
+    if row is None:
+        return None
+    return row.full_name or row.username
+
+
+def _intake_email_rows(
+    *,
+    budget_range: str | None,
+    current_vehicle: str | None,
+    desired_vehicle_type: str | None,
+    financing_preference: str | None,
+    credited_name: str | None = None,
+) -> list[tuple[str, str]]:
+    """The intake sheet's answers as (label, value) rows for the alert email.
+
+    Unanswered questions are omitted rather than rendered as "—": the person
+    reading this email at 9am wants the three things the customer actually
+    said, not a form with blanks in it.
+    """
+    rows = [
+        ("Brought in by", credited_name),
+        ("Budget", budget_range),
+        ("Currently driving", current_vehicle),
+        (
+            "Looking for",
+            _DESIRED_VEHICLE_TYPE_LABELS.get(
+                desired_vehicle_type or "", desired_vehicle_type
+            ),
+        ),
+        (
+            "Financing",
+            _FINANCING_PREFERENCE_LABELS.get(
+                financing_preference or "", financing_preference
+            ),
+        ),
+    ]
+    return [(label, value) for label, value in rows if value]
 
 
 def _clean(value: str | None) -> str | None:
