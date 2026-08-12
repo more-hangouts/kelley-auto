@@ -2282,7 +2282,6 @@ def render_admin_walk_in_lead_created(
     admin_url: str,
     customer_name: str | None = None,
     lead_kind: str = "walk-in",
-    intake_rows: list[tuple[str, str]] | None = None,
 ) -> RenderedEmail:
     """Admin-internal alert when a staff member logs a walk-in or phone
     lead via the dashboard. ``appointment`` is the placeholder
@@ -2293,12 +2292,6 @@ def render_admin_walk_in_lead_created(
     no arrival receipt to read the customer's name off. ``customer_name``
     carries it instead, and ``lead_kind`` ("walk-in" / "phone") keeps the
     subject line honest about which one this was.
-
-    ``intake_rows`` is the answers from the walk-in sheet (budget, what
-    they drive, what they want, how they'll pay) already label-formatted
-    by the caller — see ``walk_in_service._intake_email_rows``. Only the
-    questions the customer actually answered are passed, so this renders
-    nothing at all for a lead filed with the questionnaire skipped.
     """
     actor = captured_by.full_name or captured_by.username
     # celebrant_* are the legacy Bella's-era column names; they now hold
@@ -2321,7 +2314,6 @@ def render_admin_walk_in_lead_created(
         _format_event_date(appointment) if appointment is not None else "Not shared yet"
     )
     notes_clean = (notes or "").strip()
-    intake = [(label, value) for label, value in (intake_rows or []) if value]
     subject = f"New {lead_kind} lead: {customer}"
     text = (
         f"{actor} just logged a {lead_kind} lead.\n\n"
@@ -2330,7 +2322,6 @@ def render_admin_walk_in_lead_created(
         f"  Phone: {contact.phone_e164 or contact.phone or '(not provided)'}\n"
         f"  Email: {contact.email or '(not provided)'}\n"
         f"  Event date: {event_date_label}\n"
-        + "".join(f"  {label}: {value}\n" for label, value in intake)
         + (f"  Notes: {notes_clean}\n" if notes_clean else "")
         + f"\nOpen the lead in admin:\n    {admin_url}\n"
     )
@@ -2350,7 +2341,6 @@ def render_admin_walk_in_lead_created(
                 ("Phone", contact.phone_e164 or contact.phone or "(not provided)"),
                 ("Email", contact.email or "(not provided)"),
                 ("Event date", event_date_label),
-                *intake,
             ]
         )
         + notes_html

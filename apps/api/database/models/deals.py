@@ -46,14 +46,7 @@ class Event(Base):
         DateTime(timezone=True), nullable=False, server_default=text("NOW()")
     )
     owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
-    # Migration 110: who gets commission credit for bringing this customer
-    # in. Deliberately NOT owner_user_id — the CRM is worked by admin staff
-    # (who own the leads), while the salesperson who walked the customer
-    # through the door may never open it. Ownership moves as a deal is
-    # reassigned; credit must not.
-    sales_credit_user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL")
-    )
+    sales_credit_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     notes = Column(Text)
     # Day 3: optional link from a vehicle_sale deal to the catalog_items row
     # of the car being sold. Nullable — general leads and quinceañera events
@@ -71,16 +64,6 @@ class Event(Base):
     # grouped on.
     walk_in_source = Column(String(32))
     walk_in_source_detail = Column(String(200))
-    # Migration 109: the three questions from the old paper walk-in sheet
-    # that previously had nowhere structured to go and were concatenated
-    # into `notes`. The two enum columns are the reporting axes ("how many
-    # walk-ins wanted in-house financing?") and store slugs, not the
-    # button copy; `current_vehicle` is deliberately free text because a
-    # trade-in description is not a bucket. NULL means "not answered" —
-    # neither enum has an undecided member.
-    current_vehicle = Column(String(120))
-    desired_vehicle_type = Column(String(32))
-    financing_preference = Column(String(32))
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
@@ -652,5 +635,4 @@ class InstallmentReminderState(Base):
     updated_at = Column(
         DateTime(timezone=True), nullable=False, server_default=text("NOW()")
     )
-
 

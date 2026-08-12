@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Box,
@@ -8,63 +9,68 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
-  TextField,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 
 import WalkInLeadIntakeForm from '../components/WalkInLeadIntakeForm'
-import { salesCreateWalkIn, salesListAssignableStaff } from '../services/api'
-import { useSalesAuth } from '../contexts/SalesAuthContext'
 import {
-  buildWalkInLeadPayload,
   canSaveWalkInLead,
-  describeWalkInLeadError,
+  composeWalkInNotes,
+  defaultDealName,
   emptyWalkInLeadForm,
+  trimOrNull,
+  walkInBuyerName,
 } from '../utils/walkInLeadIntake'
+import {
+  salesCreateWalkIn,
+  salesListAssignableStaff,
+} from '../services/api'
 import { attendanceGateMessage, isAttendanceGateError } from './attendanceGate'
 
-// Rep-portal lead capture. Same questions as the admin dialog — they share
-// WalkInLeadIntakeForm — with one difference: the rep filing it is the
-// default, since they are the one standing there.
-//
-// The picked rep goes out on two fields, which are not the same thing:
-//
-//   - `assigned_user_id` — the sales-portal assignment this route has
-//     always had. The server mirrors it onto the appointment and the deal
-//     owner so the walk-in shows under "Today, mine". Untouched.
-//   - `sales_credit_user_id` — commission credit (migration 110). Survives
-//     any later reassignment of the lead by admin, which the assignment
-//     does not.
-//
-// On this surface they name the same person; on the admin surface only the
-// credit field is set, because the office staff own the leads there.
-
 function describeError(err) {
-  // The attendance gate is checked first: it also arrives as a 403, and the
-  // generic "you don't have permission" text would send a rep hunting for a
-  // permissions problem when they simply have not clocked in.
   if (isAttendanceGateError(err)) return attendanceGateMessage()
-  if (
-    err?.response?.status === 400 &&
-    err?.response?.data?.detail === 'invalid_assigned_user_id'
-  ) {
-    return 'Pick an active salesperson.'
+
+  const status = err?.response?.status
+  const detail = err?.response?.data?.detail
+  if (status === 422 && detail === 'invalid_phone') {
+    return 'That phone number is not in a format we can match. Use a 10-digit US number or full international format.'
   }
-  return describeWalkInLeadError(err)
+  if (status === 422 && detail === 'phone_required') {
+    return 'Phone is required.'
+  }
+  if (status === 422 && detail === 'contact_name_required') {
+    return 'Enter the customer name.'
+  }
+  if (status === 422 && detail === 'celebrant_first_name_required') {
+    return 'Enter the buyer first name.'
+  }
+  if (status === 422 && detail === 'invalid_walk_in_source') {
+    return 'Pick one of the source options.'
+  }
+  if (status === 422 && detail === 'walk_in_source_detail_too_long') {
+    return 'Shorten the platform/post detail to 200 characters or less.'
+  }
+  if (status === 400 && detail === 'invalid_assigned_user_id') {
+    return 'Pick an active sales stylist for assignment.'
+  }
+  if (status === 400 && detail === 'invalid_sales_credit_user_id') {
+    return 'Pick an active salesperson for commission credit.'
+  }
+  if (status === 401 || status === 403) {
+    return 'You do not have permission to create this walk-in.'
+  }
+  if (typeof detail === 'string') return detail
+  return 'Could not create the walk-in. Try again.'
 }
 
 export default function SalesWalkInDialog({ open, onClose, onCreated }) {
   const navigate = useNavigate()
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
-  const { user } = useSalesAuth()
 
   const [form, setForm] = useState(emptyWalkInLeadForm)
-  const [assignedUserId, setAssignedUserId] = useState('')
   const [error, setError] = useState(null)
 
   const staffQuery = useQuery({
@@ -77,66 +83,61 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
   useEffect(() => {
     if (!open) return
     setForm(emptyWalkInLeadForm())
-    setAssignedUserId(user?.id ? String(user.id) : '')
     setError(null)
-  }, [open, user?.id])
+  }, [open])
 
   const submit = useMutation({
     mutationFn: (payload) => salesCreateWalkIn(payload),
     onSuccess: (resp) => {
       onCreated?.(resp)
       onClose?.()
-      // A phone lead has no appointment, so the server sends no route — the
-      // rep portal has no deal screen to land on. Close and let the
-      // dashboard refresh instead of navigating nowhere.
-      if (resp?.route) navigate(resp.route)
+      if (resp?.route) {
+        navigate(resp.route)
+      }
     },
     onError: (err) => setError(describeError(err)),
   })
 
-  function handleSubmit(e) {
-    e?.preventDefault?.()
-    if (!canSaveWalkInLead(form) || submit.isPending) return
-    setError(null)
-    const repId = assignedUserId ? Number(assignedUserId) : null
-    submit.mutate({
-      ...buildWalkInLeadPayload(form, { salesCreditUserId: repId }),
-      assigned_user_id: repId,
-    })
+  function buildPayload() {
+    const buyer = walkInBuyerName(form)
+
+    return {
+      contact: {
+        first_name: trimOrNull(form.first_name),
+        last_name: trimOrNull(form.last_name),
+        display_name: null,
+        email: trimOrNull(form.email),
+        phone: (form.phone || '').trim(),
+      },
+      event: {
+        celebrant_first_name: buyer.first,
+        celebrant_last_name: buyer.last,
+        event_name: defaultDealName(buyer.first, buyer.last),
+        event_date: null,
+        owner_user_id: null,
+        sales_credit_user_id: form.sales_credit_user_id
+          ? Number(form.sales_credit_user_id)
+          : null,
+        walk_in_source: trimOrNull(form.walk_in_source),
+        walk_in_source_detail: trimOrNull(form.walk_in_source_detail),
+      },
+      enrichment: {
+        budget_range: trimOrNull(form.budget_range),
+        notes: composeWalkInNotes(form),
+      },
+      booking_context: form.booking_context,
+      assigned_user_id: null,
+    }
   }
 
-  const staff = staffQuery.data || []
-  const isPhoneLead = form.booking_context === 'phone_call'
+  function handleSubmit(event) {
+    event?.preventDefault?.()
+    if (!canSaveWalkInLead(form) || submit.isPending) return
+    setError(null)
+    submit.mutate(buildPayload())
+  }
 
-  const assigneeControl = (
-    <TextField
-      select
-      fullWidth
-      size="small"
-      label="Who brought them in?"
-      value={assignedUserId}
-      onChange={(e) => setAssignedUserId(e.target.value)}
-      disabled={staffQuery.isLoading}
-      helperText={
-        staffQuery.isError
-          ? 'Could not load the staff list — this will default to you.'
-          : undefined
-      }
-    >
-      {user?.id && (
-        <MenuItem value={String(user.id)}>
-          {`${user.full_name || user.username || 'Me'} (me)`}
-        </MenuItem>
-      )}
-      {staff
-        .filter((row) => row.id !== user?.id)
-        .map((row) => (
-          <MenuItem key={row.id} value={String(row.id)}>
-            {row.full_name || row.username}
-          </MenuItem>
-        ))}
-    </TextField>
-  )
+  const assignees = staffQuery.data || []
 
   return (
     <Dialog
@@ -144,9 +145,13 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
       onClose={submit.isPending ? undefined : onClose}
       fullScreen={fullScreen}
       fullWidth
-      maxWidth="sm"
+      maxWidth="md"
     >
-      <DialogTitle>{isPhoneLead ? 'New phone lead' : 'New walk-in'}</DialogTitle>
+      <DialogTitle>
+        {form.booking_context === 'phone_call'
+          ? 'Quick Add Phone Lead'
+          : 'Quick Add Walk-In'}
+      </DialogTitle>
       <DialogContent dividers>
         <Box component="form" onSubmit={handleSubmit}>
           {error && (
@@ -158,7 +163,9 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
             value={form}
             onChange={setForm}
             searchScope="sales"
-            assigneeControl={assigneeControl}
+            creditOptions={assignees}
+            creditLoading={staffQuery.isLoading}
+            creditError={staffQuery.isError}
           />
         </Box>
       </DialogContent>
@@ -172,7 +179,7 @@ export default function SalesWalkInDialog({ open, onClose, onCreated }) {
           disabled={!canSaveWalkInLead(form) || submit.isPending}
           startIcon={submit.isPending ? <CircularProgress size={16} /> : null}
         >
-          {isPhoneLead ? 'Save phone lead' : 'Save walk-in lead'}
+          Save Lead
         </Button>
       </DialogActions>
     </Dialog>

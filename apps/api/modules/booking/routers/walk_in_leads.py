@@ -24,6 +24,7 @@ from database.auth import require_admin_scope
 from database.connection import get_db
 from database.models import User
 from modules.booking.services import walk_in_service
+from modules.core.services import sales_staff
 from modules.booking.services.walk_in_service import (
     WalkInContactInput,
     WalkInEnrichmentInput,
@@ -55,17 +56,13 @@ class WalkInLeadEventPayload(BaseModel):
     event_name: str | None = Field(default=None, max_length=200)
     event_date: date | None = None
     owner_user_id: int | None = None
+    sales_credit_user_id: int | None = None
     # Migration 104. Optional on the wire: the picker is strongly
     # encouraged in the UI but does not block filing a lead, because a rep
     # who does not yet know should not be forced to guess. The service
     # validates the value against WALK_IN_SOURCE_VALUES.
     walk_in_source: str | None = Field(default=None, max_length=32)
     walk_in_source_detail: str | None = Field(default=None, max_length=200)
-    # Migration 110. Commission credit — who brought the customer in. NOT
-    # the same axis as owner_user_id above: at Kelley the admin staff own
-    # every lead, while the rep who walked the customer through the door
-    # may never open the CRM. Optional; unset means nobody is owed credit.
-    sales_credit_user_id: int | None = None
 
 
 class WalkInLeadEnrichmentPayload(BaseModel):
@@ -80,15 +77,6 @@ class WalkInLeadEnrichmentPayload(BaseModel):
     party_size_bucket: Literal["solo", "pair", "3_4", "5_plus"] | None = None
     budget_range: str | None = Field(default=None, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
-    # Migration 109: the paper walk-in sheet's questions 2, 3 and 5. All
-    # optional — the questionnaire is a conversation aid, not a gate, and a
-    # rep who has not asked yet must still be able to file the lead. The
-    # enum values are validated in the service against the same sets the
-    # CHECK constraints use, so a stale SPA build gets a 422 it can
-    # explain rather than a 500 at flush time.
-    current_vehicle: str | None = Field(default=None, max_length=120)
-    desired_vehicle_type: str | None = Field(default=None, max_length=32)
-    financing_preference: str | None = Field(default=None, max_length=32)
 
 
 class WalkInLeadCreate(BaseModel):
@@ -136,11 +124,8 @@ _ERROR_STATUS = {
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
     "invalid_walk_in_source": 422,
-    "invalid_sales_credit_user_id": 422,
     "walk_in_source_detail_too_long": 422,
-    "invalid_desired_vehicle_type": 422,
-    "invalid_financing_preference": 422,
-    "current_vehicle_too_long": 422,
+    "invalid_sales_credit_user_id": 400,
     "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
@@ -157,6 +142,14 @@ def create_walk_in_lead(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(require_admin_scope)],
 ) -> WalkInLeadResponse:
+    if (
+        payload.event.sales_credit_user_id is not None
+        and not sales_staff.is_assignable_sales_user(
+            db, payload.event.sales_credit_user_id
+        )
+    ):
+        raise HTTPException(status_code=400, detail="invalid_sales_credit_user_id")
+
     contact_in = WalkInContactInput(
         first_name=payload.contact.first_name,
         last_name=payload.contact.last_name,
@@ -170,17 +163,14 @@ def create_walk_in_lead(
         event_name=payload.event.event_name,
         event_date=payload.event.event_date,
         owner_user_id=payload.event.owner_user_id,
+        sales_credit_user_id=payload.event.sales_credit_user_id,
         walk_in_source=payload.event.walk_in_source,
         walk_in_source_detail=payload.event.walk_in_source_detail,
-        sales_credit_user_id=payload.event.sales_credit_user_id,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
         budget_range=payload.enrichment.budget_range,
         notes=payload.enrichment.notes,
-        current_vehicle=payload.enrichment.current_vehicle,
-        desired_vehicle_type=payload.enrichment.desired_vehicle_type,
-        financing_preference=payload.enrichment.financing_preference,
     )
 
     try:

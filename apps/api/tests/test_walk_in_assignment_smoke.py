@@ -1,12 +1,13 @@
-"""Smoke for the Phase 4 walk-in assignment hook.
+"""Smoke for walk-in assignment and commission-credit separation.
 
 Exercises ``services.walk_in_service.create_walk_in_lead`` at the
 service layer (route is Phase 5):
 
   - With ``assigned_user_id=<sales user>``:
       * appointments.assigned_user_id == sales_user_id
-      * events.owner_user_id == sales_user_id (overrides any
-        event_in.owner_user_id so both fields agree on the stylist)
+      * events.sales_credit_user_id can also be sales_user_id
+      * events.owner_user_id still falls back to the actor, proving
+        assignment/credit do not silently steal pipeline ownership
       * activity_log row for ``event.walk_in_created`` has
         actor_user_id == caller (not the assignee — created-by and
         assigned-to are distinct fields)
@@ -94,7 +95,13 @@ def _unique_phone() -> str:
     return f"(210) 555-{suffix:04d}"
 
 
-def _run_case(*, actor_user_id: int, assigned_user_id: int | None, tag: str):
+def _run_case(
+    *,
+    actor_user_id: int,
+    assigned_user_id: int | None,
+    sales_credit_user_id: int | None = None,
+    tag: str,
+):
     """Drive one create_walk_in_lead call inside its own transaction."""
     db = SessionLocal()
     try:
@@ -111,6 +118,7 @@ def _run_case(*, actor_user_id: int, assigned_user_id: int | None, tag: str):
             event_name=f"Walk-In Assign Smoke Quince {tag}",
             event_date=date(2027, 7, 4),
             owner_user_id=None,
+            sales_credit_user_id=sales_credit_user_id,
         )
         enrichment_in = WalkInEnrichmentInput(
             party_size_bucket="pair",
@@ -149,6 +157,9 @@ def _read_state(appointment_id: int, event_id: int) -> dict:
         return {
             "appt_assigned_user_id": appt.assigned_user_id if appt else None,
             "event_owner_user_id": event.owner_user_id if event else None,
+            "event_sales_credit_user_id": (
+                event.sales_credit_user_id if event else None
+            ),
             "activity_actor_user_id": (
                 activity.actor_user_id if activity else None
             ),
@@ -226,11 +237,16 @@ def main() -> None:
     appt_id, event_id = _run_case(
         actor_user_id=admin_id,
         assigned_user_id=sales_id,
+        sales_credit_user_id=sales_id,
         tag=f"ASSIGN-{uuid.uuid4().hex[:6].upper()}",
     )
     state = _read_state(appt_id, event_id)
     assert state["appt_assigned_user_id"] == sales_id, state
-    assert state["event_owner_user_id"] == sales_id, state
+    assert state["event_sales_credit_user_id"] == sales_id, state
+    assert state["event_owner_user_id"] == admin_id, state
+    assert (
+        state["event_owner_user_id"] != state["event_sales_credit_user_id"]
+    ), state
     assert state["activity_actor_user_id"] == admin_id, state
     assert state["activity_actor_kind"] == "staff", state
 
@@ -242,6 +258,7 @@ def main() -> None:
     )
     state_none = _read_state(appt_id_none, event_id_none)
     assert state_none["appt_assigned_user_id"] is None, state_none
+    assert state_none["event_sales_credit_user_id"] is None, state_none
     # events.owner_user_id falls back to the actor when no explicit
     # owner is supplied — pre-existing event_service behavior, kept by
     # Phase 4 unchanged. Asserted here so a future event_service refactor

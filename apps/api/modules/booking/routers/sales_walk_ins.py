@@ -73,11 +73,8 @@ _ERROR_STATUS = {
     "celebrant_first_name_required": 422,
     "invalid_party_size_bucket": 422,
     "invalid_walk_in_source": 422,
-    "invalid_sales_credit_user_id": 422,
     "walk_in_source_detail_too_long": 422,
-    "invalid_desired_vehicle_type": 422,
-    "invalid_financing_preference": 422,
-    "current_vehicle_too_long": 422,
+    "invalid_sales_credit_user_id": 400,
     "invalid_booking_context": 422,
     "missing_contact": 422,
     "contact_not_found": 404,
@@ -108,6 +105,13 @@ def create_sales_walk_in(
     # admin-owned lead in the sales pipeline.
     if not sales_staff.is_assignable_sales_user(db, assigned_user_id):
         raise HTTPException(status_code=400, detail="invalid_assigned_user_id")
+    if (
+        payload.event.sales_credit_user_id is not None
+        and not sales_staff.is_assignable_sales_user(
+            db, payload.event.sales_credit_user_id
+        )
+    ):
+        raise HTTPException(status_code=400, detail="invalid_sales_credit_user_id")
 
     contact_in = WalkInContactInput(
         first_name=payload.contact.first_name,
@@ -122,17 +126,14 @@ def create_sales_walk_in(
         event_name=payload.event.event_name,
         event_date=payload.event.event_date,
         owner_user_id=payload.event.owner_user_id,
+        sales_credit_user_id=payload.event.sales_credit_user_id,
         walk_in_source=payload.event.walk_in_source,
         walk_in_source_detail=payload.event.walk_in_source_detail,
-        sales_credit_user_id=payload.event.sales_credit_user_id,
     )
     enrichment_in = WalkInEnrichmentInput(
         party_size_bucket=payload.enrichment.party_size_bucket,
         budget_range=payload.enrichment.budget_range,
         notes=payload.enrichment.notes,
-        current_vehicle=payload.enrichment.current_vehicle,
-        desired_vehicle_type=payload.enrichment.desired_vehicle_type,
-        financing_preference=payload.enrichment.financing_preference,
     )
 
     try:
