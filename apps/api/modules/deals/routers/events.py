@@ -36,6 +36,7 @@ from database.models import (
 )
 from modules.core.services import activity_log
 from modules.contacts.services import lead_application_service
+from modules.deals.services import follow_up_service
 from modules.booking.services import booking_service, event_service
 from modules.analytics.services import storefront_analytics_service
 from modules.booking.services.event_service import EventOverrides, EventServiceError
@@ -489,6 +490,88 @@ def get_board(
             )
             for col in columns
         ],
+    )
+
+
+class FollowUpItemResponse(BaseModel):
+    """One deal in the follow-up queue."""
+
+    event_id: int
+    event_name: str | None = None
+    status: str
+    status_changed_at: datetime | None = None
+    bucket: str
+
+    contact_id: int
+    contact_name: str | None = None
+    contact_phone: str | None = None
+    contact_email: str | None = None
+
+    owner_user_id: int | None = None
+    owner_name: str | None = None
+
+    vehicle_id: int | None = None
+    vehicle_label: str | None = None
+    vehicle_stock_number: str | None = None
+
+    reminder_note_id: int | None = None
+    remind_at: datetime | None = None
+    reminder_sent_at: datetime | None = None
+    remind_user_id: int | None = None
+
+    last_note_id: int | None = None
+    last_note_body: str | None = None
+    last_note_author: str | None = None
+    last_note_at: datetime | None = None
+
+    days_since_status_change: int | None = None
+
+
+class FollowUpQueueResponse(BaseModel):
+    event_type: str
+    # Dealership-local "today" the buckets were cut against, so the client
+    # never re-derives it from the browser clock and disagrees with the server.
+    today: date
+    timezone: str
+    counts: dict[str, int]
+    # True size of `no_reminder` before the response cap — the UI must show
+    # this rather than implying the returned page is the whole pile.
+    no_reminder_total: int
+    no_reminder_limit: int
+    items: list[FollowUpItemResponse]
+
+
+# Registered before the `/{event_id}` routes below so "follow-ups" is never
+# parsed as an event id.
+@router.get("/follow-ups", response_model=FollowUpQueueResponse)
+def get_follow_ups(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+    event_type: str = Query(default="vehicle_sale"),
+    mine: bool = Query(
+        default=False,
+        description=(
+            "Limit to the signed-in user's deals. Ownerless deals stay visible "
+            "unless include_unassigned=false — most deals here have no owner, "
+            "so a strict filter would hide the actual work."
+        ),
+    ),
+    include_unassigned: bool = Query(default=True),
+) -> FollowUpQueueResponse:
+    queue = follow_up_service.get_follow_up_queue(
+        db,
+        event_type=event_type,
+        owner_user_id=user.id if mine else None,
+        include_unassigned=include_unassigned,
+    )
+    return FollowUpQueueResponse(
+        event_type=queue.event_type,
+        today=queue.today,
+        timezone=queue.timezone,
+        counts=queue.counts,
+        no_reminder_total=queue.no_reminder_total,
+        no_reminder_limit=follow_up_service.NO_REMINDER_LIMIT,
+        items=[FollowUpItemResponse(**vars(i)) for i in queue.items],
     )
 
 

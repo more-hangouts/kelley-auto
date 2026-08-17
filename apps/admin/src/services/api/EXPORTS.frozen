@@ -99,6 +99,7 @@ getEventJourney
 getEventMessages
 getEventNotes
 getEventWorkflow
+getFollowUpQueue
 getHoursVariance
 getInboxConversation
 getInboxUnreadCount

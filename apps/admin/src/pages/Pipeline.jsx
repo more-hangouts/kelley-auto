@@ -8,6 +8,8 @@ import {
   CircularProgress,
   IconButton,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -33,8 +35,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
-import { getEventBoard, patchEventStatus } from '../services/api'
+import { getEventBoard, getFollowUpQueue, patchEventStatus } from '../services/api'
 import EventQuickViewDrawer from '../components/EventQuickViewDrawer'
+import FollowUps from './FollowUps'
 import { formatUSD } from '../utils/money'
 
 dayjs.extend(relativeTime)
@@ -314,10 +317,26 @@ export default function Pipeline({
   const [selectedCard, setSelectedCard] = useState(null)
   const [activeDrag, setActiveDrag] = useState(null)
 
+  // Two views over the same live deals. The board answers "what stage is this
+  // in?"; the follow-up queue answers "who do I call today?" — the question a
+  // status column cannot answer, which is how ~290 deals piled up untouched.
+  const [view, setView] = useState('board')
+
   const { data: board, isLoading, isFetching, error, refetch } = useQuery({
     queryKey,
     queryFn: () => getEventBoard(eventType),
+    // The board query is only needed by the board view, but its counts feed
+    // the header in both, and it is already cached — leave it enabled.
   })
+
+  // Badge the toggle with what is actually due, so a rep sitting on the board
+  // still sees that calls are late.
+  const { data: followUps } = useQuery({
+    queryKey: ['events', 'follow-ups', eventType],
+    queryFn: () => getFollowUpQueue({ eventType }),
+  })
+  const dueCount =
+    (followUps?.counts?.overdue || 0) + (followUps?.counts?.due_today || 0)
 
   const changeStatus = useMutation({
     mutationFn: ({ eventId, newStatus }) => patchEventStatus(eventId, newStatus),
@@ -393,9 +412,30 @@ export default function Pipeline({
             {subtitleNoun} · {totalCards} active
           </Typography>
         </Box>
-        <IconButton onClick={() => refetch()} disabled={isFetching}>
-          {isFetching ? <CircularProgress size={20} /> : <RefreshIcon />}
-        </IconButton>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={view}
+            onChange={(_e, v) => v && setView(v)}
+          >
+            <ToggleButton value="board">Board</ToggleButton>
+            <ToggleButton value="followups">
+              Follow-ups
+              {dueCount > 0 && (
+                <Chip
+                  size="small"
+                  color="error"
+                  label={dueCount}
+                  sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.75 } }}
+                />
+              )}
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <IconButton onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? <CircularProgress size={20} /> : <RefreshIcon />}
+          </IconButton>
+        </Stack>
       </Stack>
 
       {error && (
@@ -404,13 +444,15 @@ export default function Pipeline({
         </Alert>
       )}
 
-      {isLoading && !board && (
+      {isLoading && !board && view === 'board' && (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CircularProgress />
         </Box>
       )}
 
-      {board && (
+      {view === 'followups' && <FollowUps eventType={eventType} />}
+
+      {view === 'board' && board && (
         <DndContext
           sensors={sensors}
           collisionDetection={columnCollisionDetection}

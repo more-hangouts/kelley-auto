@@ -5,6 +5,16 @@ export async function getEventBoard(eventType = 'vehicle_sale') {
   return data
 }
 
+// The follow-up working queue: the same live deals as the board, but bucketed
+// by their next open note reminder (overdue / due_today / upcoming /
+// no_reminder) instead of by status column.
+export async function getFollowUpQueue({ eventType = 'vehicle_sale', mine = false } = {}) {
+  const { data } = await api.get('/events/follow-ups', {
+    params: { event_type: eventType, mine },
+  })
+  return data
+}
+
 export async function patchEventStatus(eventId, newStatus, notes) {
   const body = { status: newStatus }
   if (notes) body.notes = notes
