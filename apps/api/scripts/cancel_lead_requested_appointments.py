@@ -40,12 +40,27 @@ from __future__ import annotations
 import os
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import text  # noqa: E402
 
+from config.settings import APP_TIMEZONE  # noqa: E402
 from database.connection import SessionLocal  # noqa: E402
+
+_TZ = ZoneInfo(APP_TIMEZONE)
+
+
+def _local(dt: datetime) -> str:
+    """Render a stored timestamptz in DEALERSHIP-LOCAL time, zone labelled.
+
+    Postgres hands these back in UTC. Printing them raw is how "10:00 AM CDT"
+    reaches a human as "15:00" — which reads as 3pm to anyone standing in the
+    dealership. Every appointment time this script prints is a time a person
+    may act on, so it is always converted and always labelled.
+    """
+    return f"{dt.astimezone(_TZ):%Y-%m-%d %I:%M %p %Z}"
 
 CANCELLATION_REASON = (
     "Auto-cleanup 2026-08-16: storefront requested-slot appointment, "
@@ -97,11 +112,14 @@ def main() -> int:
             )
         ).all()
 
-        print(f"{'APPLY' if apply else 'DRY RUN'} — {datetime.now(timezone.utc):%Y-%m-%d %H:%M %Z}")
+        print(
+            f"{'APPLY' if apply else 'DRY RUN'} — "
+            f"{_local(datetime.now(timezone.utc))}"
+        )
         print(f"\npast pending storefront-requested slots to cancel: {len(targets)}")
         for r in targets[:10]:
             name = " ".join(x for x in (r[2], r[3]) if x)
-            print(f"  #{r[0]:<6} {r[1]:%Y-%m-%d %H:%M}  {name:<28} deal={r[4]}")
+            print(f"  #{r[0]:<6} {_local(r[1]):<24}  {name:<28} deal={r[4]}")
         if len(targets) > 10:
             print(f"  … and {len(targets) - 10} more")
 
@@ -110,7 +128,7 @@ def main() -> int:
         for r in future:
             name = " ".join(x for x in (r[2], r[3]) if x)
             print(
-                f"  #{r[0]:<6} {r[1]:%Y-%m-%d %H:%M}  {name:<28} "
+                f"  #{r[0]:<6} {_local(r[1]):<24}  {name:<28} "
                 f"{r[4] or '—':<14} {r[5] or '—':<32} deal={r[6]}"
             )
 

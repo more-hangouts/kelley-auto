@@ -96,9 +96,13 @@ echo
 echo "4. The two future appointments are still there for a human"
 $PY - <<'PYEOF'
 import os, sys
+from zoneinfo import ZoneInfo
 sys.path.insert(0, os.getcwd())
 from sqlalchemy import text
+from config.settings import APP_TIMEZONE
 from database.connection import SessionLocal
+
+TZ = ZoneInfo(APP_TIMEZONE)
 
 db = SessionLocal()
 try:
@@ -113,7 +117,10 @@ try:
     """)).all()
     for r in rows:
         name = " ".join(x for x in (r[3], r[4]) if x)
-        print(f"    #{r[0]}  {r[2]:%Y-%m-%d %H:%M}  {name}  {r[5] or '—'}")
+        # Dealership-local and labelled: these are times someone will act on,
+        # and Postgres hands them back in UTC (10:00 AM CDT prints as 15:00).
+        when = f"{r[2].astimezone(TZ):%Y-%m-%d %I:%M %p %Z}"
+        print(f"    #{r[0]}  {when}  {name}  {r[5] or '—'}")
     print(("  PASS  " if len(rows) == 2 else "  FAIL  ")
           + f"{len(rows)} future pending lead appointment(s) preserved (want 2)")
 finally:
