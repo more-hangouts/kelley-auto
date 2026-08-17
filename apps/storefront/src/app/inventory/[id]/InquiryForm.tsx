@@ -6,41 +6,13 @@ import { getTrackingContext, track } from "@/lib/analytics";
 import { fbqTrack, vehicleContentParams } from "@/lib/metaPixel";
 import { isValidDateOfBirth, maskDateOfBirth } from "@/lib/dob";
 import { US_STATES } from "@/lib/us-states";
+import LeadReceived from "@/app/components/LeadReceived";
+import {
+  SCHEDULING_PHONE_DISPLAY,
+  SCHEDULING_TEL_HREF,
+} from "@/lib/scheduling";
 
 const FORM_TYPE = "vehicle_inquiry";
-
-// — time slot helpers —
-const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
-function getSlots(): number[] {
-  const h = new Date().getHours();
-  return h >= 17 ? ALL_SLOTS.filter((s) => s >= 13) : ALL_SLOTS;
-}
-
-function fmtSlot(h: number): string {
-  if (h === 12) return "12:00 PM";
-  return h > 12 ? `${h - 12}:00 PM` : `${h}:00 AM`;
-}
-
-function getTomorrow(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-// Tomorrow as a plain YYYY-MM-DD (dealership-local calendar date). Sent to the
-// backend with the chosen hour so the requested slot becomes an appointment.
-function getTomorrowISO(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 // — smooth slide-in wrapper (mounts hidden, transitions to visible on next frame) —
 function Slide({ children }: { children: React.ReactNode }) {
@@ -138,7 +110,7 @@ export default function InquiryForm({
   telHref?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(0); // 0=name, 1=email, 2=phone, 3=approval, 4=time
+  const [step, setStep] = useState(0); // 0=name, 1=email, 2=phone, 3=approval+submit
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +123,6 @@ export default function InquiryForm({
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [hasDriversLicense, setHasDriversLicense] = useState(false);
   const [driversLicenseState, setDriversLicenseState] = useState("");
-  const [slot, setSlot] = useState<number | null>(null);
   // A2P 10DLC: SMS consent — never pre-checked and never required to submit
   // (consent may not be a condition of service). Recorded server-side.
   const [smsConsent, setSmsConsent] = useState(false);
@@ -185,14 +156,14 @@ export default function InquiryForm({
   }
 
   async function submit() {
-    if (!slot) return;
+    if (!approvalValid) return;
     setLoading(true);
     setError(null);
     // No canned "message": every storefront lead is BHPH/no-credit-check, so
     // boilerplate is identical for everyone and just clutters the deal notes.
-    // The vehicle is captured structurally (vehicleId) and the requested time
-    // below becomes a real pending appointment — not a note. PII stays in the
-    // discrete encrypted fields, never folded into a message.
+    // The vehicle is captured structurally (vehicleId). No time is collected —
+    // the site does not self-schedule; staff call to set the visit. PII stays
+    // in the discrete encrypted fields, never folded into a message.
     // Captured once so the browser Pixel `Lead` below fires with the SAME
     // event_id the backend sends via CAPI — Meta dedups the pair.
     const tracking = getTrackingContext();
@@ -201,9 +172,6 @@ export default function InquiryForm({
       email,
       phone,
       vehicleId,
-      preferredTime: `${fmtSlot(slot)} on ${getTomorrow()}`,
-      preferredDate: getTomorrowISO(),
-      preferredHour: slot,
       sourcePage:
         typeof window !== "undefined" ? window.location.pathname : undefined,
       addressStreet: address.trim() || undefined,
@@ -226,27 +194,13 @@ export default function InquiryForm({
 
   if (sent) {
     return (
-      <div className="rounded-2xl bg-green-50 p-6 text-center">
-        <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-green-100">
-          <svg className="size-6 text-green-600" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M5 13l4 4L19 7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <p className="text-base font-semibold text-green-800">Request sent!</p>
-        <p className="mt-1 text-sm text-green-600">
-          We&apos;ll confirm your appointment for the {vehicleTitle} shortly.
-        </p>
-      </div>
+      <LeadReceived
+        compact
+        detail={`We got your request about the ${vehicleTitle}.`}
+      />
     );
   }
 
-  const slots = getSlots();
   const nameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
   const emailValid = email.includes("@") && email.includes(".");
   const phoneValid = phone.trim().length > 0;
@@ -474,9 +428,6 @@ export default function InquiryForm({
                     placeholder="Driver's license state"
                     value={driversLicenseState}
                     onChange={(e) => setDriversLicenseState(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && approvalValid) setStep(4);
-                    }}
                     className={inputClass}
                   />
                   <datalist id="drivers-license-states">
@@ -484,39 +435,22 @@ export default function InquiryForm({
                       <option key={state} value={state} />
                     ))}
                   </datalist>
-                  <ContinueBtn
-                    disabled={!approvalValid}
-                    onClick={() => setStep(4)}
-                  />
-                </div>
-              )}
 
-              {step === 4 && (
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-500">
-                      Pick a time
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      {getTomorrow()}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        onClick={() => setSlot(h)}
-                        className={`rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors ${
-                          slot === h
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-neutral-100 bg-neutral-25 text-neutral-600 hover:border-primary/30 hover:bg-white"
-                        }`}
-                      >
-                        {fmtSlot(h)}
-                      </button>
-                    ))}
-                  </div>
+                  {/* No time picker — the site does not self-schedule. Staff
+                      call to set the visit, so the customer is told the one
+                      channel that can actually book it. */}
+                  <p className="rounded-xl bg-neutral-25 px-4 py-3 text-xs leading-5 text-neutral-500">
+                    We&apos;ll follow up shortly to go over your approval. Want
+                    to lock in a test drive now? Call or text{" "}
+                    <a
+                      href={SCHEDULING_TEL_HREF}
+                      className="font-semibold text-primary underline underline-offset-2"
+                    >
+                      {SCHEDULING_PHONE_DISPLAY}
+                    </a>
+                    .
+                  </p>
+
                   <label className="flex items-start gap-3 text-xs leading-5 text-neutral-500">
                     <input
                       type="checkbox"
@@ -555,7 +489,7 @@ export default function InquiryForm({
                   )}
                   <button
                     type="button"
-                    disabled={!slot || loading}
+                    disabled={!approvalValid || loading}
                     onClick={submit}
                     className="w-full rounded-xl bg-gradient-to-b from-[#f9896a] to-primary py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-40"
                   >

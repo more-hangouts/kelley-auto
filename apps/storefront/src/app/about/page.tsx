@@ -77,8 +77,8 @@ export default function AboutPage() {
             },
             {
               step: "02",
-              title: "Request an appointment",
-              body: "Pick a time slot that works for you. We prepare the vehicle before your arrival so you can inspect it without any wait.",
+              title: "Send us an inquiry",
+              body: "Tell us which vehicle you want to see, or just call or text us. We'll get back to you and set up a time that works, then prepare the vehicle before you arrive.",
             },
             {
               step: "03",

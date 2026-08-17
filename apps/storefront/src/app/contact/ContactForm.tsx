@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { submitLead } from "@/lib/publicApi";
+import LeadReceived from "../components/LeadReceived";
+import {
+  SCHEDULING_PHONE_DISPLAY,
+  SCHEDULING_TEL_HREF,
+} from "@/lib/scheduling";
 
 type FormState = {
   firstName: string;
@@ -9,31 +14,7 @@ type FormState = {
   email: string;
   phone: string;
   message: string;
-  preferredSlot: number | null;
 };
-
-const ALL_SLOTS = [10, 11, 12, 13, 14, 15, 16, 17];
-
-function getAvailableSlots(): number[] {
-  const hour = new Date().getHours();
-  return hour >= 17 ? ALL_SLOTS.filter((h) => h >= 13) : ALL_SLOTS;
-}
-
-
-function formatSlot(h: number): string {
-  if (h === 12) return "12:00 PM";
-  return h > 12 ? `${h - 12}:00 PM` : `${h}:00 AM`;
-}
-
-function getTomorrow(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 export default function ContactForm() {
   const [loading, setLoading] = useState(false);
@@ -48,30 +29,22 @@ export default function ContactForm() {
     email: "",
     phone: "",
     message: "",
-    preferredSlot: null,
   });
 
-  function update(field: keyof Omit<FormState, "preferredSlot">) {
+  function update(field: keyof FormState) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.preferredSlot) {
-      setError("Please select a preferred appointment time.");
-      return;
-    }
     setLoading(true);
     setError(null);
-    const tomorrow = getTomorrow();
-    const preferredTime = `${formatSlot(form.preferredSlot)} on ${tomorrow}`;
     const result = await submitLead({
       name: `${form.firstName} ${form.lastName}`.trim(),
       email: form.email,
       phone: form.phone,
       message: form.message,
-      preferredTime,
       smsConsent,
       sourcePage:
         typeof window !== "undefined" ? window.location.pathname : "/contact-us",
@@ -87,29 +60,7 @@ export default function ContactForm() {
   const inputClass =
     "w-full rounded-xl border border-neutral-100 bg-neutral-25 px-4 py-3 text-sm text-neutral-700 placeholder-neutral-400 outline-none transition-colors focus:border-primary";
 
-  const slots = getAvailableSlots();
-
-  if (sent) {
-    return (
-      <div className="rounded-2xl bg-green-50 p-8 text-center">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-green-100">
-          <svg className="size-7 text-green-600" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M5 13l4 4L19 7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <p className="text-lg font-semibold text-green-800">Request received!</p>
-        <p className="mt-1 text-sm text-green-600">
-          We&apos;ll reach out shortly to confirm your appointment.
-        </p>
-      </div>
-    );
-  }
+  if (sent) return <LeadReceived />;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -156,31 +107,23 @@ export default function ContactForm() {
         className={`${inputClass} resize-none`}
       />
 
-      {/* Time slot picker */}
+      {/* Scheduling happens on the phone, not on the site — the form only
+          starts the conversation. */}
       <div className="rounded-xl border border-neutral-100 bg-neutral-25 p-4">
         <p className="text-sm font-semibold text-neutral-700">
-          Preferred appointment time
+          Want to schedule a test drive or visit?
         </p>
-        <p className="mt-1 text-xs text-neutral-400">
-          By appointment only &middot; Next available:{" "}
-          <span className="font-medium text-neutral-600">{getTomorrow()}</span>
+        <p className="mt-1 text-xs leading-5 text-neutral-500">
+          Send this form and our team will follow up shortly — or call or text
+          us at{" "}
+          <a
+            href={SCHEDULING_TEL_HREF}
+            className="font-semibold text-primary underline underline-offset-2"
+          >
+            {SCHEDULING_PHONE_DISPLAY}
+          </a>{" "}
+          and we&apos;ll help get it set up.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {slots.map((h) => (
-            <button
-              key={h}
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, preferredSlot: h }))}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                form.preferredSlot === h
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-neutral-100 bg-white text-neutral-600 hover:border-primary/40"
-              }`}
-            >
-              {formatSlot(h)}
-            </button>
-          ))}
-        </div>
       </div>
 
       <label className="flex items-start gap-3 text-xs leading-5 text-neutral-500">
@@ -215,7 +158,7 @@ export default function ContactForm() {
         disabled={loading}
         className="rounded-xl bg-gradient-to-b from-[#f9896a] to-primary py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-60"
       >
-        {loading ? "Sending…" : "Request Appointment"}
+        {loading ? "Sending…" : "Send Inquiry"}
       </button>
     </form>
   );

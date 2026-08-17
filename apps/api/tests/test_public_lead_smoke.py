@@ -419,10 +419,13 @@ def main() -> int:  # noqa: C901 - linear smoke script
             "notes keep only customer message",
             _event_notes(deals[0][0]),
         )
+        # A lead is NOT an appointment. The storefront no longer sends a slot,
+        # but the payload above still posts preferred_date/preferred_hour on
+        # purpose — a visitor on a cached bundle must get a normal 200 with the
+        # fields ignored, never a 422 and never a phantom calendar row.
         _assert(
-            _appointment_for_event(deals[0][0])
-            == ("pending", 30, "Requested via storefront — call to confirm."),
-            "preferred slot creates pending appointment",
+            _appointment_for_event(deals[0][0]) is None,
+            "preferred slot must NOT create an appointment",
             _appointment_for_event(deals[0][0]),
         )
         _assert(

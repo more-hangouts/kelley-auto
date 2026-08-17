@@ -238,12 +238,16 @@ class PublicLeadRequest(BaseModel):
     vehicle_id: int | None = None
     listing_code: str | None = Field(default=None, max_length=40)
     message: str | None = Field(default=None, max_length=4000)
+    # Free-text scheduling preference; recorded on the deal's activity payload.
+    # A lead never becomes a calendar appointment — see the note in
+    # modules/contacts/services/public_lead_service.py.
+    #
+    # `preferred_date` / `preferred_hour` used to live here and drove that
+    # appointment creation. They are gone; the model is extra="ignore", so a
+    # visitor still running a cached bundle that posts them gets a normal 200
+    # with the fields dropped rather than a 422 that silently loses the lead.
     preferred_day: str | None = Field(default=None, max_length=60)
     preferred_time: str | None = Field(default=None, max_length=60)
-    # Structured preferred appointment slot: dealership-local date + hour. When
-    # present, the lead becomes a pending appointment on the calendar.
-    preferred_date: str | None = Field(default=None, max_length=10)
-    preferred_hour: int | None = Field(default=None, ge=0, le=23)
     source_page: str | None = Field(default=None, max_length=500)
     utm_source: str | None = Field(default=None, max_length=120)
     utm_medium: str | None = Field(default=None, max_length=120)
@@ -414,8 +418,6 @@ def submit_lead(
         message=payload.message,
         preferred_day=payload.preferred_day,
         preferred_time=payload.preferred_time,
-        preferred_date=payload.preferred_date,
-        preferred_hour=payload.preferred_hour,
         source_page=payload.source_page,
         utm=payload.utm(),
         date_of_birth=payload.date_of_birth,

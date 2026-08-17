@@ -5,6 +5,10 @@ import ContactForm from "./ContactForm";
 import { getContactPage } from "@/lib/api";
 import { resolveNap } from "@/lib/nap";
 import { lexicalToHtml } from "@/lib/richtext-html";
+import {
+  SCHEDULING_PHONE_DISPLAY,
+  SCHEDULING_TEL_HREF,
+} from "@/lib/scheduling";
 
 export const metadata = {
   title: "Contact Us | Kelley Autoplex",
@@ -24,12 +28,16 @@ export default async function ContactPage() {
 
   const tagline = page.tagline || "Get in Touch";
   const heading = page.heading || "Contact Us";
-  const formHeading = page.formHeading || "Request an Appointment";
+  const formHeading = page.formHeading || "Send Us an Inquiry";
 
+  // Copy no longer promises self-scheduling: the site collects the inquiry and
+  // staff call to set the visit. The scheduling number is the Twilio line
+  // (call or text) — see lib/scheduling.ts for why it differs from the NAP
+  // phone rendered in the contact card below.
   const descriptionHtml = lexicalToHtml(page.description) ||
-    "<p>All vehicle viewings are <strong><em>by appointment only</em></strong>. Pick a time that works for you and we&apos;ll confirm same day.</p>";
+    `<p>Tell us what you're looking for and our team will follow up shortly. Ready to schedule a test drive or visit? Call or text us at <a href="${SCHEDULING_TEL_HREF}">${SCHEDULING_PHONE_DISPLAY}</a> and we'll help get it set up.</p>`;
   const appointmentNoteHtml = lexicalToHtml(page.appointmentNote) ||
-    "<p>All visits are by appointment only — walk-ins are not accepted.</p>";
+    `<p>Visits are best arranged ahead of time — call or text <strong>${SCHEDULING_PHONE_DISPLAY}</strong> and we'll make sure someone is ready for you.</p>`;
 
   return (
     <div className="min-h-screen">
