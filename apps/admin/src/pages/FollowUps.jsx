@@ -154,6 +154,7 @@ function FollowUpRow({ item, today, onWork }) {
 
 export default function FollowUps({ eventType = 'vehicle_sale' }) {
   const [working, setWorking] = useState(null)
+  const navigate = useNavigate()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['events', 'follow-ups', eventType],
@@ -189,6 +190,7 @@ export default function FollowUps({ eventType = 'vehicle_sale' }) {
 
   const counts = data?.counts || {}
   const actionable = (counts.overdue || 0) + (counts.due_today || 0)
+  const scheduled = data?.scheduled_total || 0
 
   return (
     <Box sx={{ overflowY: 'auto', pb: 4 }}>
@@ -207,6 +209,19 @@ export default function FollowUps({ eventType = 'vehicle_sale' }) {
           <>Nothing overdue or due today. Nice.</>
         )}
       </Alert>
+
+      {/* Held-out deals never just disappear — say how many and where they are. */}
+      {scheduled > 0 && (
+        <Alert severity="info" sx={{ mb: 2 }} icon={false}>
+          <strong>{scheduled}</strong> more {scheduled === 1 ? 'lead has' : 'leads have'}{' '}
+          a visit already booked, so {scheduled === 1 ? 'it is' : 'they are'} not in
+          this call list.{' '}
+          <Link component="button" underline="hover" onClick={() => navigate('/calendar')}>
+            See the appointments calendar
+          </Link>
+          .
+        </Alert>
+      )}
 
       <Stack spacing={3}>
         {BUCKETS.map((bucket) => {

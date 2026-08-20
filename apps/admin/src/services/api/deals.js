@@ -22,6 +22,15 @@ export async function patchEventStatus(eventId, newStatus, notes) {
   return data
 }
 
+// Set which car the deal is about and/or which car it closed on. Send only
+// the key you mean to change — an omitted key leaves that link alone, while
+// an explicit null clears it. Sending both keys always is what would let a
+// "record the sold car" click quietly wipe the inquiry vehicle.
+export async function patchEventVehicles(eventId, patch) {
+  const { data } = await api.patch(`/events/${eventId}/vehicles`, patch)
+  return data
+}
+
 export async function getEvent(eventId) {
   const { data } = await api.get(`/events/${eventId}`)
   return data

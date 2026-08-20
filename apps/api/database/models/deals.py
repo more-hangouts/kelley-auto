@@ -55,6 +55,15 @@ class Event(Base):
     vehicle_catalog_item_id = Column(
         Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
     )
+    # Migration 111: the car the deal actually CLOSED on, when it is not the
+    # car the lead came in on. Above is attribution ("which listing produced
+    # this lead?") and is written once at intake; this is the outcome ("which
+    # car left the lot?") and is written by staff at the end. NULL — the normal
+    # state — means "closed on the car they asked about", and the inventory
+    # propagation falls back to `vehicle_catalog_item_id` accordingly.
+    sold_vehicle_catalog_item_id = Column(
+        Integer, ForeignKey("catalog_items.id", ondelete="SET NULL")
+    )
     # Migration 104: staff-entered origin for leads that never touch the
     # storefront (walk-ins, phone-ins). Deliberately separate from the
     # derived source/medium attribution on storefront_events — a person who

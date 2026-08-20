@@ -161,6 +161,19 @@ export default async function ContactPage() {
                       <p className="text-sm font-medium text-neutral-700">
                         {nap.addressLines.join(", ")}
                       </p>
+                      {/* The contact page is the one place a visitor has
+                          already declared they want to reach us — the route
+                          should not be a copy-paste job here of all places. */}
+                      {nap.directionsHref && (
+                        <a
+                          href={nap.directionsHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-block text-sm font-medium text-primary hover:underline"
+                        >
+                          Get directions
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}

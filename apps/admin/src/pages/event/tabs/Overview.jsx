@@ -31,6 +31,7 @@ import AdminEventOwnerDialog from '../../../components/AdminEventOwnerDialog'
 import BookAppointmentDialog from '../../../components/BookAppointmentDialog'
 import ContactActions from '../../../components/ContactActions'
 import ContactEditDialog from '../../../components/ContactEditDialog'
+import DealVehiclePanel from '../../../components/DealVehiclePanel'
 import ParticipantTagDialog from '../../../components/ParticipantTagDialog'
 import RecordDependenciesDialog from '../../../components/RecordDependenciesDialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -710,6 +711,12 @@ export default function Overview() {
 
       {event.event_type === 'vehicle_sale' && (
         <>
+          {/* Two links, not one: the car the lead came in on, and the car it
+              closed on. Kept as its own Section rather than KV rows in "Deal"
+              because both are editable and the distinction needs the room. */}
+          <Section title="Vehicle">
+            <DealVehiclePanel event={event} />
+          </Section>
           {/* Renders itself away for users without the PII permission. */}
           <CreditApplicationPanel eventId={event.id} />
           <LeadJourneyPanel eventId={event.id} event={event} />

@@ -46,6 +46,7 @@ class TimelineSummary(BaseModel):
     customer_name: str | None
     customer_phone: str | None
     vehicle_label: str | None
+    sold_vehicle_label: str | None = None
     last_touch_at: datetime | None
     last_touch_label: str | None
     flags: list[TimelineFlag]
@@ -96,6 +97,7 @@ def get_deal_timeline(
             customer_name=summary.customer_name,
             customer_phone=summary.customer_phone,
             vehicle_label=summary.vehicle_label,
+            sold_vehicle_label=summary.sold_vehicle_label,
             last_touch_at=summary.last_touch_at,
             last_touch_label=summary.last_touch_label,
             flags=[TimelineFlag(**f) for f in summary.flags],

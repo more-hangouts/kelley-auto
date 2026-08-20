@@ -104,6 +104,11 @@ PAYMENT_UNAPPLIED = "payment.unapplied"
 # Event lifecycle (mirrored from event_status_change_events)
 EVENT_STATUS_CHANGED = "event.status_changed"
 EVENT_PARTICIPANT_ADDED = "event.participant_added"
+# Migration 111: a staff member changed which car the deal is about — either
+# the inquiry link or the car it closed on. Worth an audit row because the
+# sold link drives inventory: this is the trail explaining why a catalog row
+# flipped to `sold`, and who to ask when the wrong one did.
+EVENT_VEHICLE_CHANGED = "event.vehicle_changed"
 # Walk-in / in-store lead capture (services/walk_in_service.py). Anchored
 # to the freshly-created event so the timeline tab shows a single
 # "Captured as walk-in" row at the top of the audit trail.
@@ -237,6 +242,7 @@ _KNOWN_TYPES = frozenset(
         PAYMENT_UNAPPLIED,
         EVENT_STATUS_CHANGED,
         EVENT_PARTICIPANT_ADDED,
+        EVENT_VEHICLE_CHANGED,
         EVENT_WALK_IN_CREATED,
         PUBLIC_LEAD_SUBMITTED,
         LEAD_NOTIFICATION_SENT,

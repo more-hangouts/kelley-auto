@@ -8,10 +8,14 @@ export default function Navbar({
   light = false,
   phone,
   telHref = null,
+  address = null,
+  directionsHref = null,
 }: {
   light?: boolean;
   phone?: string;
   telHref?: string | null;
+  address?: string | null;
+  directionsHref?: string | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const linkColor = light ? "text-neutral-50" : "text-neutral-600";
@@ -169,7 +173,7 @@ export default function Navbar({
             {telHref ? (
               <a
                 href={telHref}
-                className="py-3 text-base text-neutral-700 hover:text-primary"
+                className="py-3 text-base font-medium text-neutral-700 hover:text-primary"
                 onClick={() => setMenuOpen(false)}
               >
                 Call Us: {displayPhone}
@@ -178,6 +182,25 @@ export default function Navbar({
               <span className="py-3 text-base text-neutral-500">
                 {displayPhone}
               </span>
+            )}
+            {/* Address + route, in the menu itself. Someone who opened the
+                menu looking for "where are you" should not have to close it
+                again and scroll to the footer. */}
+            {address && (
+              <div className="pb-1">
+                <p className="text-sm text-neutral-500">{address}</p>
+                {directionsHref && (
+                  <a
+                    href={directionsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Get directions
+                  </a>
+                )}
+              </div>
             )}
             <Link
               href="/cars-for-sale"

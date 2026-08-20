@@ -26,6 +26,7 @@ from database.connection import get_db
 from database.models import (
     Appointment,
     AppointmentEnrichmentResponse,
+    CatalogItem,
     Contact,
     Event,
     EventParticipant,
@@ -112,6 +113,18 @@ class OwnerSummary(BaseModel):
     full_name: str | None
 
 
+class DealVehicleRef(BaseModel):
+    """Just enough of a linked car to name it on the deal page. Deliberately
+    thinner than `VehicleCardSummary` — the deal header wants a label and a
+    stock number, not the full spec sheet."""
+
+    id: int
+    label: str | None = None
+    stock_number: str | None = None
+    vin: str | None = None
+    vehicle_status: str | None = None
+
+
 class EventResponse(BaseModel):
     id: int
     event_type: str
@@ -128,6 +141,14 @@ class EventResponse(BaseModel):
     owner: OwnerSummary | None
     notes: str | None
     vehicle_catalog_item_id: int | None
+    # Migration 111: the car the deal CLOSED on, when it differs from the one
+    # the lead came in on. NULL is the normal state and means "closed on the
+    # car they asked about" — the inventory propagation falls back accordingly.
+    sold_vehicle_catalog_item_id: int | None = None
+    # Rendered labels for the two links above, so the deal page can show which
+    # cars these are without a round-trip per id.
+    vehicle: DealVehicleRef | None = None
+    sold_vehicle: DealVehicleRef | None = None
     # Migration 104: staff-entered origin for walk-in / phone leads. Kept
     # separate from the storefront attribution served by /journey — this is
     # what a rep was told, not what a click stream showed.
@@ -420,6 +441,58 @@ def patch_status(
     return _to_event_response(db, event)
 
 
+class EventVehiclesPatch(BaseModel):
+    """Set either link, both, or one to null.
+
+    Every field is optional AND nullable, and the two are different requests:
+    an omitted field is left alone, an explicit `null` clears the link. The
+    handler tells them apart with `model_fields_set` rather than an `is None`
+    check, because "don't touch the inquiry vehicle" and "unlink the inquiry
+    vehicle" must not collapse into the same payload.
+    """
+
+    vehicle_catalog_item_id: int | None = None
+    sold_vehicle_catalog_item_id: int | None = None
+
+
+@router.patch("/{event_id}/vehicles", response_model=EventResponse)
+def patch_event_vehicles(
+    event_id: int,
+    payload: EventVehiclesPatch,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_any_scope("admin", "sales"))],
+) -> EventResponse:
+    """Record which car the deal is about, and which car it closed on.
+
+    Both are staff-editable: 275 of the live deals are walk-ins and phone-ins
+    that never had an inquiry vehicle to begin with, so "set the car" is as
+    common an act as "correct the car".
+    """
+    sent = payload.model_fields_set
+    try:
+        event = event_service.set_event_vehicles(
+            db,
+            event_id=event_id,
+            actor_user_id=user.id,
+            vehicle_catalog_item_id=(
+                payload.vehicle_catalog_item_id
+                if "vehicle_catalog_item_id" in sent
+                else event_service.UNSET
+            ),
+            sold_vehicle_catalog_item_id=(
+                payload.sold_vehicle_catalog_item_id
+                if "sold_vehicle_catalog_item_id" in sent
+                else event_service.UNSET
+            ),
+        )
+    except EventServiceError as exc:
+        raise HTTPException(status_code=_status_for(exc.code), detail=exc.code) from exc
+
+    db.commit()
+    db.refresh(event)
+    return _to_event_response(db, event)
+
+
 @router.get("/board", response_model=BoardResponse)
 def get_board(
     db: Annotated[Session, Depends(get_db)],
@@ -538,6 +611,9 @@ class FollowUpQueueResponse(BaseModel):
     # this rather than implying the returned page is the whole pile.
     no_reminder_total: int
     no_reminder_limit: int
+    # Live deals kept OUT of the queue because a visit is already booked.
+    # Surfaced so the UI can point at the calendar rather than let them vanish.
+    scheduled_total: int
     items: list[FollowUpItemResponse]
 
 
@@ -571,6 +647,7 @@ def get_follow_ups(
         counts=queue.counts,
         no_reminder_total=queue.no_reminder_total,
         no_reminder_limit=follow_up_service.NO_REMINDER_LIMIT,
+        scheduled_total=queue.scheduled_total,
         items=[FollowUpItemResponse(**vars(i)) for i in queue.items],
     )
 
@@ -981,6 +1058,24 @@ def _to_linked_appointment(
     )
 
 
+def _deal_vehicle_ref(db: Session, catalog_item_id: int | None) -> DealVehicleRef | None:
+    if catalog_item_id is None:
+        return None
+    item = db.get(CatalogItem, catalog_item_id)
+    if item is None:
+        return None
+    label = " ".join(
+        str(p) for p in (item.year, item.make, item.model, item.trim) if p
+    )
+    return DealVehicleRef(
+        id=item.id,
+        label=label or None,
+        stock_number=item.stock_number,
+        vin=item.vin,
+        vehicle_status=item.vehicle_status,
+    )
+
+
 def _to_event_response(db: Session, event: Event) -> EventResponse:
     contact = db.get(Contact, event.primary_contact_id)
     owner = db.get(User, event.owner_user_id) if event.owner_user_id else None
@@ -1014,6 +1109,9 @@ def _to_event_response(db: Session, event: Event) -> EventResponse:
         owner=OwnerSummary(id=owner.id, full_name=owner.full_name) if owner else None,
         notes=event.notes,
         vehicle_catalog_item_id=event.vehicle_catalog_item_id,
+        sold_vehicle_catalog_item_id=event.sold_vehicle_catalog_item_id,
+        vehicle=_deal_vehicle_ref(db, event.vehicle_catalog_item_id),
+        sold_vehicle=_deal_vehicle_ref(db, event.sold_vehicle_catalog_item_id),
         walk_in_source=event.walk_in_source,
         walk_in_source_detail=event.walk_in_source_detail,
         created_at=event.created_at,
@@ -1025,6 +1123,10 @@ _ERROR_STATUS_MAP = {
     "appointment_not_found": 404,
     "event_not_found": 404,
     "contact_not_found": 404,
+    "vehicle_not_found": 404,
+    # 422, not 404: the row exists, it just isn't a car. That is a bad request
+    # body, and the caller needs to know the difference to report it usefully.
+    "not_a_vehicle": 422,
     "missing_contact": 422,
     "already_promoted": 409,
     "invalid_status": 422,

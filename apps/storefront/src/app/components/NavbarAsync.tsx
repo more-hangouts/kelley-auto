@@ -5,6 +5,12 @@ import { resolveNap } from "@/lib/nap";
 export async function NavbarAsync({ light }: { light?: boolean }) {
   const nap = await resolveNap();
   return (
-    <Navbar light={light} phone={nap.phoneDisplay} telHref={nap.telHref} />
+    <Navbar
+      light={light}
+      phone={nap.phoneDisplay}
+      telHref={nap.telHref}
+      address={nap.addressOneLine}
+      directionsHref={nap.directionsHref}
+    />
   );
 }

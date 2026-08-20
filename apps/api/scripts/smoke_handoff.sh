@@ -99,6 +99,7 @@ SUITE=(
   tests/test_events_smoke.py
   tests/test_event_documents_smoke.py
   tests/test_event_participants_smoke.py
+  tests/test_deal_vehicles_and_follow_up_scope_smoke.py
 
   # catalog
   tests/test_catalog_smoke.py

@@ -115,6 +115,7 @@ class DealSummary:
     customer_name: str | None = None
     customer_phone: str | None = None
     vehicle_label: str | None = None
+    sold_vehicle_label: str | None = None
     last_touch_at: datetime | None = None
     last_touch_label: str | None = None
     flags: list[dict[str, str]] = field(default_factory=list)
@@ -214,16 +215,31 @@ def _message_items(db: Session, event_id: int) -> list[TimelineItem]:
     return items
 
 
-def _vehicle_label(db: Session, event: Event) -> str | None:
+def _catalog_item_label(db: Session, catalog_item_id: int | None) -> str | None:
     """"2019 Toyota Camry" for the header. NULL on the ~70% of deals that
     carry no vehicle link (Event has no ORM relationship for it)."""
-    if not event.vehicle_catalog_item_id:
+    if not catalog_item_id:
         return None
-    item = db.get(CatalogItem, event.vehicle_catalog_item_id)
+    item = db.get(CatalogItem, catalog_item_id)
     if item is None:
         return None
     bits = [str(item.year) if item.year else None, item.make, item.model]
     return " ".join(b for b in bits if b) or item.product_title
+
+
+def _vehicle_label(db: Session, event: Event) -> str | None:
+    return _catalog_item_label(db, event.vehicle_catalog_item_id)
+
+
+def _sold_vehicle_label(db: Session, event: Event) -> str | None:
+    """Migration 111: the car the deal CLOSED on, and only when it differs
+    from the inquiry car. Rendering it when the two match would put the same
+    string on the header twice and imply a switch that never happened."""
+    if not event.sold_vehicle_catalog_item_id:
+        return None
+    if event.sold_vehicle_catalog_item_id == event.vehicle_catalog_item_id:
+        return None
+    return _catalog_item_label(db, event.sold_vehicle_catalog_item_id)
 
 
 def _describe_last_touch(item: TimelineItem) -> str:
@@ -409,6 +425,7 @@ def build_deal_timeline(db: Session, event_id: int) -> tuple[DealSummary, list[T
         customer_name=contact.display_name if contact else None,
         customer_phone=(contact.phone_e164 or contact.phone) if contact else None,
         vehicle_label=_vehicle_label(db, event),
+        sold_vehicle_label=_sold_vehicle_label(db, event),
         last_touch_at=last.at if last else None,
         last_touch_label=_describe_last_touch(last) if last else None,
         flags=_build_flags(db, event, items),

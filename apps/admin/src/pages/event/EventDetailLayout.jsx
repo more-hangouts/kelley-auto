@@ -97,6 +97,11 @@ function LeadSourceStrip({ summary }) {
   if (summary.vehicle_label) {
     bits.push({ key: 'vehicle', label: 'Asking about', value: summary.vehicle_label })
   }
+  // Only present when they closed on a DIFFERENT car — the API suppresses it
+  // when the two match, so this never restates the line above.
+  if (summary.sold_vehicle_label) {
+    bits.push({ key: 'sold_vehicle', label: 'Bought', value: summary.sold_vehicle_label })
+  }
   if (summary.customer_phone) {
     bits.push({ key: 'phone', label: 'Phone', value: summary.customer_phone })
   }

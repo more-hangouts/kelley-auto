@@ -68,9 +68,33 @@ export default async function Footer() {
               )}
             </div>
             {nap.hasAddress && (
-              <p className="max-w-[248px] text-base text-neutral-300">
-                {nap.addressLines.join(", ")}
-              </p>
+              <div className="max-w-[248px]">
+                <p className="text-base text-neutral-300">
+                  {nap.addressLines.join(", ")}
+                </p>
+                {/* The footer is where people scroll to find the lot, so the
+                    address earns an actual route link rather than text they
+                    have to retype into a maps app. */}
+                {nap.directionsHref && (
+                  <a
+                    href={nap.directionsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-medium text-primary-light hover:text-white transition-colors"
+                  >
+                    <svg className="size-4 shrink-0" fill="none" viewBox="0 0 18 18" aria-hidden="true">
+                      <path
+                        d="M9 1.5C6.51 1.5 4.5 3.51 4.5 6c0 3.75 4.5 10.5 4.5 10.5S13.5 9.75 13.5 6c0-2.49-2.01-4.5-4.5-4.5ZM9 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Get directions
+                  </a>
+                )}
+              </div>
             )}
             {nap.email && (
               <a

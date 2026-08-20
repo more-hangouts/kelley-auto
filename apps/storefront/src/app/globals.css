@@ -26,3 +26,23 @@ body {
   color: var(--color-neutral-700);
   background: #ffffff;
 }
+
+/* Fixed mobile call/directions bar (components/MobileContactBar.tsx).
+   Published as a variable so two independent things can stay clear of it: the
+   page itself, whose footer would otherwise sit under the buttons, and the
+   chat bubble, which is positioned with inline styles inside a third-party-
+   shaped widget. Both read the same number, so the bar's height is defined
+   once, here. Zero above `lg`, where the bar is not rendered at all. */
+:root {
+  --mobile-cta-h: calc(56px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --mobile-cta-h: 0px;
+  }
+}
+
+body {
+  padding-bottom: var(--mobile-cta-h);
+}

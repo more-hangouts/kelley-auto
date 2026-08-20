@@ -378,7 +378,7 @@ export default function ChatWidget() {
   // ── render ───────────────────────────────────────────────────────────────
   const panelStyle: React.CSSProperties = {
     position: "fixed",
-    bottom: 92,
+    bottom: "calc(92px + var(--mobile-cta-h, 0px))",
     right: 16,
     width: "min(360px, calc(100vw - 32px))",
     maxHeight: "min(560px, calc(100vh - 120px))",
@@ -443,7 +443,10 @@ export default function ChatWidget() {
         }}
         style={{
           position: "fixed",
-          bottom: 20,
+          // Lifts clear of the fixed mobile call/directions bar. The variable
+          // is 0px above `lg`, where that bar is not rendered, so the bubble
+          // sits exactly where it always did on desktop.
+          bottom: "calc(20px + var(--mobile-cta-h, 0px))",
           right: 16,
           width: 58,
           height: 58,

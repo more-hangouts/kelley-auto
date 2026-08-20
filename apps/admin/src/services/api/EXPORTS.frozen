@@ -162,6 +162,7 @@ patchAdminShift
 patchAdminStaffLocation
 patchDocument
 patchEventStatus
+patchEventVehicles
 patchInboxConversation
 patchSalesStaff
 patchScheduleEntry

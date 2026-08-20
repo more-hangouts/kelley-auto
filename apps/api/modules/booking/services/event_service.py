@@ -312,6 +312,13 @@ def _propagate_vehicle_status(db: Session, event: Event, new_status: str) -> Non
       * the deal is linked to a catalog row, and
       * that row is actually a vehicle (``is_vehicle = true``).
 
+    **Which car.** ``sold_vehicle_catalog_item_id`` when set, otherwise the
+    inquiry link. A shopper who asks about the Altima and drives off in the
+    Rogue must mark the ROGUE sold; before migration 111 there was only one
+    column, so closing that deal marked the Altima — pulling a car that was
+    still on the lot off the site and leaving the sold one listed. NULL keeps
+    the historical behavior exactly: closed on the car they asked about.
+
     The ``is_vehicle`` guard is the hard boundary: this never writes to a
     dress/catalog row even if some future link pointed at one. Backward
     moves and ``lost`` deliberately do NOT revert inventory — a car may be
@@ -320,9 +327,12 @@ def _propagate_vehicle_status(db: Session, event: Event, new_status: str) -> Non
     if event.event_type != "vehicle_sale":
         return
     target = _DEAL_STATUS_TO_VEHICLE_STATUS.get(new_status)
-    if target is None or event.vehicle_catalog_item_id is None:
+    catalog_item_id = (
+        event.sold_vehicle_catalog_item_id or event.vehicle_catalog_item_id
+    )
+    if target is None or catalog_item_id is None:
         return
-    vehicle = db.get(CatalogItem, event.vehicle_catalog_item_id)
+    vehicle = db.get(CatalogItem, catalog_item_id)
     if vehicle is None or not vehicle.is_vehicle:
         return
     if vehicle.vehicle_status == target:
@@ -330,6 +340,94 @@ def _propagate_vehicle_status(db: Session, event: Event, new_status: str) -> Non
     vehicle.vehicle_status = target
     vehicle.updated_at = datetime.now(timezone.utc)
     db.flush()
+
+
+UNSET = object()
+
+
+def set_event_vehicles(
+    db: Session,
+    *,
+    event_id: int,
+    actor_user_id: int | None,
+    vehicle_catalog_item_id: int | None | object = UNSET,
+    sold_vehicle_catalog_item_id: int | None | object = UNSET,
+) -> Event:
+    """Set the deal's inquiry vehicle and/or the vehicle it closed on.
+
+    Sentinel-guarded per field: passing ``None`` CLEARS a link, while omitting
+    the argument leaves it untouched. A plain ``None`` default would make
+    "don't change the inquiry vehicle" indistinguishable from "unlink it", and
+    the caller most often wants to set exactly one of the two.
+
+    Both links must point at a real vehicle (``is_vehicle = true``) — the same
+    hard boundary ``_propagate_vehicle_status`` enforces, applied at write time
+    so a bad link can never reach inventory in the first place.
+
+    Changing the SOLD vehicle on an already-``sold`` deal re-propagates, so
+    correcting a mistake fixes inventory instead of stranding the wrong car in
+    ``sold``. The previously-marked car is deliberately NOT reverted: it may
+    have been sold on a different deal, and the module's standing rule is that
+    un-selling is a human decision.
+    """
+    event = db.get(Event, event_id)
+    if event is None or event.deleted_at is not None:
+        raise EventServiceError("event not found", code="event_not_found")
+
+    changes: dict[str, tuple[int | None, int | None]] = {}
+
+    for field, value in (
+        ("vehicle_catalog_item_id", vehicle_catalog_item_id),
+        ("sold_vehicle_catalog_item_id", sold_vehicle_catalog_item_id),
+    ):
+        if value is UNSET:
+            continue
+        if value is not None:
+            vehicle = db.get(CatalogItem, value)
+            if vehicle is None:
+                raise EventServiceError(
+                    "vehicle not found", code="vehicle_not_found"
+                )
+            # `active` is NOT checked: a car goes inactive once it is off the
+            # lot, and recording which car an old deal closed on is exactly
+            # when the link is needed most.
+            if not vehicle.is_vehicle:
+                raise EventServiceError(
+                    "catalog item is not a vehicle", code="not_a_vehicle"
+                )
+        previous = getattr(event, field)
+        if previous == value:
+            continue  # no-op; don't write a noise audit row
+        changes[field] = (previous, value)
+        setattr(event, field, value)
+
+    if not changes:
+        return event
+
+    event.updated_at = func.now()
+    db.flush()
+
+    from modules.core.services import activity_log  # local to avoid import cycle
+
+    activity_log.log_activity(
+        db,
+        event_id=event.id,
+        actor_kind="staff" if actor_user_id else "system",
+        actor_user_id=actor_user_id,
+        activity_type=activity_log.EVENT_VEHICLE_CHANGED,
+        subject_kind="event",
+        subject_id=event.id,
+        payload={
+            field: {"from": before, "to": after}
+            for field, (before, after) in changes.items()
+        },
+    )
+
+    # Re-propagate when the closing car moved under an already-sold deal.
+    if "sold_vehicle_catalog_item_id" in changes:
+        _propagate_vehicle_status(db, event, event.status)
+
+    return event
 
 
 # ---------------------------------------------------------------------------
@@ -721,13 +819,21 @@ def get_board_data(db: Session, *, event_type: str = "vehicle_sale") -> list[Boa
             )
         )
 
+    # A working column (new_lead / contacted / follow_up) is a call list, so it
+    # leads with the STALEST deal — the lead nobody has touched in three weeks
+    # is the one that needs a human, not the one that came in this morning. The
+    # query sorts newest-first, so the live columns get reversed here. Terminal
+    # columns keep newest-first: on sold / lost the question is "what closed
+    # recently?", not "what is rotting?".
     return [
         BoardColumn(
             code=s.code,
             label=s.label,
             sort_order=s.sort_order,
             is_terminal=s.is_terminal,
-            cards=by_status[s.code],
+            cards=(
+                by_status[s.code] if s.is_terminal else by_status[s.code][::-1]
+            ),
         )
         for s in statuses
     ]

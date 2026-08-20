@@ -93,11 +93,17 @@ function moveCardOptimistic(board, eventId, newStatus) {
   if (!movedCard) return board
   const dest = columns.find((c) => c.code === newStatus)
   if (!dest) return board
-  dest.cards.unshift({
+  const landed = {
     ...movedCard,
     status: newStatus,
     status_changed_at: new Date().toISOString(),
-  })
+  }
+  // Mirror the server's column ordering so the optimistic position survives
+  // the refetch: working columns run stalest-first, and a card that just moved
+  // is the freshest thing in one, so it lands at the bottom. Terminal columns
+  // run newest-first and take it at the top.
+  if (dest.is_terminal) dest.cards.unshift(landed)
+  else dest.cards.push(landed)
   return { ...board, columns }
 }
 

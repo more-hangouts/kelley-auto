@@ -33,6 +33,19 @@ the UI can say "showing 100 of 281" instead of implying the list is complete.
 
 Terminal deals (sold / lost) are excluded everywhere: a closed deal is not
 owed a call. That is what makes "mark it lost" a real way to clear the queue.
+
+**Deals with a booked appointment are excluded too.** A customer who has an
+agreed time on the calendar is not owed a cold call — they were landing in
+`no_reminder` ("nobody has scheduled this") when in fact somebody had, just in
+the other system. Those deals belong to the appointments calendar; the count
+comes back as `scheduled_total` so the queue can point at it rather than
+silently shrinking.
+
+"Booked" means UPCOMING only: an appointment whose local date is today or
+later, in a live status (`pending` / `confirmed`). A past appointment is the
+opposite of a reason to stay quiet — the visit already happened (or was a
+no-show) and the deal is owed exactly the call this queue exists to prompt.
+`cancelled`, `attended` and `no_show` never shield a deal at all.
 """
 
 from __future__ import annotations
@@ -45,7 +58,14 @@ from sqlalchemy import Integer, func, or_, select
 from sqlalchemy.orm import Session
 
 from config.settings import APP_TIMEZONE
-from database.models import CatalogItem, Contact, Event, EventNote, User
+from database.models import (
+    Appointment,
+    CatalogItem,
+    Contact,
+    Event,
+    EventNote,
+    User,
+)
 from modules.booking.services.event_workflow import all_statuses
 
 # How many `no_reminder` rows to return. The bucket is unbounded by nature
@@ -59,6 +79,11 @@ BUCKET_UPCOMING = "upcoming"
 BUCKET_NO_REMINDER = "no_reminder"
 
 BUCKETS = (BUCKET_OVERDUE, BUCKET_DUE_TODAY, BUCKET_UPCOMING, BUCKET_NO_REMINDER)
+
+# Appointment statuses that mean "a time is still agreed". `cancelled` is not
+# a commitment; `attended` / `no_show` are in the past by definition and leave
+# the deal owed a call.
+LIVE_APPOINTMENT_STATUSES = ("pending", "confirmed")
 
 
 @dataclass(frozen=True)
@@ -108,6 +133,10 @@ class FollowUpQueue:
     counts: dict[str, int]
     # Total rows in `no_reminder` before NO_REMINDER_LIMIT was applied.
     no_reminder_total: int
+    # Live deals held OUT of the queue because they have an upcoming
+    # appointment. Returned so the UI can say where they went instead of
+    # letting them vanish.
+    scheduled_total: int
 
 
 def _open_statuses(event_type: str) -> list[str]:
@@ -173,6 +202,24 @@ def get_follow_up_queue(
         .subquery()
     )
 
+    # --- Upcoming booked appointment per deal -------------------------------
+    # Presence of a row here takes the deal OUT of the queue: a customer with
+    # an agreed time is not owed a follow-up call. Cut at the START of the
+    # dealership-local day rather than at `now()`, so a deal with a 10am visit
+    # is still "scheduled" at 2pm the same day instead of popping back into the
+    # queue mid-afternoon while the customer is standing in the showroom.
+    day_start_utc = datetime.combine(today, datetime.min.time(), tzinfo=tz)
+    upcoming_appt_subq = (
+        select(Appointment.crm_event_id.label("event_id"))
+        .where(
+            Appointment.crm_event_id.is_not(None),
+            Appointment.status.in_(LIVE_APPOINTMENT_STATUSES),
+            Appointment.slot_start_at >= day_start_utc,
+        )
+        .distinct()
+        .subquery()
+    )
+
     # --- Most recent note per deal (reminder or not) ------------------------
     # DISTINCT ON is the cheap way to get the whole winning row rather than
     # just its timestamp; ordering matches the Timeline's newest-first.
@@ -216,6 +263,7 @@ def get_follow_up_queue(
             last_note_subq.c.body.label("last_note_body"),
             last_note_subq.c.author.label("last_note_author"),
             last_note_subq.c.created_at.label("last_note_at"),
+            upcoming_appt_subq.c.event_id.label("scheduled_event_id"),
             func.extract(
                 "day", func.now() - Event.status_changed_at
             ).cast(Integer).label("days_since_status_change"),
@@ -225,6 +273,7 @@ def get_follow_up_queue(
         .outerjoin(CatalogItem, CatalogItem.id == Event.vehicle_catalog_item_id)
         .outerjoin(next_remind_subq, next_remind_subq.c.event_id == Event.id)
         .outerjoin(last_note_subq, last_note_subq.c.event_id == Event.id)
+        .outerjoin(upcoming_appt_subq, upcoming_appt_subq.c.event_id == Event.id)
         .where(
             Event.event_type == event_type,
             Event.deleted_at.is_(None),
@@ -254,8 +303,15 @@ def get_follow_up_queue(
     items: list[FollowUpItem] = []
     counts = {b: 0 for b in BUCKETS}
     no_reminder_total = 0
+    scheduled_total = 0
 
     for r in rows:
+        # A booked visit outranks the queue entirely — before bucketing, so a
+        # scheduled deal is absent from the counts as well as from the list.
+        if r.scheduled_event_id is not None:
+            scheduled_total += 1
+            continue
+
         if r.remind_at is None:
             bucket = BUCKET_NO_REMINDER
             no_reminder_total += 1
@@ -302,4 +358,5 @@ def get_follow_up_queue(
         items=items,
         counts=counts,
         no_reminder_total=no_reminder_total,
+        scheduled_total=scheduled_total,
     )
